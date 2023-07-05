@@ -1,13 +1,18 @@
 import openai
 import numpy as np
 import os
-from typing import List
+import psycopg2
+import pickle
+
+# from typing import List
 from sklearn.metrics.pairwise import cosine_similarity
 from tenacity import (
     retry,
     wait_random_exponential,
     stop_after_attempt,
 )
+from psycopg2 import sql
+
 
 EMBEDDING_MODEL = "text-embedding-ada-002"
 # let's make sure to not retry on an invalid request, because that is what we want to demonstrate
@@ -51,14 +56,24 @@ class MyCodebase:
         self.file_dict = {}
         ignore_dirs = ["node_modules", ".next"]
         directory = os.path.abspath(directory)
+        self.conn = psycopg2.connect(
+            dbname="memory",
+            user="joe",
+            password="1234",
+            host="localhost",
+        )
+        self.cur = self.conn.cursor()
+        self.create_tables()
 
         # Read and embed the files
         for root, dirs, files in os.walk(directory):
             dirs[:] = [d for d in dirs if d not in ignore_dirs]
 
             for file_name in files:
-                if not file_name.startswith(".") and (
-                    file_name.endswith(".js") or file_name.endswith(".py")
+                if (
+                    not file_name.startswith(".")
+                    and not file_name.startswith("__init__")
+                    and (file_name.endswith(".js") or file_name.endswith(".py"))
                 ):
                     file_path = os.path.join(root, file_name)
                     print(f"Reading file: {file_path}")
@@ -72,15 +87,42 @@ class MyCodebase:
     def update_file(self, file_path):
         with open(file_path, "r") as file:
             text = file.read()
-            embedding = self.encode(text)
+            embedding = pickle.dumps(self.encode(text))
 
             # The dict's key is the file path, and value is a dict containing the text and embedding
-            self.file_dict[file_path] = {"text": text, "embedding": embedding}
+            self.cur.execute(
+                sql.SQL(
+                    """
+            INSERT INTO files (file_path, text, embedding)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (file_path)
+            DO UPDATE SET text = %s, embedding = %s
+            """,
+                ),
+                (file_path, text, embedding, text, embedding),
+            )
+            self.conn.commit()
 
         # Update the embeddings array from the file_dict
-        self.embeddings = np.array(
-            [file["embedding"] for file in self.file_dict.values()]
+        self.cur.execute(
+            """
+            SELECT embedding FROM files
+        """
         )
+        self.embeddings = np.array([bytes(file[0]) for file in self.cur.fetchall()])
+
+    def create_tables(self):
+        self.cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS files (
+                file_path TEXT PRIMARY KEY,
+                text TEXT,
+                embedding BYTEA
+            );
+            TRUNCATE TABLE files;
+        """
+        )
+        self.conn.commit()
 
     @retry(
         wait=wait_random_exponential(min=1, max=20),
@@ -143,25 +185,8 @@ class MyCodebase:
         # Build the tree string starting from the root
         return build_tree_string(tree)
 
-    def _file_lookup(self, file_names: List[str]) -> List[str]:
-        out = []
-        for name in file_names:
-            resolved_name = os.path.basename(name)
-            for file in self.files:
-                if os.path.basename(file["name"]) == resolved_name:
-                    out.append(file["content"])
-                    break
-            else:
-                raise ValueError(f"File {name} not found in the database.")
-        return out
-
 
 if __name__ == "__main__":
     # Example usage:
     db = MyCodebase(directory="../")
     print(db.tree())
-
-    # results = db.search(query="open_ai_schema")
-
-    # for file_name, content in results:
-    #     print(f"File: {file_name}\nContent: {content}\n\n")

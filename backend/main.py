@@ -34,6 +34,7 @@ def code_search(query: str) -> str:
     """
     Search the Human's codebase to see the most up to date code. This is useful when
     you are responsding to a question from the Human but were not given complete information.
+    The function returns the top 2 results which will be the whole file's content.
     """
     return codebase.search(query)
 
@@ -73,3 +74,15 @@ async def update_system_prompt(input: dict):
     agent.memory_manager.set_system(input.get("system_prompt"))
     print(agent.memory_manager.system)
     return HTTPStatus(200)
+
+
+@app.get("/get_functions")
+async def get_functions():
+    print(agent.functions)
+    return {"functions": agent.functions}
+
+
+@app.get("/current_messages")
+async def get_current_messages():
+    print(agent.memory_manager.display_conversation_html())
+    return {"messages": agent.memory_manager.display_conversation_html()}

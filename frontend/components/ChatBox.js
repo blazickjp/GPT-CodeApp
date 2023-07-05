@@ -8,7 +8,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 
 
-
 const encoding = get_encoding("cl100k_base");
 
 const Chatbox = ({ messages }) => {
@@ -40,12 +39,14 @@ const Chatbox = ({ messages }) => {
             {messages.map((message, index) => {
                 const tokens = encoding.encode(message.text);
                 return (
-                    <div key={index} className={message.user === 'human' ? "bg-gray-700 text-white py-5" : "bg-gray-600 p-5 text-white"}>
-                        <ReactMarkdown className="mx-auto w-1/2" children={message.text} components={{ code: CodeBlock }} />
-                        <FontAwesomeIcon icon={faInfoCircle} className="top-2 left-2 cursor-pointer" data-tip data-for={`tokenTip${index}`} />
-                        <ReactTooltip id={`tokenTip${index}`} place="top" effect='solid' delayHide={500} globalEventOff='mouseout'>
-                            Tokens: {tokens.length}
-                        </ReactTooltip>
+                    <div key={index} className={message.user === 'human' ? "bg-gray-700 text-white p-5" : "bg-gray-600 p-5 text-white"}>
+                        <div className='flex flex-row w-1/2 mx-auto'>
+                            <FontAwesomeIcon icon={faInfoCircle} className="cursor-pointer mr-5" data-tip data-for={`tokenTip${index}`} />
+                            <ReactTooltip id={`tokenTip${index}`} place="top" effect='solid' delayHide={500} globalEventOff='mouseout'>
+                                Tokens: {tokens.length}
+                            </ReactTooltip>
+                            <ReactMarkdown children={message.text} components={{ code: CodeBlock }} />
+                        </div>
                     </div>
                 )
             })}
