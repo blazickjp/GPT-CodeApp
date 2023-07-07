@@ -2,85 +2,89 @@ import React, { useState, useEffect } from 'react';
 import { w3cwebsocket as W3CWebSocket } from 'websocket';
 import ChatBox from '../components/ChatBox';
 import Modal from 'react-modal';
+import { get_encoding } from "@dqbd/tiktoken";
+import ModalBar from '../components/ModalBar';
 
-
-
-
+const encoding = get_encoding("cl100k_base");
 const client = new W3CWebSocket('ws://127.0.0.1:8000/ws');
 Modal.setAppElement('#__next');
-
-
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [systemPrompt, setSystemPrompt] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editablePrompt, setEditablePrompt] = useState("");
-  const [functions, setFunctions] = useState([]);
-  const [isFunctionModalOpen, setIsFunctionModalOpen] = useState(false);
 
-
-
-  const fetchSystemPromptAndOpenModal = () => {
-    fetch('http://127.0.0.1:8000/system_prompt')
+  const fetchMessagesAndOpenModal = (modal = true) => {
+    setMessages([]);
+    fetch('http://127.0.0.1:8000/get_messages')
       .then(response => response.json())
       .then(data => {
-        setEditablePrompt(data.system_prompt);
-        setSystemPrompt(data.system_prompt);
-        setIsModalOpen(true);
+        console.log(data.messages);
+        data.messages.forEach(message => {
+          setMessages(prevMessages => [...prevMessages, { text: message.content, user: message.role }]);
+        });
+        // let m_tokens = 0;
+        // for (const message of data.messages) {
+        //     console.log(message);
+        //     m_tokens += encoding.encode(message.content).length;
+        // }
+        // console.log(m_tokens);
+        // setMessageTokens(m_tokens);
       })
       .catch(console.error);
   };
-
-  const fetchFunctionsAndOpenModal = () => {
-    fetch('http://127.0.0.1:8000/get_functions')
-      .then(response => response.json())
-      .then(data => {
-        setFunctions(data.functions);
-        setIsFunctionModalOpen(true);
-      })
-      .catch(console.error);
-  };
-
-  const updateSystemPrompt = (e) => {
-    e.preventDefault();
-    fetch('http://127.0.0.1:8000/update_system', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system_prompt: editablePrompt }),
-    })
-      .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
-        setSystemPrompt(editablePrompt); // Update original systemPrompt
-        setIsModalOpen(false); // Close modal
-      })
-      .catch(console.error);
-  };
-
-
 
   useEffect(() => {
     let currentId = null;
-    client.onopen = () => {
-      console.log('WebSocket Client Connected');
+    const connect = () => {
+
+      client.onopen = () => {
+        console.log('WebSocket Client Connected');
+        fetchMessagesAndOpenModal(false);
+        console.log(messages)
+      };
+
+      client.onmessage = (message) => {
+        const messageData = JSON.parse(message.data);
+        // console.log(message.data);
+        let id = messageData.id;
+        let content = messageData.content;
+        if (id != currentId) {
+          setMessages(prevMessages => [...prevMessages, { text: content, user: 'ai' }]);
+          currentId = id;
+        } else {
+          setMessages(prevMessages => {
+            // console.log(prevMessages);
+            const lastMessage = { ...prevMessages[prevMessages.length - 1] };
+            lastMessage.text = lastMessage.text + content;
+            return [...prevMessages.slice(0, prevMessages.length - 1), lastMessage];
+          })
+        }
+      };
+
+      client.onclose = (event) => {
+        console.log('WebSocket connection closed');
+        if (event.wasClean) {
+          console.log(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+        } else {
+          // e.g. server process killed or network down
+          // event.code is usually 1006 in this case
+          console.log('[close] Connection died');
+          // Reconnect after a delay
+          setTimeout(connect, 5000); // 5 second delay
+        }
+      };
+
+      client.onerror = (error) => {
+        console.log('WebSocket Client Error', error);
+      };
     };
-    client.onmessage = (message) => {
-      const messageData = JSON.parse(message.data);
-      // console.log(message.data);
-      const id = messageData.id;
-      const content = messageData.content;
-      if (id != currentId) {
-        setMessages(prevMessages => [...prevMessages, { text: content, user: 'ai' }]);
-        currentId = id;
-      } else {
-        setMessages(prevMessages => {
-          const lastMessage = { ...prevMessages[prevMessages.length - 1] };
-          lastMessage.text = lastMessage.text + content;
-          return [...prevMessages.slice(0, prevMessages.length - 1), lastMessage];
-        })
-      }
+
+    connect();
+
+    return () => {
+      client.close();
     };
+
   }, []);
 
 
@@ -103,63 +107,8 @@ const Chat = () => {
       <div className="p-4 h-1/8">
         <h1 className="text-4xl font-bold text-center text-dark-secondary">CodeGPT</h1>
       </div>
-      <div className='flex flex-row mx-auto'>
 
-        <div className='px-5'>
-          <button onClick={fetchSystemPromptAndOpenModal}>Show System Prompt</button>
-
-          <Modal
-            isOpen={isModalOpen}
-            onRequestClose={() => setIsModalOpen(false)}
-            className="fixed inset-0 flex items-center justify-center p-4"
-            overlayClassName="fixed inset-0 bg-black bg-opacity-50"
-          >
-            <div className="relative bg-white rounded p-4 w-full max-w-lg mx-auto text-gray-900">
-              <h2 className="text-xl">System Prompt</h2>
-              <form onSubmit={updateSystemPrompt}>
-                <textarea
-                  value={editablePrompt}
-                  onChange={(e) => setEditablePrompt(e.target.value)}
-                  className="mt-2 w-full"
-                />
-                <button
-                  type="submit"
-                  className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  Update System Prompt
-                </button>
-              </form>
-            </div>
-          </Modal>
-        </div>
-        <div className='px-5'>
-          <button onClick={fetchFunctionsAndOpenModal}>Show Functions</button>
-
-          <Modal
-            isOpen={isFunctionModalOpen}
-            onRequestClose={() => setIsFunctionModalOpen(false)}
-            className="fixed inset-0 flex items-center justify-center p-4"
-            overlayClassName="fixed inset-0 bg-black bg-opacity-50"
-          >
-            <div className="relative bg-white rounded p-4 w-full max-w-lg mx-auto text-gray-900 overflow-scroll">
-              <h2 className="text-xl">Functions</h2>
-              <pre>
-                {functions.map((f) => (
-                  <div key={f.name}>
-                    <h3 className="text-lg">{f.name}</h3>
-                    <p>{f.description}</p>
-                    <p className="text-sm">{f.signature}</p>
-                    <hr />
-                  </div>
-                ))}
-              </pre>
-            </div>
-          </Modal>
-
-        </div>
-      </div>
-
-
+      <ModalBar />
       <div className="flex-grow overflow-y-scroll" style={{ maxHeight: '75vh' }}>
         <ChatBox messages={messages} />
       </div>
@@ -176,7 +125,6 @@ const Chat = () => {
           />
           <button type="submit" className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full">Send</button>
         </form>
-
       </div>
     </div>
   );

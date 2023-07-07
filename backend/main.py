@@ -33,8 +33,9 @@ The structure of the codebase is as follows:
 def code_search(query: str) -> str:
     """
     Search the Human's codebase to see the most up to date code. This is useful when
-    you are responsding to a question from the Human but were not given complete information.
+    you are responsding to a question from the Human but need additional information from their code.
     The function returns the top 2 results which will be the whole file's content.
+    Your input query should be a string which semantically matches the code you are looking for.
     """
     return codebase.search(query)
 
@@ -49,6 +50,7 @@ agent = CodingAgent(
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+    accumulated_messages = {}
     try:
         while True:
             data = await websocket.receive_json()
@@ -56,11 +58,15 @@ async def websocket_endpoint(websocket: WebSocket):
             id = str(uuid4())
             for content in agent.query(prompt):
                 if content is not None:
-                    print(content)
+                    if id not in accumulated_messages:
+                        accumulated_messages[id] = ""
+                    accumulated_messages[id] += content
                     await websocket.send_json({"id": id, "content": content})
                     sys.stdout.flush()
+            agent.memory_manager.add_message("assistant", accumulated_messages[id])
+
     except WebSocketDisconnect:
-        # handle disconnection, e.g., cleanup operations, logging
+        accumulated_messages = {}
         print("WebSocket disconnected")
 
 
@@ -72,17 +78,24 @@ async def get_system_prompt():
 @app.post("/update_system")
 async def update_system_prompt(input: dict):
     agent.memory_manager.set_system(input.get("system_prompt"))
-    print(agent.memory_manager.system)
     return HTTPStatus(200)
 
 
 @app.get("/get_functions")
 async def get_functions():
-    print(agent.functions)
     return {"functions": agent.functions}
 
 
-@app.get("/current_messages")
-async def get_current_messages():
-    print(agent.memory_manager.display_conversation_html())
-    return {"messages": agent.memory_manager.display_conversation_html()}
+@app.get("/get_messages")
+async def get_messages():
+    if len(agent.memory_manager.messages) == 1:
+        return {"messages": []}
+    else:
+        return {"messages": agent.memory_manager.messages[1:]}
+
+
+@app.get("/get_summaries")
+async def get_summaries():
+    result = codebase.get_summaries()
+    print(result)
+    return {"summaries": result}

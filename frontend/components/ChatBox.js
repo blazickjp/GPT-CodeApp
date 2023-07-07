@@ -13,18 +13,19 @@ const encoding = get_encoding("cl100k_base");
 const Chatbox = ({ messages }) => {
     const chatboxRef = useRef(null);
 
-    const CodeBlock = ({ node }) => {
-        if (node.properties.className) {
-            const language = node.properties.className[0].replace("language-", "");
-            const value = node.children[0].value;
-            console.log("Language:", language);
-            console.log("Value:", value);
-            return (
-                <SyntaxHighlighter language={language} style={oneDark} >
-                    {value}
-                </SyntaxHighlighter>
-            );
-        }
+    const CodeBlock = ({ node, inline, className, children }) => {
+        const match = /language-(\w+)/.exec(className || '')
+        const lang = match && match[1] ? match[1] : ''
+        console.log("Language:", lang);
+        return !inline && match ? (
+            <SyntaxHighlighter language={lang} style={oneDark} >
+                {String(children)}
+            </SyntaxHighlighter>
+        ) : (
+            <code className={className} >
+                {children}
+            </code>
+        )
     };
 
     useEffect(() => {
@@ -45,7 +46,7 @@ const Chatbox = ({ messages }) => {
                             <ReactTooltip id={`tokenTip${index}`} place="top" effect='solid' delayHide={500} globalEventOff='mouseout'>
                                 Tokens: {tokens.length}
                             </ReactTooltip>
-                            <ReactMarkdown children={message.text} components={{ code: CodeBlock }} />
+                            <ReactMarkdown children={message.text} className='flex-grow' components={{ code: CodeBlock }} />
                         </div>
                     </div>
                 )

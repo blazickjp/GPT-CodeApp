@@ -171,7 +171,7 @@ class MemoryManager:
                 {"role": "system", "content": "You are a helpful AI assistant."},
                 {"role": "user", "content": prompt},
             ],
-            max_tokens=100,  # You can adjust this value
+            max_tokens=500,  # You can adjust this value
         )
 
         summary = response["choices"][0]["message"]["content"].strip()

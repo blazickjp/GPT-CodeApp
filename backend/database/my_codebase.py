@@ -3,6 +3,7 @@ import numpy as np
 import os
 import psycopg2
 import pickle
+import tiktoken
 
 # from typing import List
 from sklearn.metrics.pairwise import cosine_similarity
@@ -15,7 +16,15 @@ from psycopg2 import sql
 
 
 EMBEDDING_MODEL = "text-embedding-ada-002"
-# let's make sure to not retry on an invalid request, because that is what we want to demonstrate
+ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
+SUMMARY_MODEL = "gpt-3.5-turbo"
+SUMMARY_PROMPT = """
+Please summarise the following code. The code is part of a larger project and this summary will
+be used to help the AI Assistant understand the codebase when being prompted with questions.
+Please be consise and include all the important information.\n\n
+CODE:{}
+SUMMARY:
+"""
 
 
 class MyCodebase:
@@ -68,7 +77,6 @@ class MyCodebase:
         # Read and embed the files
         for root, dirs, files in os.walk(directory):
             dirs[:] = [d for d in dirs if d not in ignore_dirs]
-
             for file_name in files:
                 if (
                     not file_name.startswith(".")
@@ -88,18 +96,41 @@ class MyCodebase:
         with open(file_path, "r") as file:
             text = file.read()
             embedding = pickle.dumps(self.encode(text))
+            token_count = len(ENCODER.encode(text))
+            response = openai.ChatCompletion.create(
+                model=SUMMARY_MODEL,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": SUMMARY_PROMPT.format(text),
+                    },
+                ],
+                max_tokens=250,
+                temperature=0.4,
+            )
+            file_summary = response["choices"][0]["message"]["content"].strip()
 
             # The dict's key is the file path, and value is a dict containing the text and embedding
             self.cur.execute(
                 sql.SQL(
                     """
-            INSERT INTO files (file_path, text, embedding)
-            VALUES (%s, %s, %s)
+            INSERT INTO files (file_path, text, embedding, token_count, summary)
+            VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT (file_path)
-            DO UPDATE SET text = %s, embedding = %s
+            DO UPDATE SET text = %s, embedding = %s, token_count = %s, summary = %s, last_updated = CURRENT_TIMESTAMP
             """,
                 ),
-                (file_path, text, embedding, text, embedding),
+                (
+                    file_path,
+                    text,
+                    embedding,
+                    token_count,
+                    file_summary,
+                    text,
+                    embedding,
+                    token_count,
+                    file_summary,
+                ),
             )
             self.conn.commit()
 
@@ -117,7 +148,10 @@ class MyCodebase:
             CREATE TABLE IF NOT EXISTS files (
                 file_path TEXT PRIMARY KEY,
                 text TEXT,
-                embedding BYTEA
+                embedding BYTEA,
+                token_count INT,
+                summary TEXT,
+                last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
             TRUNCATE TABLE files;
         """
@@ -156,14 +190,26 @@ class MyCodebase:
 
         return out
 
+    def get_summaries(self):
+        self.cur.execute("SELECT file_path, summary FROM files")
+        results = self.cur.fetchall()
+        out = {}
+        for file_name, summary in results:
+            out.update({file_name: summary})
+        return out
+
     def tree(self, start_from="GPT-CodeApp"):
         """
         Return a string representing the tree of the files in the database.
         """
         tree = {}
 
+        # Fetch file paths from the database
+        self.cur.execute("SELECT file_path, summary FROM files")
+        file_paths = [result[0] for result in self.cur.fetchall()]
+
         # Insert each file into the tree structure
-        for file_path in self.file_dict:
+        for file_path in file_paths:
             parts = file_path.split(os.path.sep)
             # Find the start_from directory in the path and trim up to it
             if start_from in parts:

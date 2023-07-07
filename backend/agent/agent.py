@@ -54,7 +54,6 @@ class CodingAgent:
             stream=True,
         ):
             delta = chunk["choices"][0].get("delta", {})
-            accumulated_message = ""
 
             if "function_call" in delta:
                 if "name" in delta.function_call:
@@ -80,22 +79,9 @@ class CodingAgent:
                     stream=True,
                 ):
                     content = chunk["choices"][0].get("delta", {}).get("content")
-                    print(content)
-                    accumulated_message += content
-                    if chunk.choices[0].finish_reason == "stop":
-                        self.memory_manager.add_message(
-                            "assistant", accumulated_message
-                        )
                     yield content
             else:
-                content = delta.get("content")
-                if content is not None:
-                    accumulated_message += content
-                    if chunk.choices[0].finish_reason == "stop":
-                        self.memory_manager.add_message(
-                            "assistant", accumulated_message
-                        )
-                    yield content
+                yield delta.get("content")
 
 
 if __name__ == "__main__":
