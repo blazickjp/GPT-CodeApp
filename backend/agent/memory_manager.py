@@ -84,17 +84,7 @@ class MemoryManager:
 
         # Create a cursor object
         self.cur = self.conn.cursor()
-
-        # Create the table if it doesn't exist
-        self.cur.execute(
-            """
-        CREATE TABLE IF NOT EXISTS memory (
-            interaction_index BIGINT PRIMARY KEY,
-            memory_item JSONB NOT NULL
-        )
-        """
-        )
-        # self.cur.execute("TRUNCATE memory")
+        self.create_tables()
         self.conn.commit()
 
     def add_message(self, role, content, override_truncate=False):
@@ -195,39 +185,6 @@ class MemoryManager:
             total_tokens += num_tokens
         return total_tokens
 
-    def display_conversation(self, detailed=False):
-        role_to_color = {
-            "system": "red",
-            "user": "green",
-            "assistant": "blue",
-            "function": "magenta",
-        }
-        for message in self.messages:
-            print(
-                colored(
-                    f"{message['role']}: {message['content']}\n\n",
-                    role_to_color[message["role"]],
-                )
-            )
-
-    def display_conversation_html(self, detailed=False):
-        role_to_color = {
-            "system": "#FF0000",
-            "user": "#00FF00",
-            "assistant": "#0000FF",
-            "function": "#FF00FF",
-        }
-        conversation_html = ""
-        for message in self.messages:
-            color = role_to_color.get(message["role"], "#000000")
-            # escape markdown specific characters
-            content = message["content"].replace("<", "&lt;").replace(">", "&gt;")
-            # wrap content in a div with a color style
-            conversation_html += f"""
-            <div style="color: {color}"><strong>{message["role"].capitalize()}:</strong><br>{content}</div><br>
-            """
-        return conversation_html
-
     def load_memory(self):
         # Retrieve all memory items from the database
         self.cur.execute(
@@ -254,6 +211,19 @@ class MemoryManager:
             "content": self.system,
             "interaction_index": self.messages[0]["interaction_index"],
         }
+
+    def create_tables(self):
+        # Create the table if it doesn't exist
+        self.cur.execute(
+            """
+        CREATE TABLE IF NOT EXISTS memory (
+            interaction_index BIGINT PRIMARY KEY,
+            memory_item JSONB NOT NULL,
+            role TEXT NOT NULL
+        )
+        """
+        )
+        return
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ import os
 import psycopg2
 import pickle
 import tiktoken
+import datetime
 
 # from typing import List
 from sklearn.metrics.pairwise import cosine_similarity
@@ -19,9 +20,8 @@ EMBEDDING_MODEL = "text-embedding-ada-002"
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 SUMMARY_MODEL = "gpt-3.5-turbo"
 SUMMARY_PROMPT = """
-Please summarise the following code. The code is part of a larger project and this summary will
-be used to help the AI Assistant understand the codebase when being prompted with questions.
-Please be consise and include all the important information.\n\n
+Please summarise the following what the following code is doing.
+Please be consise and include all the important informastion.\n\n
 CODE:{}
 SUMMARY:
 """
@@ -80,11 +80,10 @@ class MyCodebase:
             for file_name in files:
                 if (
                     not file_name.startswith(".")
-                    and not file_name.startswith("__init__")
+                    and not file_name.startswith("_")
                     and (file_name.endswith(".js") or file_name.endswith(".py"))
                 ):
                     file_path = os.path.join(root, file_name)
-                    print(f"Reading file: {file_path}")
                     self.update_file(file_path)
 
         # Build the embeddings array from the file_dict
@@ -93,8 +92,29 @@ class MyCodebase:
         )
 
     def update_file(self, file_path):
+        self.cur.execute(
+            sql.SQL(
+                """
+                SELECT last_updated FROM files WHERE file_path = %s
+                """
+            ),
+            (file_path,),
+        )
+        self.conn.commit()
+        result = self.cur.fetchall()
         with open(file_path, "r") as file:
             text = file.read()
+            last_modified = datetime.datetime.fromtimestamp(
+                os.path.getmtime(file_path)
+            ).replace(microsecond=0)
+
+            if len(result) > 0:
+                if result[0][0] >= last_modified:
+                    print(f"File {file_path} is up to date")
+                    return
+                else:
+                    print(f"Updating file {file_path}")
+
             embedding = pickle.dumps(self.encode(text))
             token_count = len(ENCODER.encode(text))
             response = openai.ChatCompletion.create(
@@ -114,11 +134,11 @@ class MyCodebase:
             self.cur.execute(
                 sql.SQL(
                     """
-            INSERT INTO files (file_path, text, embedding, token_count, summary)
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (file_path)
-            DO UPDATE SET text = %s, embedding = %s, token_count = %s, summary = %s, last_updated = CURRENT_TIMESTAMP
-            """,
+                    INSERT INTO files (file_path, text, embedding, token_count, summary, last_updated)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (file_path)
+                    DO UPDATE SET text = %s, embedding = %s, token_count = %s, summary = %s, last_updated = %s
+                    """,
                 ),
                 (
                     file_path,
@@ -126,10 +146,12 @@ class MyCodebase:
                     embedding,
                     token_count,
                     file_summary,
+                    last_modified,
                     text,
                     embedding,
                     token_count,
                     file_summary,
+                    last_modified,
                 ),
             )
             self.conn.commit()
@@ -153,7 +175,6 @@ class MyCodebase:
                 summary TEXT,
                 last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
-            TRUNCATE TABLE files;
         """
         )
         self.conn.commit()
@@ -201,6 +222,7 @@ class MyCodebase:
     def tree(self, start_from="GPT-CodeApp"):
         """
         Return a string representing the tree of the files in the database.
+        TODO: Configure start_from so it's not hardcoded
         """
         tree = {}
 

@@ -1,13 +1,20 @@
+import sys
+import psycopg2
+import os
+
 from http import HTTPStatus
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-import sys
 from uuid import uuid4
 from agent.agent import CodingAgent
 from agent.memory_manager import MemoryManager
 from database.my_codebase import MyCodebase
 from agent.openai_function_call import openai_function
 
+conn = psycopg2.connect(
+    host="localhost", database="memory", user="joe", password="1234"
+)
+cur = conn.cursor()
 
 app = FastAPI()
 
@@ -96,6 +103,15 @@ async def get_messages():
 
 @app.get("/get_summaries")
 async def get_summaries():
-    result = codebase.get_summaries()
-    print(result)
-    return {"summaries": result}
+    cur.execute("SELECT DISTINCT file_path, summary, token_count FROM files")
+    results = cur.fetchall()
+    result = [
+        {
+            "file_path": os.path.basename(file_path),
+            "summary": summary,
+            "token_count": token_count,
+        }
+        for file_path, summary, token_count in results
+    ]
+    print(results)
+    return result

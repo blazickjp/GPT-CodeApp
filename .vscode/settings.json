@@ -2,5 +2,9 @@
     "[python]": {
         "editor.defaultFormatter": "ms-python.black-formatter"
     },
+    "python.linting.flake8Args": [
+        "--max-line-length=120",
+        "--ignore=E203,F841,F401,E302,E305,W503",
+    ],
     "python.formatting.provider": "none"
 }

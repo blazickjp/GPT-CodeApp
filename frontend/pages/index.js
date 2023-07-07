@@ -4,6 +4,14 @@ import ChatBox from '../components/ChatBox';
 import Modal from 'react-modal';
 import { get_encoding } from "@dqbd/tiktoken";
 import ModalBar from '../components/ModalBar';
+import RightSidebar from '../components/RightSidebar';
+import { FiMenu } from 'react-icons/fi';
+import { AiOutlineClose } from 'react-icons/ai';
+import { FaRegWindowMinimize } from 'react-icons/fa';
+import { FaRegWindowMaximize } from 'react-icons/fa';
+import { FaRegWindowRestore } from 'react-icons/fa';
+import { FaRegWindowClose } from 'react-icons/fa';
+
 
 const encoding = get_encoding("cl100k_base");
 const client = new W3CWebSocket('ws://127.0.0.1:8000/ws');
@@ -12,6 +20,12 @@ Modal.setAppElement('#__next');
 const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!isSidebarOpen);
+  };
+
 
   const fetchMessagesAndOpenModal = (modal = true) => {
     setMessages([]);
@@ -104,11 +118,15 @@ const Chat = () => {
 
   return (
     <div className="flex flex-col bg-gray-800 h-screen">
-      <div className="p-4 h-1/8">
-        <h1 className="text-4xl font-bold text-center text-dark-secondary">CodeGPT</h1>
+      <div className="flex flex-row p-4 h-1/8 mx-auto">
+        <h1 className="text-4xl font-bold text-center text-dark-secondary px-5">CodeGPT</h1>
+        <button onClick={toggleSidebar} className="float-right">
+          <FiMenu className="mr-2" />
+        </button>
       </div>
 
       <ModalBar />
+      <RightSidebar isSidebarOpen={isSidebarOpen} />
       <div className="flex-grow overflow-y-scroll" style={{ maxHeight: '75vh' }}>
         <ChatBox messages={messages} />
       </div>
