@@ -85,34 +85,32 @@ class CodingAgent:
 
 
 if __name__ == "__main__":
-    from memory_manager import MemoryManager
-    from functions import class_lookup
+    # from memory_manager import MemoryManager
+    pass
 
-    FUNCTIONS = [class_lookup.openai_schema]
+    # memory_manager = MemoryManager(model=GPT_MODEL)
+    # agent = CodingAgent(memory_manager, functions=FUNCTIONS)
 
-    memory_manager = MemoryManager(model=GPT_MODEL)
-    agent = CodingAgent(memory_manager, functions=FUNCTIONS)
+    # response = agent.query("What's the weather like in Boston?")
+    # # print(response)
 
-    response = agent.query("What's the weather like in Boston?")
-    # print(response)
+    # response1 = agent.query("What is the capital of France?")
+    # # print(response1)
 
-    response1 = agent.query("What is the capital of France?")
-    # print(response1)
+    # response2 = agent.query("Tell me more about its history.")
+    # # print(response2)
+    # # print(f"Total Tokens: {agent.memory_manager.get_total_tokens()}")
 
-    response2 = agent.query("Tell me more about its history.")
-    # print(response2)
+    # response2 = agent.query(
+    #     """
+    #     Write a python script using the GitLoader class from Langchain to load and parse
+    #     the files from the pandas package. Use the master branch.
+    # """
+    # )
+    # # print(response2)
+
     # print(f"Total Tokens: {agent.memory_manager.get_total_tokens()}")
-
-    response2 = agent.query(
-        """
-        Write a python script using the GitLoader class from Langchain to load and parse
-        the files from the pandas package. Use the master branch.
-    """
-    )
-    # print(response2)
-
-    print(f"Total Tokens: {agent.memory_manager.get_total_tokens()}")
-    print(f"Total Messages: {len(agent.memory_manager.messages)}")
-    memory_manager.display_conversation()
-    memory_manager.summarize_history()
-    memory_manager.display_conversation()
+    # print(f"Total Messages: {len(agent.memory_manager.messages)}")
+    # memory_manager.display_conversation()
+    # memory_manager.summarize_history()
+    # memory_manager.display_conversation()

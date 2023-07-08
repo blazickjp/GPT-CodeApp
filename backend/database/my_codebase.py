@@ -5,6 +5,7 @@ import psycopg2
 import pickle
 import tiktoken
 import datetime
+import subprocess
 
 # from typing import List
 from sklearn.metrics.pairwise import cosine_similarity
@@ -19,12 +20,26 @@ from psycopg2 import sql
 EMBEDDING_MODEL = "text-embedding-ada-002"
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 SUMMARY_MODEL = "gpt-3.5-turbo"
+README_MODEL = "gpt-4"
 SUMMARY_PROMPT = """
 Please summarise the following what the following code is doing.
 Please be consise and include all the important informastion.\n\n
 CODE:{}
 SUMMARY:
 """
+
+
+def get_git_root(path):
+    try:
+        root = (
+            subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=path)
+            .decode("utf-8")
+            .strip()
+        )
+        return root
+    except Exception as e:
+        print(e)
+        return None
 
 
 class MyCodebase:
@@ -86,6 +101,7 @@ class MyCodebase:
                     file_path = os.path.join(root, file_name)
                     self.update_file(file_path)
 
+        self.remove_old_files()
         # Build the embeddings array from the file_dict
         self.embeddings = np.array(
             [file["embedding"] for file in self.file_dict.values()]
@@ -219,6 +235,42 @@ class MyCodebase:
             out.update({file_name: summary})
         return out
 
+    def generate_readme(self):
+        """
+        Generate an updated README.md file for the repository.
+        """
+        # Gather summaries
+        summaries = self.get_summaries()
+        content = """
+        Please use the descriptions below to update the README.md file for this repository.
+        Descriptions of Files: {}
+        Current README.md: {}
+        New README.md:"""
+        file_summaries = ""
+        root = get_git_root(".")
+
+        with open(root + "/README.md", "r") as file:
+            current_readme = file.read()
+
+        for file_path, summary in summaries.items():
+            file_summaries += f"File: {file_path}\nDescription: {summary}\n\n"
+
+        messages = [
+            {
+                "role": "system",
+                "content": content.format(current_readme, summaries),
+            }
+        ]
+
+        # Call OpenAI
+        response = openai.ChatCompletion.create(
+            model=README_MODEL, messages=messages, max_tokens=500, temperature=0.4
+        )
+
+        # Get project summary
+        project_summary = response["choices"][0]["message"]["content"].strip()
+        return project_summary
+
     def tree(self, start_from="GPT-CodeApp"):
         """
         Return a string representing the tree of the files in the database.
@@ -252,6 +304,25 @@ class MyCodebase:
 
         # Build the tree string starting from the root
         return build_tree_string(tree)
+
+    def remove_old_files(self):
+        """
+        Remove files from the database that are no longer present in the codebase.
+        """
+        self.cur.execute("SELECT file_path FROM files")
+        file_paths = [result[0] for result in self.cur.fetchall()]
+        for file_path in file_paths:
+            if not os.path.exists(file_path) or file_path in self.file_dict.keys():
+                self.cur.execute(
+                    sql.SQL(
+                        """
+                        DELETE FROM files WHERE file_path = %s
+                        """
+                    ),
+                    (file_path,),
+                )
+                self.conn.commit()
+                print(f"****    Removed file {file_path} from the database    *****")
 
 
 if __name__ == "__main__":

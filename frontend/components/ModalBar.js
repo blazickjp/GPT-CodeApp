@@ -90,17 +90,14 @@ const ModalBar = () => {
         fetchFunctionsAndOpenModal(false);
     }, []); //
     return (
-        <div className='flex flex-row mx-auto py-5'>
-
-            <div className='px-5'>
+        <div className='flex flex-row mx-auto pb-3'>
+            <div>
                 <button onClick={fetchSystemPromptAndOpenModal}>
                     System Prompt:
                     <span className="ml-2 inline-block bg-green-500 text-white text-xs px-2 rounded-full uppercase font-semibold tracking-wide">
                         {systemTokens} tokens
                     </span>
-
                 </button>
-
                 <Modal
                     isOpen={isModalOpen}
                     onRequestClose={() => setIsModalOpen(false)}

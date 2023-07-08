@@ -2,7 +2,6 @@ import openai
 import json
 import time
 import psycopg2
-from termcolor import colored
 import tiktoken
 
 

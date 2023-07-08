@@ -1,6 +1,7 @@
 import sys
 import psycopg2
 import os
+import subprocess
 
 from http import HTTPStatus
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -8,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from uuid import uuid4
 from agent.agent import CodingAgent
 from agent.memory_manager import MemoryManager
-from database.my_codebase import MyCodebase
+from database.my_codebase import MyCodebase, get_git_root
 from agent.openai_function_call import openai_function
 
 conn = psycopg2.connect(
@@ -105,13 +106,20 @@ async def get_messages():
 async def get_summaries():
     cur.execute("SELECT DISTINCT file_path, summary, token_count FROM files")
     results = cur.fetchall()
+    root_path = get_git_root(".")
     result = [
         {
-            "file_path": os.path.basename(file_path),
+            "file_path": os.path.relpath(file_path, root_path),
             "summary": summary,
             "token_count": token_count,
         }
         for file_path, summary, token_count in results
     ]
-    print(results)
+    result = sorted(result, key=lambda x: x["file_path"])
     return result
+
+
+@app.get("/generate_readme")
+async def generate_readme():
+    # readme = codebase.generate_readme()
+    return {"readme": "Deprecated"}

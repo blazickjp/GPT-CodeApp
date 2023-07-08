@@ -119,6 +119,9 @@ const Chat = () => {
   return (
     <div className="flex flex-col bg-gray-800 h-screen">
       <div className="flex flex-row p-4 h-1/8 mx-auto">
+        <button className="float-left">
+          <FiMenu className="ml-2" />
+        </button>
         <h1 className="text-4xl font-bold text-center text-dark-secondary px-5">CodeGPT</h1>
         <button onClick={toggleSidebar} className="float-right">
           <FiMenu className="mr-2" />
