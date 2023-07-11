@@ -2,6 +2,7 @@ import sys
 import psycopg2
 import os
 import subprocess
+import tiktoken
 
 from http import HTTPStatus
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -30,11 +31,22 @@ app.add_middleware(
 codebase = MyCodebase("../")
 tree = codebase.tree()
 
-SYSTEM_PROMPT = f"""
-You are an AI Coding assistant and a world class python programmer helping me work on a project.
-The structure of the codebase is as follows:
-{tree}
+SYSTEM_PROMPT = """
+You are an AI Pair Prograamer and a world class python developer helping the Humar work on a project.
+
+#### Project Details and Contextual Information ####
+The directory structure of the codebase is as follows:
+{}
+
+File Contents the Human has included to assist you in your work:
+{}
+
+File Summaries the Human has included to assist you in your work:
+{}
+
+Happy Programming!
 """
+ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
 
 @openai_function
@@ -49,7 +61,10 @@ def code_search(query: str) -> str:
 
 
 agent = CodingAgent(
-    MemoryManager(model="gpt-3.5-turbo-0613", system=SYSTEM_PROMPT),
+    MemoryManager(
+        model="gpt-3.5-turbo-0613",
+        system=SYSTEM_PROMPT.format(tree, "None", "None", "None"),
+    ),
     functions=[code_search.openai_schema],
     callables=[code_search.func],
 )
@@ -107,11 +122,13 @@ async def get_summaries():
     cur.execute("SELECT DISTINCT file_path, summary, token_count FROM files")
     results = cur.fetchall()
     root_path = get_git_root(".")
+
     result = [
         {
             "file_path": os.path.relpath(file_path, root_path),
             "summary": summary,
-            "token_count": token_count,
+            "file_token_count": token_count,
+            "summary_token_count": len(ENCODER.encode(summary)),
         }
         for file_path, summary, token_count in results
     ]
@@ -123,3 +140,19 @@ async def get_summaries():
 async def generate_readme():
     # readme = codebase.generate_readme()
     return {"readme": "Deprecated"}
+
+
+@app.post("/set_summary_files_in_prompt")
+async def set_summary_files_in_prompt(input: dict):
+    # files = input.get("files")
+    # files = [codebase.get_file_path(file) for file in files]
+    # agent.memory_manager.set_summary_files(files)
+    return HTTPStatus(200)
+
+
+@app.post("/set_files_in_prompt")
+async def set_files_in_prompt(input: dict):
+    # files = input.get("files")
+    # files = [codebase.get_file_path(file) for file in files]
+    # agent.memory_manager.set_files(files)
+    return HTTPStatus(200)

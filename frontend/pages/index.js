@@ -36,13 +36,6 @@ const Chat = () => {
         data.messages.forEach(message => {
           setMessages(prevMessages => [...prevMessages, { text: message.content, user: message.role }]);
         });
-        // let m_tokens = 0;
-        // for (const message of data.messages) {
-        //     console.log(message);
-        //     m_tokens += encoding.encode(message.content).length;
-        // }
-        // console.log(m_tokens);
-        // setMessageTokens(m_tokens);
       })
       .catch(console.error);
   };
@@ -127,7 +120,6 @@ const Chat = () => {
           <FiMenu className="mr-2" />
         </button>
       </div>
-
       <ModalBar />
       <RightSidebar isSidebarOpen={isSidebarOpen} />
       <div className="flex-grow overflow-y-scroll" style={{ maxHeight: '75vh' }}>
