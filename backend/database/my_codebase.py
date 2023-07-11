@@ -29,7 +29,7 @@ SUMMARY:
 """
 
 
-def get_git_root(path):
+def get_git_root(path="."):
     try:
         root = (
             subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=path)
@@ -235,41 +235,13 @@ class MyCodebase:
             out.update({file_name: summary})
         return out
 
-    def generate_readme(self):
-        """
-        Generate an updated README.md file for the repository.
-        """
-        # Gather summaries
-        summaries = self.get_summaries()
-        content = """
-        Please use the descriptions below to update the README.md file for this repository.
-        Descriptions of Files: {}
-        Current README.md: {}
-        New README.md:"""
-        file_summaries = ""
-        root = get_git_root(".")
-
-        with open(root + "/README.md", "r") as file:
-            current_readme = file.read()
-
-        for file_path, summary in summaries.items():
-            file_summaries += f"File: {file_path}\nDescription: {summary}\n\n"
-
-        messages = [
-            {
-                "role": "system",
-                "content": content.format(current_readme, summaries),
-            }
-        ]
-
-        # Call OpenAI
-        response = openai.ChatCompletion.create(
-            model=README_MODEL, messages=messages, max_tokens=500, temperature=0.4
-        )
-
-        # Get project summary
-        project_summary = response["choices"][0]["message"]["content"].strip()
-        return project_summary
+    def get_file_contents(self):
+        self.cur.execute("SELECT file_path, text FROM files")
+        results = self.cur.fetchall()
+        out = {}
+        for file_name, text in results:
+            out.update({file_name: text})
+        return out
 
     def tree(self, start_from="GPT-CodeApp"):
         """

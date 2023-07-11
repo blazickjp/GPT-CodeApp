@@ -1,12 +1,13 @@
 import sys
 import psycopg2
 import os
-import subprocess
 import tiktoken
 
 from http import HTTPStatus
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
 from uuid import uuid4
 from agent.agent import CodingAgent
 from agent.memory_manager import MemoryManager
@@ -30,22 +31,6 @@ app.add_middleware(
 
 codebase = MyCodebase("../")
 tree = codebase.tree()
-
-SYSTEM_PROMPT = """
-You are an AI Pair Prograamer and a world class python developer helping the Humar work on a project.
-
-#### Project Details and Contextual Information ####
-The directory structure of the codebase is as follows:
-{}
-
-File Contents the Human has included to assist you in your work:
-{}
-
-File Summaries the Human has included to assist you in your work:
-{}
-
-Happy Programming!
-"""
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
 
@@ -63,7 +48,7 @@ def code_search(query: str) -> str:
 agent = CodingAgent(
     MemoryManager(
         model="gpt-3.5-turbo-0613",
-        system=SYSTEM_PROMPT.format(tree, "None", "None", "None"),
+        tree=tree,
     ),
     functions=[code_search.openai_schema],
     callables=[code_search.func],
@@ -101,7 +86,7 @@ async def get_system_prompt():
 @app.post("/update_system")
 async def update_system_prompt(input: dict):
     agent.memory_manager.set_system(input.get("system_prompt"))
-    return HTTPStatus(200)
+    return JSONResponse(status_code=200, content={})
 
 
 @app.get("/get_functions")
@@ -111,10 +96,10 @@ async def get_functions():
 
 @app.get("/get_messages")
 async def get_messages():
-    if len(agent.memory_manager.messages) == 1:
-        return {"messages": []}
-    else:
-        return {"messages": agent.memory_manager.messages[1:]}
+    # if len(agent.memory_manager.messages) == 1:
+    #     return {"messages": []}
+    # else:
+    return {"messages": agent.memory_manager.messages}
 
 
 @app.get("/get_summaries")
@@ -138,21 +123,26 @@ async def get_summaries():
 
 @app.get("/generate_readme")
 async def generate_readme():
-    # readme = codebase.generate_readme()
     return {"readme": "Deprecated"}
 
 
 @app.post("/set_summary_files_in_prompt")
 async def set_summary_files_in_prompt(input: dict):
-    # files = input.get("files")
-    # files = [codebase.get_file_path(file) for file in files]
-    # agent.memory_manager.set_summary_files(files)
-    return HTTPStatus(200)
+    files = [os.path.join(get_git_root(), file) for file in input.get("files")]
+    summaries = codebase.get_summaries()
+    summaries = [f"{k}:\n{v}" for k, v in summaries.items() if k in files]
+    additional_system_prompt_summaries = "\n\n".join(summaries)
+    agent.memory_manager.system_file_summaries = additional_system_prompt_summaries
+    agent.memory_manager.set_system()
+    return {}, HTTPStatus(400)
 
 
 @app.post("/set_files_in_prompt")
 async def set_files_in_prompt(input: dict):
-    # files = input.get("files")
-    # files = [codebase.get_file_path(file) for file in files]
-    # agent.memory_manager.set_files(files)
-    return HTTPStatus(200)
+    files = [os.path.join(get_git_root(), file) for file in input.get("files")]
+    content = codebase.get_file_contents()
+    content = [f"{k}:\n{v}" for k, v in content.items() if k in files]
+    additional_system_prompt_files = "\n\n".join(content)
+    agent.memory_manager.system_file_contents = additional_system_prompt_files
+    agent.memory_manager.set_system()
+    return HTTPStatus(404)

@@ -42,9 +42,7 @@ const ModalBar = () => {
                 if (modal) {
                     setIsFunctionModalOpen(true);
                 }
-                console.log(JSON.stringify(data.functions[0]));
                 const f_tokens = encoding.encode(JSON.stringify(data.functions[0]));
-                console.log(f_tokens);
                 setFunctionTokens(f_tokens.length);
             })
             .catch(console.error);
@@ -61,7 +59,6 @@ const ModalBar = () => {
                 }
                 let m_tokens = 0;
                 for (const message of data.messages) {
-                    console.log(message);
                     m_tokens += encoding.encode(message.content).length;
                 }
                 console.log(m_tokens);
@@ -169,9 +166,9 @@ const ModalBar = () => {
                     <div className="relative bg-gray-700 rounded p-4 max-w-screen-lg mx-auto text-gray-200 overflow-scroll">
                         <h2 className="text-xl text-white">Messages</h2>
                         {messageHistory.map((m, index) => (
-                            <div key={index} className={m.role === 'user' ? 'my-4 p-2 rounded bg-blue-600 text-white' : 'my-4 p-2 rounded bg-green-600 text-white'}>
+                            <div key={index} className={m.role === 'user' ? 'my-4 p-2 rounded bg-blue-600 text-black' : 'my-4 p-2 rounded bg-green-600 text-black'}>
                                 <h3 className="text-lg font-bold">{m.role.toUpperCase()}</h3>
-                                <p className="text-md">{m.content}</p>
+                                <textarea className="text-md">{m.content}</textarea>
                             </div>
                         ))}
                     </div>

@@ -92,12 +92,14 @@ const RightSidebar = ({ isSidebarOpen }) => {
             },
             body: JSON.stringify({ files: summariesInPrompt })
         }).then(response => {
+            console.log(response.status);
             if (response.status === 200) {
                 setSummaryStatus('success');
+                setTimeout(() => setSummaryStatus(''), 1000);
             } else {
-                // handle non-200 responses here
                 console.log(response.status)
                 setSummaryStatus('error');
+                setTimeout(() => setSummaryStatus(''), 1000);
             }
         }).catch(error => {
             // handle request errors here
@@ -117,10 +119,12 @@ const RightSidebar = ({ isSidebarOpen }) => {
         }).then(response => {
             if (response.status === 200) {
                 setFileStatus('success');
+                setTimeout(() => setFileStatus(''), 1000);
             } else {
                 // handle non-200 responses here
                 console.log(response.status)
                 setFileStatus('error');
+                setTimeout(() => setFileStatus(''), 1000);
             }
         }).catch(error => {
             // handle request errors here
@@ -149,9 +153,11 @@ const RightSidebar = ({ isSidebarOpen }) => {
                 <h2 className="text-2xl font-bold mb-4 text-gray-100">Summaries In Prompt</h2>
                 {summaryStatus === 'success' ? (
                     <BiCheckCircle className="text-green-500" />
+                ) : (summaryStatus === 'error' ? (
+                    <BiErrorCircle className="text-red-500" />
                 ) : (
                     <AiOutlineSend onClick={sendSummaryFiles} className="cursor-pointer" />
-                )}
+                ))}
             </div>
             {summariesInPrompt.map((summaryFile, index) => {
                 return (
@@ -164,12 +170,14 @@ const RightSidebar = ({ isSidebarOpen }) => {
             <hr className="border-gray-600 mb-4" />
 
             <div className="flex flex-row justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold mb-4 text-gray-100">Project File Summaries</h2>
+                <h2 className="text-2xl font-bold mb-4 text-gray-100">File Contents in Prompt</h2>
                 {fileStatus === 'success' ? (
                     <BiCheckCircle className="text-green-500" />
+                ) : (fileStatus === 'error' ? (
+                    <BiErrorCircle className="text-red-500" />
                 ) : (
                     <AiOutlineSend onClick={sendFiles} className="cursor-pointer" />
-                )}
+                ))}
             </div>
             {filesInPrompt.map((file, index) => {
                 return (

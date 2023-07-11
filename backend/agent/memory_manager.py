@@ -1,3 +1,4 @@
+import sys
 import openai
 import json
 import time
@@ -64,18 +65,22 @@ class MemoryManager:
         in the conversation history reaches the max_tokens limit.
     """
 
-    def __init__(self, model="gpt-3.5-turbo", system=None, max_tokens=1000):
+    def __init__(
+        self, model="gpt-3.5-turbo", identity=None, tree=None, max_tokens=1000
+    ):
         self.model = model
         self.max_tokens = max_tokens
-        self.system = "You are a helpful AI assistant." if not system else system
-        self.messages = [
-            {
-                "role": "system",
-                "content": self.system,
-                "interaction_index": time.time() * 1000,
-            }
-        ]
-        self.summary = ""
+        self.system = None
+        self.identity = (
+            "You are an AI Pair Programmer and a world class python developer helping the Human work on a project."
+            if not identity
+            else identity
+        )
+        self.tree = tree
+        self.system_file_summaries = None
+        self.system_file_contents = None
+        self.messages = []
+        self.set_system()
         # Connect to the PostgreSQL database
         self.conn = psycopg2.connect(
             host="localhost", database="memory", user="joe", password="1234"
@@ -92,8 +97,8 @@ class MemoryManager:
             {"role": role, "content": content, "interaction_index": timestamp}
         )
 
-        if not override_truncate and self.get_total_tokens() > self.max_tokens:
-            self.truncate_history()
+        # if not override_truncate and self.get_total_tokens() > self.max_tokens:
+        #     self.truncate_history()
 
     def truncate_history(self):
         """Truncate the history to fit within the max_tokens limit."""
@@ -145,29 +150,29 @@ class MemoryManager:
 
     def summarize_history(self):
         # Combine the content of all messages into a single string
-        full_history = "\n".join(
-            [
-                f"{item['role'].capitalize()}: {item['content']}"
-                for item in self.messages
-            ]
-        )
+        # full_history = "\n".join(
+        #     [
+        #         f"{item['role'].capitalize()}: {item['content']}"
+        #         for item in self.messages
+        #     ]
+        # )
 
         # Use Chat API to summarize the history
-        prompt = f"User: Please summarize the following conversation: \n{full_history}\n\nAssistant:"
-        response = openai.ChatCompletion.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": "You are a helpful AI assistant."},
-                {"role": "user", "content": prompt},
-            ],
-            max_tokens=500,  # You can adjust this value
-        )
+        # prompt = f"User: Please summarize the following conversation: \n{full_history}\n\nAssistant:"
+        # response = openai.ChatCompletion.create(
+        #     model=self.model,
+        #     messages=[
+        #         {"role": "system", "content": "You are a helpful AI assistant."},
+        #         {"role": "user", "content": prompt},
+        #     ],
+        #     max_tokens=500,  # You can adjust this value
+        # )
 
-        summary = response["choices"][0]["message"]["content"].strip()
+        # summary = response["choices"][0]["message"]["content"].strip()
         # Clear the messages and add the summarized history as a single system message
-        self.summary = summary
-        self.system = self.system + f"\n\nSummary of Conversation so far: {summary}"
-        self.messages = [{"role": "system", "content": self.system}]
+        # self.system = self.system + f"\n\nSummary of Conversation so far: {summary}"
+        # self.messages = [{"role": "system", "content": self.system}]
+        return
 
     def get_total_tokens_in_message(self, message):
         """Returns the number of tokens in a message."""
@@ -203,13 +208,49 @@ class MemoryManager:
         self.messages = items_to_load
         self.conn.commit()
 
-    def set_system(self, system):
+    def set_system(self, input: dict = {}):
+        """Set the system message."""
+
+        "Update the system prompt manually"
+        if len(input.keys()) != 0:
+            self.system = input.get("system")
+            return True
+
+        system = (
+            self.identity + "\n\n" + "********* Contextual Information *********\n\n"
+        )
+        system += (
+            "The project directory is setup as follows:\n" + self.tree + "\n\n"
+            if self.tree
+            else ""
+        )
+
+        system += (
+            "Summaries of Relted Files:\n" + self.system_file_summaries + "\n\n"
+            if self.system_file_summaries
+            else ""
+        )
+        system += (
+            "Related File Contents:\n" + self.system_file_contents + "\n\n"
+            if self.system_file_contents
+            else ""
+        )
         self.system = system
-        self.messages[0] = {
-            "role": "system",
-            "content": self.system,
-            "interaction_index": self.messages[0]["interaction_index"],
-        }
+
+        if len(self.messages) > 0:
+            self.messages[0] = {
+                "role": "system",
+                "content": self.system,
+                "interaction_index": self.messages[0]["interaction_index"],
+            }
+        else:
+            self.messages = [
+                {
+                    "role": "system",
+                    "content": self.system,
+                    "interaction_index": int(time.time() * 1000),
+                }
+            ]
 
     def create_tables(self):
         # Create the table if it doesn't exist
