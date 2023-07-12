@@ -1,9 +1,12 @@
 import sys
+import token
 import openai
 import json
 import time
 import psycopg2
 import tiktoken
+from datetime import datetime
+from uuid import uuid4
 
 
 class MemoryManager:
@@ -80,99 +83,96 @@ class MemoryManager:
         self.system_file_summaries = None
         self.system_file_contents = None
         self.messages = []
-        self.set_system()
-        # Connect to the PostgreSQL database
         self.conn = psycopg2.connect(
             host="localhost", database="memory", user="joe", password="1234"
         )
-
-        # Create a cursor object
         self.cur = self.conn.cursor()
         self.create_tables()
         self.conn.commit()
+        self.set_system()
 
-    def add_message(self, role, content, override_truncate=False):
-        timestamp = int(time.time() * 1000)  # Current timestamp in milliseconds
-        self.messages.append(
-            {"role": role, "content": content, "interaction_index": timestamp}
+    def get_messages(self):
+        self.cur.execute(
+            """
+            SELECT role, content
+            FROM system_prompt;
+            """
         )
-
-        # if not override_truncate and self.get_total_tokens() > self.max_tokens:
-        #     self.truncate_history()
-
-    def truncate_history(self):
-        """Truncate the history to fit within the max_tokens limit."""
-        print("Truncating history...")
-        total_tokens = sum(len(item["content"]) for item in self.messages)
-        while total_tokens > self.max_tokens // 2:
-            # Check if the message to be removed is the first message and is a system message
-            if len(self.messages) > 1:
-                removed_item = self.messages.pop(
-                    1
-                )  # Pop the second message instead of the first
-                total_tokens -= len(removed_item["content"])
-                self.archive_memory_item(removed_item)
-            else:
-                # If there is only the system message, do nothing.
+        results = self.cur.fetchall()
+        print(results)
+        messages = [{"role": result[0], "content": result[1]} for result in results]
+        self.cur.execute(
+            """
+            with t1 as (
+                SELECT role,
+                    COALESCE(summarized_message, content) as content,
+                    COALESCE(summarized_message_tokens, content_tokens) as tokens,
+                    sum(COALESCE(summarized_message_tokens, content_tokens)) OVER (ORDER BY interaction_index DESC) as token_cum_sum
+                FROM memory
+                ORDER BY interaction_index desc
+            )
+            select role, content, tokens
+            from t1
+            WHERE token_cum_sum <= %s
+            """,
+            (self.max_tokens,),
+        )
+        results = self.cur.fetchall()
+        tokens = 0
+        for result in results[::-1]:
+            tokens += result[2]
+            if tokens > self.max_tokens:
                 break
+            messages.append({"role": result[0], "content": result[1]})
 
-    def archive_memory_item(self, memory_item):
-        """Archive a memory item in the database."""
-        print("Archiving memory item...")
-        interaction_index = memory_item.get("interaction_index")
-        if interaction_index is not None:
-            interaction_index = int(interaction_index)  # Make sure it's an integer
-        else:
-            interaction_index = int(
-                time.time() * 1000
-            )  # Default to current timestamp in milliseconds
+        return messages
 
-        # Check if the content is already a JSON string
-        if isinstance(memory_item["content"], str):
-            # If it's already a JSON string, escape single quotes
-            memory_item_json = json.dumps(memory_item).replace("'", "''")
-        else:
-            # If it's a dictionary, convert it to a JSON string
-            memory_item_json = json.dumps(memory_item)
-
-        # Try to insert into the database
-        query = "INSERT INTO memory (interaction_index, memory_item) VALUES (%s, %s)"
-        while True:
-            try:
-                self.cur.execute(query, (interaction_index, memory_item_json))
-                self.conn.commit()
-                break
-            except psycopg2.errors.UniqueViolation as e:
-                print(e)
-                # If interaction_index already exists, increment it, rollback the transaction and retry
-                interaction_index += 1
-                self.conn.rollback()
-
-    def summarize_history(self):
-        # Combine the content of all messages into a single string
-        # full_history = "\n".join(
-        #     [
-        #         f"{item['role'].capitalize()}: {item['content']}"
-        #         for item in self.messages
-        #     ]
-        # )
-
-        # Use Chat API to summarize the history
-        # prompt = f"User: Please summarize the following conversation: \n{full_history}\n\nAssistant:"
-        # response = openai.ChatCompletion.create(
-        #     model=self.model,
-        #     messages=[
-        #         {"role": "system", "content": "You are a helpful AI assistant."},
-        #         {"role": "user", "content": prompt},
-        #     ],
-        #     max_tokens=500,  # You can adjust this value
-        # )
-
-        # summary = response["choices"][0]["message"]["content"].strip()
-        # Clear the messages and add the summarized history as a single system message
-        # self.system = self.system + f"\n\nSummary of Conversation so far: {summary}"
-        # self.messages = [{"role": "system", "content": self.system}]
+    def add_message(self, role, content):
+        timestamp = datetime.now().isoformat()  # Current timestamp in milliseconds
+        message_tokens = self.get_total_tokens_in_message(content)
+        summary, summary_tokens = (
+            self.summarize(content) if message_tokens > 200 else (None, None)
+        )
+        try:
+            self.cur.execute(
+                """
+                INSERT INTO memory
+                (interaction_index, role, content, content_tokens, summarized_message, summarized_message_tokens)
+                VALUES (%s, %s, %s, %s, %s, %s);
+                """,
+                (
+                    timestamp,
+                    role,
+                    content,
+                    message_tokens,
+                    summary,
+                    summary_tokens,
+                ),
+            )
+            self.conn.commit()
+        except Exception as e:
+            print("Failed to insert data: ", str(e))
         return
+
+    def summarize(self, message):
+        prompt = """Please summarize the following message. Reply only with the summary and do not
+        include any other text in your response.
+        MESSAGE: {}
+        SUMMARY:
+        """.format(
+            message
+        )
+        response = openai.ChatCompletion.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": "You are a helpful AI assistant."},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=250,  # You can adjust this value
+        )
+        summary = response["choices"][0]["message"]["content"].strip()
+        tokens = self.get_total_tokens_in_message(summary)
+        return summary, tokens
 
     def get_total_tokens_in_message(self, message):
         """Returns the number of tokens in a message."""
@@ -237,30 +237,42 @@ class MemoryManager:
         )
         self.system = system
 
-        if len(self.messages) > 0:
-            self.messages[0] = {
-                "role": "system",
-                "content": self.system,
-                "interaction_index": self.messages[0]["interaction_index"],
-            }
-        else:
-            self.messages = [
-                {
-                    "role": "system",
-                    "content": self.system,
-                    "interaction_index": int(time.time() * 1000),
-                }
-            ]
+        self.cur.execute(
+            """
+            TRUNCATE TABLE system_prompt;
+            INSERT INTO system_prompt
+            (role, content, content_tokens, updated_at)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (
+                "system",
+                self.system,
+                self.get_total_tokens_in_message(self.system),
+                datetime.now().isoformat(),
+            ),
+        )
 
     def create_tables(self):
         # Create the table if it doesn't exist
         self.cur.execute(
             """
         CREATE TABLE IF NOT EXISTS memory (
-            interaction_index BIGINT PRIMARY KEY,
-            memory_item JSONB NOT NULL,
-            role TEXT NOT NULL
-        )
+            interaction_index TIMESTAMP DEFAULT NOW(),
+            conversation_id TEXT,
+            role TEXT,
+            content TEXT,
+            content_tokens INT,
+            summarized_message TEXT,
+            summarized_message_tokens INT
+        );
+
+        CREATE TABLE IF NOT EXISTS system_prompt (
+            role TEXT,
+            content TEXT,
+            content_tokens INT,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        );
         """
         )
         return

@@ -1,12 +1,12 @@
-import sys
+import json
 import psycopg2
 import os
 import tiktoken
 
 from http import HTTPStatus
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from uuid import uuid4
 from agent.agent import CodingAgent
@@ -55,27 +55,23 @@ agent = CodingAgent(
 )
 
 
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    accumulated_messages = {}
-    try:
-        while True:
-            data = await websocket.receive_json()
-            prompt = data.get("input")
-            id = str(uuid4())
-            for content in agent.query(prompt):
-                if content is not None:
-                    if id not in accumulated_messages:
-                        accumulated_messages[id] = ""
-                    accumulated_messages[id] += content
-                    await websocket.send_json({"id": id, "content": content})
-                    sys.stdout.flush()
-            agent.memory_manager.add_message("assistant", accumulated_messages[id])
+@app.post("/message_streaming")
+async def message_streaming(request: Request):
+    # Get the input data from the POST request
+    data = await request.json()
+    prompt = data.get("input")
 
-    except WebSocketDisconnect:
-        accumulated_messages = {}
-        print("WebSocket disconnected")
+    def stream():
+        id = str(uuid4())
+        accumulated_messages = {id: ""}
+        for content in agent.query(prompt):
+            if content is not None:
+                accumulated_messages[id] += content
+                yield json.dumps({"id": id, "content": content})
+
+        agent.memory_manager.add_message("assistant", accumulated_messages[id])
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
 
 
 @app.get("/system_prompt")
@@ -99,7 +95,7 @@ async def get_messages():
     # if len(agent.memory_manager.messages) == 1:
     #     return {"messages": []}
     # else:
-    return {"messages": agent.memory_manager.messages}
+    return {"messages": agent.memory_manager.get_messages()}
 
 
 @app.get("/get_summaries")
@@ -107,7 +103,6 @@ async def get_summaries():
     cur.execute("SELECT DISTINCT file_path, summary, token_count FROM files")
     results = cur.fetchall()
     root_path = get_git_root(".")
-
     result = [
         {
             "file_path": os.path.relpath(file_path, root_path),
