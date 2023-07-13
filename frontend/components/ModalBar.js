@@ -85,6 +85,7 @@ const ModalBar = () => {
     useEffect(() => {
         fetchSystemPromptAndOpenModal(false);
         fetchFunctionsAndOpenModal(false);
+        fetchMessagesAndOpenModal(false);
     }, []); //
     return (
         <div className='flex flex-row mx-auto pb-3'>
@@ -157,25 +158,49 @@ const ModalBar = () => {
                     </span>
                 </button>
 
+                {/* <Modal
+                    isOpen={isMessageModalOpen}
+                    onRequestClose={() => setIsMessageModalOpen(false)}
+                    className="flex inset-0 items-center justify-center p-4 max-h-96"
+                    overlayClassName="fixed inset-0 bg-black bg-opacity-50"
+                >
+                    <div className='relative'>
+                        Hi
+                    </div>
+
+                </Modal> */}
                 <Modal
                     isOpen={isMessageModalOpen}
                     onRequestClose={() => setIsMessageModalOpen(false)}
-                    className="fixed inset-0 flex items-center justify-center p-4 w-full"
+                    className="fixed inset-0 flex items-center justify-center p-4"
                     overlayClassName="fixed inset-0 bg-black bg-opacity-50"
+                //                 style={{
+                //     overlay: {
+                //         backgroundColor: 'rgba(0,0,0,0.5)'
+                //     },
+                //     content: {
+                //         position: 'absolute',
+                //         top: '50%',
+                //         left: '50%',
+                //         right: 'auto',
+                //         bottom: 'auto',
+                //         marginRight: '-50%',
+                //         transform: 'translate(-50%, -50%)'
+                //     }
+                // 
                 >
-                    <div className="relative bg-gray-700 rounded p-4 max-w-screen-lg mx-auto text-gray-200 overflow-scroll">
+                    <div className="bg-gray-700 rounded p-4 w-1/2 h-1/2 overflow-y-scroll mx-auto text-gray-200">
                         <h2 className="text-xl text-white">Messages</h2>
                         {messageHistory.map((m, index) => (
-                            <div key={index} className={m.role === 'user' ? 'my-4 p-2 rounded bg-blue-600 text-black' : 'my-4 p-2 rounded bg-green-600 text-black'}>
+                            <div key={index} className={m.role === 'user' ? 'my-4 p-2 rounded bg-blue-600 text-white' : 'my-4 p-2 rounded bg-green-600 text-white'}>
                                 <h3 className="text-lg font-bold">{m.role.toUpperCase()}</h3>
-                                <textarea className="text-md">{m.content}</textarea>
+                                <pre className="text-md whitespace-pre-wrap">{m.content}</pre>
                             </div>
                         ))}
                     </div>
-
                 </Modal>
             </div>
-        </div>
+        </div >
     );
 }
 

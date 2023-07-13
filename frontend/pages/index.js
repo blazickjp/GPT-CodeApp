@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { w3cwebsocket as W3CWebSocket } from 'websocket';
 import ChatBox from '../components/ChatBox';
 import Modal from 'react-modal';
 import { get_encoding } from "@dqbd/tiktoken";
@@ -66,6 +65,31 @@ const Chat = () => {
     }
   };
 
+  useEffect(() => {
+    // Function to fetch historical messages from the server
+    const fetchHistoricalMessages = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:8000/get_messages'); // Replace this with your actual API endpoint
+        const historicalMessages = await response.json();
+        console.log(historicalMessages.messages);
+
+        // Format and set the messages
+        const formattedMessages = historicalMessages.messages.map(message => ({
+          text: message.full_content,
+          user: message.role === 'user' ? 'human' : 'ai'
+        }));
+        // console.log(formattedMessages);
+        setMessages(formattedMessages);
+      } catch (error) {
+        console.error('Failed to fetch historical messages:', error);
+      }
+    };
+
+    // Call the function to fetch historical messages
+    fetchHistoricalMessages();
+  }, []); // Empty dependency array causes this effect to run only once
+
+
   return (
     <div className="flex flex-col bg-gray-800 h-screen">
       <div className="flex flex-row p-4 h-1/8 mx-auto">
@@ -83,9 +107,10 @@ const Chat = () => {
         <ChatBox messages={messages} />
       </div>
 
-      <div className="input-area flex flex-row bg-gray-700 text-center justify-center items-center w-full text-black" style={{ height: '20vh' }}>
+      <div className="input-area flex flex-row bg-gray-800 text-center justify-center items-center w-full text-black" style={{ height: '20vh' }}>
         <form onSubmit={submitMessage} className='flex w-1/2'>
           <input
+            id='chat-input-box'
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
