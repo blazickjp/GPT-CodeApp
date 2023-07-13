@@ -99,19 +99,19 @@ class MemoryManager:
             """
         )
         results = self.cur.fetchall()
-        print(results)
         messages = [{"role": result[0], "content": result[1]} for result in results]
         self.cur.execute(
             """
             with t1 as (
                 SELECT role,
+                    content as full_content,
                     COALESCE(summarized_message, content) as content,
                     COALESCE(summarized_message_tokens, content_tokens) as tokens,
                     sum(COALESCE(summarized_message_tokens, content_tokens)) OVER (ORDER BY interaction_index DESC) as token_cum_sum
                 FROM memory
                 ORDER BY interaction_index desc
             )
-            select role, content, tokens
+            select role, full_content, content, tokens
             from t1
             WHERE token_cum_sum <= %s
             """,
@@ -120,10 +120,12 @@ class MemoryManager:
         results = self.cur.fetchall()
         tokens = 0
         for result in results[::-1]:
-            tokens += result[2]
+            tokens += result[3]
             if tokens > self.max_tokens:
                 break
-            messages.append({"role": result[0], "content": result[1]})
+            messages.append(
+                {"role": result[0], "content": result[2], "full_content": result[1]}
+            )
 
         return messages
 

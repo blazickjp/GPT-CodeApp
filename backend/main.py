@@ -2,6 +2,7 @@ import json
 import psycopg2
 import os
 import tiktoken
+import time
 
 from http import HTTPStatus
 from fastapi import FastAPI, Request
@@ -67,6 +68,9 @@ async def message_streaming(request: Request):
         for content in agent.query(prompt):
             if content is not None:
                 accumulated_messages[id] += content
+                # TODO: This is a hack to prevent multiple messages from being
+                # processes at once. We should fix this on the client side.
+                time.sleep(0.05)
                 yield json.dumps({"id": id, "content": content})
 
         agent.memory_manager.add_message("assistant", accumulated_messages[id])
@@ -92,10 +96,10 @@ async def get_functions():
 
 @app.get("/get_messages")
 async def get_messages():
-    # if len(agent.memory_manager.messages) == 1:
-    #     return {"messages": []}
-    # else:
-    return {"messages": agent.memory_manager.get_messages()}
+    if len(agent.memory_manager.messages) == 1:
+        return {"messages": []}
+    else:
+        return {"messages": agent.memory_manager.get_messages()[1:]}
 
 
 @app.get("/get_summaries")

@@ -35,8 +35,10 @@ class CodingAgent:
         """
         print(f"Input Text: {input_text}")
         self.memory_manager.add_message("user", input_text)
-        message_history = self.memory_manager.get_messages()
-        print(f"MESSAGE HISTORY:\n\n{message_history}")
+        message_history = [
+            {"role": i["role"], "content": i["content"]}
+            for i in self.memory_manager.get_messages()
+        ]
 
         func_call = {
             "name": None,

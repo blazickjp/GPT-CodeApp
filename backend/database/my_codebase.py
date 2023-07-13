@@ -96,7 +96,11 @@ class MyCodebase:
                 if (
                     not file_name.startswith(".")
                     and not file_name.startswith("_")
-                    and (file_name.endswith(".js") or file_name.endswith(".py"))
+                    and (
+                        file_name.endswith(".js")
+                        or file_name.endswith(".py")
+                        or file_name.endswith(".md")
+                    )
                 ):
                     file_path = os.path.join(root, file_name)
                     self.update_file(file_path)
@@ -295,9 +299,3 @@ class MyCodebase:
                 )
                 self.conn.commit()
                 print(f"****    Removed file {file_path} from the database    *****")
-
-
-if __name__ == "__main__":
-    # Example usage:
-    db = MyCodebase(directory="../")
-    print(db.tree())
