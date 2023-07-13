@@ -2,7 +2,15 @@
 
 > This project is a chat application where users can get their code reviewed by GPT-4. It utilizes a token counter to evaluate the complexity of the input and also has features like code highlighting and a beautiful user interface.
 
+## Todo
 
+- [x] Initial setup
+- [x] Database configuration
+- [x] Code highlighting
+- [ ] SearchBar for adding files
+- [ ] Testing
+- [ ] Give LLM ability to edit Todo of README.md
+- [ ] User authentication system
 
 ## Table of Contents
 

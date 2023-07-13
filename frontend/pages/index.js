@@ -5,6 +5,7 @@ import { get_encoding } from "@dqbd/tiktoken";
 import ModalBar from '../components/ModalBar';
 import RightSidebar from '../components/RightSidebar';
 import { FiMenu } from 'react-icons/fi';
+import SearchBar from '../components/SearchBar';
 
 
 const encoding = get_encoding("cl100k_base");
@@ -101,7 +102,10 @@ const Chat = () => {
           <FiMenu className="mr-2" />
         </button>
       </div>
-      <ModalBar />
+      <div className="flex flex-col items-center">
+        <SearchBar />
+        <ModalBar />
+      </div>
       <RightSidebar isSidebarOpen={isSidebarOpen} />
       <div className="flex-grow overflow-y-scroll" style={{ maxHeight: '75vh' }}>
         <ChatBox messages={messages} />
