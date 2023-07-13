@@ -10,6 +10,12 @@
 - [ ] SearchBar for adding files
 - [ ] Testing
 - [ ] Give LLM ability to edit Todo of README.md
+- [ ] Support Multiple Conversations
+- [ ] Edit User Files with LLM
+- [ ] Support Multiple "Identities" for LLM
+- [ ] Display Sidebar Files with a File Explorer
+- [ ] Switch between GPT-4 and GPT-3.5 (Other Models too)
+- [ ] Comprehensive User Documentation
 - [ ] User authentication system
 
 ## Table of Contents
