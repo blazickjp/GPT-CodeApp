@@ -15,12 +15,7 @@ This project is a chat application where users can get their code reviewed by GP
 
 ## Installation
 
-To install necessary dependencies, run the following command:
-
-```bash
-cd /frontend
-npm install
-```
+To install necessary dependencies, run the following commands:
 
 ### Install PostgresSQL
 1. Install PostgreSQL: 
@@ -45,14 +40,20 @@ npm install
 6. Test the database connection:
    - Restart your application and check if it successfully connects to the PostgreSQL database.
 
-7. Update the README.md file:
-   - Add a section to your README.md file with instructions on setting up the PostgreSQL database, including the installation steps, creating the database and user, and updating the application configuration.
-
 Remember to replace `your_database_name`, `your_username`, and `your_password` with your desired values.
 
 ## Usage
 
-Please provide instructions and examples for use.
+```bash
+cd /frontend
+npm install
+npm run dev
+```
+
+```bash
+cd /backend
+uvicorn main:app --reload
+```
 
 ## Contributing
 
