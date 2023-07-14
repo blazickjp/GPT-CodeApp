@@ -6,6 +6,7 @@ import ModalBar from '../components/ModalBar';
 import RightSidebar from '../components/RightSidebar';
 import { FiMenu } from 'react-icons/fi';
 import SearchBar from '../components/SearchBar';
+import { AiOutlineSend } from 'react-icons/ai';
 
 
 const encoding = get_encoding("cl100k_base");
@@ -93,7 +94,7 @@ const Chat = () => {
 
   return (
     <div className="flex flex-col bg-gray-800 h-screen">
-      <div className="flex flex-row p-4 h-1/8 mx-auto">
+      <div className="flex flex-row p-2 h-1/8 mx-auto">
         <button className="float-left">
           <FiMenu className="ml-2" />
         </button>
@@ -122,7 +123,9 @@ const Chat = () => {
             placeholder="Type a message..."
             className="p-2 rounded mr-2 flex-grow"
           />
-          <button type="submit" className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full">Send</button>
+          <button type="submit" className=" text-purple-700 font-bold py-2 px-4 rounded text-xl">
+            <AiOutlineSend />
+          </button>
         </form>
       </div>
     </div>

@@ -32,8 +32,6 @@ const RightSidebar = ({ isSidebarOpen }) => {
     const [summaryStatus, setSummaryStatus] = useState(''); // add this line to your existing state declarations
     const [fileStatus, setFileStatus] = useState(''); // add this line to your existing state declarations
 
-
-
     const fetchSummaries = () => {
         setSummaries([]);
         fetch('http://127.0.0.1:8000/get_summaries')

@@ -110,8 +110,8 @@ async def get_summaries():
     result = [
         {
             "file_path": os.path.relpath(file_path, root_path),
-            "summary": summary,
             "file_token_count": token_count,
+            "summary": summary,
             "summary_token_count": len(ENCODER.encode(summary)),
         }
         for file_path, summary, token_count in results
@@ -139,6 +139,7 @@ async def set_summary_files_in_prompt(input: dict):
 @app.post("/set_files_in_prompt")
 async def set_files_in_prompt(input: dict):
     files = [os.path.join(get_git_root(), file) for file in input.get("files")]
+    print(files)
     content = codebase.get_file_contents()
     content = [f"{k}:\n{v}" for k, v in content.items() if k in files]
     additional_system_prompt_files = "\n\n".join(content)
