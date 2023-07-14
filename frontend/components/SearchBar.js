@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
-import { AiOutlineSend } from 'react-icons/ai';
+import { AiOutlineSend, AiFillPython } from 'react-icons/ai';
 import { HiOutlineRefresh } from 'react-icons/hi';
+import { DiJavascript1 } from 'react-icons/di'; // JS icon
+import { MdDescription } from 'react-icons/md'; // Readme icon
+import { FaPython } from 'react-icons/fa';
+
+
+
 
 const SearchBar = ({ addFileToContext }) => {
     const [selectedOptions, setSelectedOptions] = useState(null);
@@ -10,6 +16,27 @@ const SearchBar = ({ addFileToContext }) => {
     const [fileStatus, setFileStatus] = useState(null);  // Add this state
 
     const timetout = 1000;
+    const fileIcon = (fileType) => {
+        console.log(fileType);
+        switch (fileType) {
+            case 'py':
+                return <span className='text-python-blue'><FaPython /></span>
+            case 'js':
+                return <span className='text-yellow-500'><DiJavascript1 /></span>
+            case 'md':
+                return <span className="text-black"><MdDescription /></span>
+            default:
+                return null;
+        }
+    };
+    // Modify the option labels
+    const formatOptionLabel = ({ value, label }) => (
+
+        < div className="flex items-center" >
+            {fileIcon(value.split('.').pop())} <span className="ml-2">{label}</span>
+        </div >
+
+    );
 
     const handleChange = option => {
         setSelectedOptions(option);
@@ -156,6 +183,7 @@ const SearchBar = ({ addFileToContext }) => {
                 styles={customStyles}
                 closeMenuOnSelect={false}
                 blurInputOnSelect={false}
+                formatOptionLabel={formatOptionLabel} // Use the custom format here
                 placeholder='Add File to Context'
             />
             <button className='text-purple-700 ml-5 text-lg' onClick={sendFiles}>
