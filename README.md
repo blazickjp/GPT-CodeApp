@@ -7,7 +7,7 @@
 - [x] Initial setup
 - [x] Database configuration
 - [x] Code highlighting
-- [ ] SearchBar for adding files
+- [x] SearchBar for adding files
 - [ ] Testing
 - [ ] Give LLM ability to edit Todo of README.md
 - [ ] Support Multiple Conversations
