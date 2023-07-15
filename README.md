@@ -8,6 +8,7 @@
 - [x] Database configuration
 - [x] Code highlighting
 - [x] SearchBar for adding files
+- [ ] Better Interface for Functions
 - [ ] Testing
 - [ ] Give LLM ability to edit Todo of README.md
 - [ ] Support Multiple Conversations
