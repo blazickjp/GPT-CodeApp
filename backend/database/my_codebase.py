@@ -1,11 +1,15 @@
-import openai
-import numpy as np
+# base
+import json
 import os
-import psycopg2
-import pickle
-import tiktoken
 import datetime
 import subprocess
+import pickle
+
+# third party
+import openai
+import numpy as np
+import psycopg2
+import tiktoken
 
 # from typing import List
 from sklearn.metrics.pairwise import cosine_similarity
@@ -43,6 +47,14 @@ def get_git_root(path="."):
 
 
 class MyCodebase:
+    IGNORE_DIRS = ["node_modules", ".next"]
+    FILE_EXTENSIONS = [".js", ".py", ".md"]
+    DEFAULT_AUTH = {
+        "dbname": "postgres",
+        "user": "postgres",
+        "password": "postgres",
+        "host": "localhost",
+    }
     """
     A class used to represent a local database of files and their embeddings.
 
@@ -78,37 +90,58 @@ class MyCodebase:
         self.files = []
         self.embeddings = []
         self.file_dict = {}
-        ignore_dirs = ["node_modules", ".next"]
+
         directory = os.path.abspath(directory)
-        self.conn = psycopg2.connect(
-            dbname="memory",
-            user="joe",
-            password="1234",
-            host="localhost",
-        )
+        self._connect_to_database()
         self.cur = self.conn.cursor()
         self.create_tables()
 
         # Read and embed the files
-        for root, dirs, files in os.walk(directory):
-            dirs[:] = [d for d in dirs if d not in ignore_dirs]
-            for file_name in files:
-                if (
-                    not file_name.startswith(".")
-                    and not file_name.startswith("_")
-                    and (
-                        file_name.endswith(".js")
-                        or file_name.endswith(".py")
-                        or file_name.endswith(".md")
-                    )
-                ):
-                    file_path = os.path.join(root, file_name)
-                    self.update_file(file_path)
+        self._update_files_and_embeddings(directory)
 
         self.remove_old_files()
         # Build the embeddings array from the file_dict
         self.embeddings = np.array(
             [file["embedding"] for file in self.file_dict.values()]
+        )
+
+    def _connect_to_database(self):
+        try:
+            auth_path = os.environ["POSTGRES_AUTH"]
+            with open(auth_path) as f:
+                auth = json.load(f)
+        except KeyError:
+            print(
+                "No POSTGRES_AUTH environment variable found."
+                " Attempting manual input credentials..."
+            )
+            auth = self.DEFAULT_AUTH
+
+        try:
+            self.conn = psycopg2.connect(**auth)
+            print("Successfully connected to database")
+        except Exception as e:
+            print(e)
+            raise Exception(
+                "Failed to connect to database. Either the credentials are incorrect"
+                " OR You may have not manually input your credentials to"
+                " the POSTGRES_AUTH environment variable or the script."
+            )
+
+    def _update_files_and_embeddings(self, directory):
+        for root, dirs, files in os.walk(directory):
+            dirs[:] = [d for d in dirs if d not in self.IGNORE_DIRS]
+            for file_name in files:
+                if self._is_valid_file(file_name):
+                    file_path = os.path.join(root, file_name)
+                    self.update_file(file_path)
+
+    @staticmethod
+    def _is_valid_file(file_name):
+        return (
+            not file_name.startswith(".")
+            and not file_name.startswith("_")
+            and any(file_name.endswith(ext) for ext in MyCodebase.FILE_EXTENSIONS)
         )
 
     def update_file(self, file_path):

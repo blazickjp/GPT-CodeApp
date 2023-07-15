@@ -15,10 +15,9 @@ from agent.memory_manager import MemoryManager
 from database.my_codebase import MyCodebase, get_git_root
 from agent.openai_function_call import openai_function
 
-conn = psycopg2.connect(
-    host="localhost", database="memory", user="joe", password="1234"
-)
-cur = conn.cursor()
+mcb = MyCodebase()
+
+cur = mcb.conn.cursor()
 
 app = FastAPI()
 
