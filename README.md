@@ -8,16 +8,19 @@
 - [x] Database configuration
 - [x] Code highlighting
 - [x] SearchBar for adding files
-- [ ] Better Interface for Functions
-- [ ] Testing
-- [ ] Give LLM ability to edit Todo of README.md
-- [ ] Support Multiple Conversations
-- [ ] Edit User Files with LLM
-- [ ] Support Multiple "Identities" for LLM
-- [ ] Display Sidebar Files with a File Explorer
+- [x] Breakup the Chatbox historical messages from the current streaming message. Reduce number of re-renders.
 - [ ] Switch between GPT-4 and GPT-3.5 (Other Models too)
+- [ ] Testing
+- [ ] Give LLM function to edit Todo of README.md
+- [ ] Give LLM functions to create files and add boiler plate code
+- [ ] Edit User Files with LLM
+- [ ] Support Multiple Conversations
+- [ ] Support Multiple "Identities" for LLM (debugging, adding feature, refactor, etc...)
+- [ ] Display Sidebar Files with a File Explorer
 - [ ] Comprehensive User Documentation
+- [ ] Better Interface for Functions
 - [ ] User authentication system
+- [ ] Use Wisper to add voice interface
 
 ## Table of Contents
 

@@ -68,8 +68,7 @@ async def message_streaming(request: Request):
                 accumulated_messages[id] += content
                 # TODO: This is a hack to prevent multiple messages from being
                 # processes at once. We should fix this on the client side.
-                time.sleep(0.05)
-                yield json.dumps({"id": id, "content": content})
+                yield json.dumps({"id": id, "content": content}) + "\n"
 
         agent.memory_manager.add_message("assistant", accumulated_messages[id])
 
