@@ -43,6 +43,7 @@ To install necessary dependencies, run the following commands:
 
 3. Create a new database:
    - Open a terminal and run `psql` to enter the PostgreSQL command-line interface.
+   - If you are prompted for a password, you may need to instead run `psql -U postgres -h localhost` and provide the superuser password you provided at set-up.
    - Run the following command to create a new database: `CREATE DATABASE your_database_name;`
 
 4. Create a database user:
@@ -50,7 +51,16 @@ To install necessary dependencies, run the following commands:
    - Grant privileges to the user for the database: `GRANT ALL PRIVILEGES ON DATABASE your_database_name TO your_username;`
 
 5. Update your application configuration:
-   - In your backend code, update the database connection settings to use the database name, username, and password you created.
+   - Use the example `.env.sample` file in the root to create your own `.env` file. The backend code will find the file automatically for authentication.:
+      ```sh
+      CCODEAPP_DB_NAME=DB_FROM_SETUP_STEP3
+      CODEAPP_DB_USER=USER_FROM_SETUP_STEP4
+      CODEAPP_DB_PW=PW_FROM_SETUP_STEP4
+      CODEAPP_DB_HOST=localhost
+      IGNORE_DIRS=[node_modules,.nextm,.venv,__pycache__,.git]
+      FILE_EXTENSIONS=[.js,.py,.md]
+      ```
+      It is important that if you are using a virtual environment not named `.venv` to add it to the ignored directories.
 
 6. Test the database connection:
    - Restart your application and check if it successfully connects to the PostgreSQL database.
