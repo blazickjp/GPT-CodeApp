@@ -10,6 +10,7 @@ import openai
 import numpy as np
 import psycopg2
 import tiktoken
+from dotenv import load_dotenv
 
 # from typing import List
 from sklearn.metrics.pairwise import cosine_similarity
@@ -47,14 +48,13 @@ def get_git_root(path="."):
 
 
 class MyCodebase:
-    IGNORE_DIRS = ["node_modules", ".next"]
-    FILE_EXTENSIONS = [".js", ".py", ".md"]
-    DEFAULT_AUTH = {
-        "dbname": "postgres",
-        "user": "postgres",
-        "password": "postgres",
-        "host": "localhost",
-    }
+    load_dotenv()
+    CODEAPP_DB_NAME = os.getenv("CODEAPP_DB_NAME")
+    CODEAPP_DB_USER = os.getenv("CODEAPP_DB_USER")
+    CODEAPP_DB_PW = os.getenv("CODEAPP_DB_PW")
+    CODEAPP_DB_HOST = os.getenv("CODEAPP_DB_HOST")
+    IGNORE_DIRS = os.getenv("IGNORE_DIRS")
+    FILE_EXTENSIONS = os.getenv("FILE_EXTENSIONS")
     """
     A class used to represent a local database of files and their embeddings.
 
@@ -107,26 +107,24 @@ class MyCodebase:
 
     def _connect_to_database(self):
         try:
-            auth_path = os.environ["POSTGRES_AUTH"]
-            with open(auth_path) as f:
-                auth = json.load(f)
-        except KeyError:
-            print(
-                "No POSTGRES_AUTH environment variable found."
-                " Attempting manual input credentials..."
-            )
-            auth = self.DEFAULT_AUTH
-
-        try:
+            auth = {"dbname": self.CODEAPP_DB_NAME, 
+                    "user": self.CODEAPP_DB_USER,
+                    "password": self.CODEAPP_DB_PW,
+                    "host": self.CODEAPP_DB_HOST}
             self.conn = psycopg2.connect(**auth)
             print("Successfully connected to database")
         except Exception as e:
-            print(e)
-            raise Exception(
-                "Failed to connect to database. Either the credentials are incorrect"
-                " OR You may have not manually input your credentials to"
-                " the POSTGRES_AUTH environment variable or the script."
-            )
+            if self.CODEAPP_DB_USER is None or self.CODEAPP_DB_USER == "USER_FROM_SETUP_STEP4":
+                raise Exception(
+                    """
+                    Failed to connect to database. 
+                    Credentials not set or changed in .env file or .env file is missing. 
+                    Please set the following environment variables in the .env file in the root directory: 
+                    CODEAPP_DB_NAME, CODEAPP_DB_USER, CODEAPP_DB_PW, CODEAPP_DB_HOST
+                    """
+                )
+            else:
+                raise e
 
     def _update_files_and_embeddings(self, directory):
         for root, dirs, files in os.walk(directory):

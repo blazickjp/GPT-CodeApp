@@ -51,21 +51,16 @@ To install necessary dependencies, run the following commands:
    - Grant privileges to the user for the database: `GRANT ALL PRIVILEGES ON DATABASE your_database_name TO your_username;`
 
 5. Update your application configuration:
-   - In your [backend code](https://github.com/blazickjp/GPT-CodeApp/blob/main/backend/database/my_codebase.py), update the database connection settings to use the database name, username, and password you created.
-
-   OR
-   
-   - Create an environment variable `POSTGRES_AUTH` and supply to a path to a local `.json` you create with the following format:
-      ```json
-      {
-      "dbname": "DB_FROM_STEP3",
-      "user": "USER_FROM_STEP4",
-      "password": "PWD_FROM_STEP4",
-      "host": "localhost"
-      }
+   - Use the example `.env.sample` file in the root to create your own `.env` file. The backend code will find the file automatically for authentication.:
+      ```sh
+      CCODEAPP_DB_NAME=DB_FROM_SETUP_STEP3
+      CODEAPP_DB_USER=USER_FROM_SETUP_STEP4
+      CODEAPP_DB_PW=PW_FROM_SETUP_STEP4
+      CODEAPP_DB_HOST=localhost
+      IGNORE_DIRS=[node_modules,.nextm,.venv,__pycache__,.git]
+      FILE_EXTENSIONS=[.js,.py,.md]
       ```
-      Doing so will allow the code to automatically find and use your credentials.
-
+      It is important that if you are using a virtual environment not named `.venv` to add it to the ignored directories.
 
 6. Test the database connection:
    - Restart your application and check if it successfully connects to the PostgreSQL database.

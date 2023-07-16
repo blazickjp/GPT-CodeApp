@@ -1,13 +1,17 @@
-import sys
-import token
-import openai
+# base
 import json
 import time
+import sys
+from uuid import uuid4
+from datetime import datetime
+import os
+
+# third party
+import token
+import openai
 import psycopg2
 import tiktoken
-from datetime import datetime
-from uuid import uuid4
-
+from dotenv import load_dotenv
 
 class MemoryManager:
     """
@@ -71,6 +75,12 @@ class MemoryManager:
     def __init__(
         self, model="gpt-3.5-turbo", identity=None, tree=None, max_tokens=1000
     ):
+        load_dotenv()
+        CODEAPP_DB_NAME = os.getenv("CODEAPP_DB_NAME")
+        CODEAPP_DB_USER = os.getenv("CODEAPP_DB_USER")
+        CODEAPP_DB_PW = os.getenv("CODEAPP_DB_PW")
+        CODEAPP_DB_HOST = os.getenv("CODEAPP_DB_HOST")
+
         self.model = model
         self.max_tokens = max_tokens
         self.system = None
@@ -83,9 +93,25 @@ class MemoryManager:
         self.system_file_summaries = None
         self.system_file_contents = None
         self.messages = []
-        self.conn = psycopg2.connect(
-            host="localhost", database="memory", user="joe", password="1234"
-        )
+        try:
+            auth = {"dbname": CODEAPP_DB_NAME, 
+                    "user": CODEAPP_DB_USER,
+                    "password": CODEAPP_DB_PW,
+                    "host": CODEAPP_DB_HOST}
+            self.conn = psycopg2.connect(**auth)
+            print("Successfully connected to database")
+        except Exception as e:
+            if self.CODEAPP_DB_USER is None or self.CODEAPP_DB_USER == "USER_FROM_SETUP_STEP4":
+                raise Exception(
+                    """
+                    Failed to connect to database. 
+                    Credentials not set or changed in .env file or .env file is missing. 
+                    Please set the following environment variables in the .env file in the root directory: 
+                    CODEAPP_DB_NAME, CODEAPP_DB_USER, CODEAPP_DB_PW, CODEAPP_DB_HOST
+                    """
+                )
+            else:
+                raise e
         self.cur = self.conn.cursor()
         self.create_tables()
         self.conn.commit()

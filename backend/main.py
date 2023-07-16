@@ -1,23 +1,20 @@
+# Base
 import json
-import psycopg2
 import os
-import tiktoken
 import time
+from uuid import uuid4
 
+# Third Party
+import tiktoken
 from http import HTTPStatus
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from uuid import uuid4
 from agent.agent import CodingAgent
 from agent.memory_manager import MemoryManager
 from database.my_codebase import MyCodebase, get_git_root
 from agent.openai_function_call import openai_function
-
-mcb = MyCodebase()
-
-cur = mcb.conn.cursor()
 
 app = FastAPI()
 
@@ -31,6 +28,8 @@ app.add_middleware(
 
 codebase = MyCodebase("../")
 tree = codebase.tree()
+cur = codebase.conn.cursor()
+
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
 
