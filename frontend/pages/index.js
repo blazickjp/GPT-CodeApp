@@ -7,6 +7,7 @@ import RightSidebar from '../components/RightSidebar';
 import { FiMenu } from 'react-icons/fi';
 import SearchBar from '../components/SearchBar';
 import { AiOutlineSend } from 'react-icons/ai';
+import ChatInput from '../components/ChatInput';  // adjust this path to point to the ChatInput file
 
 
 const encoding = get_encoding("cl100k_base");
@@ -14,56 +15,70 @@ Modal.setAppElement('#__next');
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
   };
 
-  const submitMessage = async (e) => {
-    e.preventDefault();
+  const submitMessage = async (input) => {
+    console.log(input);
     let messageData = null;
     let currentId = null;
+    const inputValue = input;  // get the input value from the event
 
-    setMessages((prevMessages) => [...prevMessages, { text: input, user: 'human' }]);
-    setInput("");
+    setMessages((prevMessages) => [...prevMessages, { text: inputValue, user: 'human' }]);
 
     const response = await fetch('http://127.0.0.1:8000/message_streaming', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ input }),
+      body: JSON.stringify({ input: input }),
     });
     let reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+    let buffer = '';
     while (true) {
       const { value, done } = await reader.read();
       if (done) {
         console.log("Stream finished.");
+        if (buffer) {
+          console.error('Stream ended unexpectedly; partial JSON object:', buffer);
+        }
         break;
       }
-      try {
-        messageData = JSON.parse(value);
-      } catch (e) {
-        console.log("Failed to parse: ", value);
-        continue;
-      }
-      let id = messageData.id;
-      let content = messageData.content;
-      console.log(content, id);
-      if (id != currentId) {
-        setMessages(prevMessages => [...prevMessages, { text: content, user: 'ai' }]);
-        currentId = id;
-      } else {
-        setMessages(prevMessages => {
-          // console.log(prevMessages);
-          const lastMessage = { ...prevMessages[prevMessages.length - 1] };
-          lastMessage.text = lastMessage.text + content;
-          return [...prevMessages.slice(0, prevMessages.length - 1), lastMessage];
-        })
-      }
+      buffer += value;
+      while (buffer.includes('\n')) {
+        // Find the end of the first JSON object in the buffer.
+        const endOfJsonObject = buffer.indexOf('\n');
 
+        // Extract the JSON object from the buffer.
+        const jsonObjectStr = buffer.slice(0, endOfJsonObject);
+
+        // Process the JSON object.
+        try {
+          const messageData = JSON.parse(jsonObjectStr);
+          let id = messageData.id;
+          let content = messageData.content;
+          console.log(content, id);
+          if (id != currentId) {
+            setMessages(prevMessages => [...prevMessages, { text: content, user: 'ai' }]);
+            currentId = id;
+          } else {
+            setMessages(prevMessages => {
+              // console.log(prevMessages);
+              const lastMessage = { ...prevMessages[prevMessages.length - 1] };
+              lastMessage.text = lastMessage.text + content;
+              return [...prevMessages.slice(0, prevMessages.length - 1), lastMessage];
+            })
+          }
+        } catch (e) {
+          console.error('Failed to parse JSON object:', jsonObjectStr);
+          throw e;  // Rethrow the error, because it's a programming error.
+        }
+        // Remove the processed JSON object from the buffer.
+        buffer = buffer.slice(endOfJsonObject + 1);
+      }
     }
   };
 
@@ -112,21 +127,9 @@ const Chat = () => {
         <ChatBox messages={messages} />
       </div>
 
+
       <div className="input-area flex flex-row bg-gray-800 text-center justify-center items-center w-full text-black" style={{ height: '20vh' }}>
-        <form onSubmit={submitMessage} className='flex w-1/2'>
-          <input
-            id='chat-input-box'
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' ? submitMessage(e) : null}
-            placeholder="Type a message..."
-            className="p-2 rounded mr-2 flex-grow"
-          />
-          <button type="submit" className=" text-purple-700 font-bold py-2 px-4 rounded text-xl">
-            <AiOutlineSend />
-          </button>
-        </form>
+        <ChatInput onSubmit={submitMessage} />
       </div>
     </div>
   );
