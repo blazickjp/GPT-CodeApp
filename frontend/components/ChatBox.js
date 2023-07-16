@@ -38,7 +38,7 @@ const Chatbox = ({ messages }) => {
                     <ReactTooltip id={`tokenTip${index}`} place="top" effect='solid' delayHide={500} globalEventOff='mouseout'>
                         Tokens: {tokens.length}
                     </ReactTooltip>
-                    <ReactMarkdown children={message.text} className='flex-grow' components={{ code: CodeBlock }} />
+                    <ReactMarkdown children={message.text} className='flex-grow overflow-x-auto' components={{ code: CodeBlock }} />
                 </div>
             </div>
         );
