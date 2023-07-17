@@ -8,6 +8,7 @@ import { FiMenu } from 'react-icons/fi';
 import SearchBar from '../components/SearchBar';
 import { AiOutlineSend } from 'react-icons/ai';
 import ChatInput from '../components/ChatInput';  // adjust this path to point to the ChatInput file
+import ModelSelector from '../components/ModelSelector';
 
 
 const encoding = get_encoding("cl100k_base");
@@ -122,14 +123,16 @@ const Chat = () => {
         <SearchBar />
         <ModalBar />
       </div>
-      <RightSidebar isSidebarOpen={isSidebarOpen} />
       <div className="flex-grow overflow-y-scroll" style={{ maxHeight: '75vh' }}>
         <ChatBox messages={messages} />
       </div>
+      <RightSidebar isSidebarOpen={isSidebarOpen} />
 
-
-      <div className="input-area flex flex-row bg-gray-800 text-center justify-center items-center w-full text-black" style={{ height: '20vh' }}>
-        <ChatInput onSubmit={submitMessage} />
+      <div className="input-area h-1/5 flex bg-gray-800 text-center justify-center items-center w-full text-gray-900" >
+        <div className='w-full'>
+          <ChatInput onSubmit={submitMessage} />
+          <ModelSelector />
+        </div>
       </div>
     </div>
   );

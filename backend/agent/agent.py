@@ -18,6 +18,7 @@ class CodingAgent:
         """
         self.memory_manager = memory_manager
         self.functions = functions
+        self.GPT_MODEL = GPT_MODEL
         self.function_map = {
             func.__name__: func for func in callables
         }  # Create a map of function names to functions
@@ -46,7 +47,7 @@ class CodingAgent:
         }
 
         for chunk in openai.ChatCompletion.create(
-            model=GPT_MODEL,
+            model=self.GPT_MODEL,
             messages=message_history,
             functions=self.functions,
             function_call=function_call,
@@ -70,7 +71,7 @@ class CodingAgent:
                 }
                 message_history.append(function_response)
                 for chunk in openai.ChatCompletion.create(
-                    model=GPT_MODEL,
+                    model=self.GPT_MODEL,
                     messages=message_history,
                     functions=self.functions,
                     function_call=function_call,

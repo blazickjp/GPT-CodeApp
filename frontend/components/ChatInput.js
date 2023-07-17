@@ -12,7 +12,7 @@ const ChatInput = ({ onSubmit }) => {
     };
 
     return (
-        <div className="input-area flex flex-row bg-gray-800 text-center justify-center items-center w-full text-black" style={{ height: '20vh' }}>
+        <div className="input-area flex flex-row bg-gray-800 text-center justify-center items-center w-full text-black pb-5">
             <form onSubmit={handleSubmit} className='flex w-1/2'>
                 <input
                     id='chat-input-box'

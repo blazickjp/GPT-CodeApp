@@ -9,7 +9,7 @@
 - [x] Code highlighting
 - [x] SearchBar for adding files
 - [x] Breakup the Chatbox historical messages from the current streaming message. Reduce number of re-renders.
-- [ ] Switch between GPT-4 and GPT-3.5 (Other Models too)
+- [x] Switch between GPT-4 and GPT-3.5 (Other Models too)
 - [ ] Testing
 - [ ] Give LLM function to edit Todo of README.md
 - [ ] Give LLM functions to create files and add boiler plate code

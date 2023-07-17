@@ -107,14 +107,19 @@ class MyCodebase:
 
     def _connect_to_database(self):
         try:
-            auth = {"dbname": self.CODEAPP_DB_NAME, 
-                    "user": self.CODEAPP_DB_USER,
-                    "password": self.CODEAPP_DB_PW,
-                    "host": self.CODEAPP_DB_HOST}
+            auth = {
+                "dbname": self.CODEAPP_DB_NAME,
+                "user": self.CODEAPP_DB_USER,
+                "password": self.CODEAPP_DB_PW,
+                "host": self.CODEAPP_DB_HOST,
+            }
             self.conn = psycopg2.connect(**auth)
             print("Successfully connected to database")
         except Exception as e:
-            if self.CODEAPP_DB_USER is None or self.CODEAPP_DB_USER == "USER_FROM_SETUP_STEP4":
+            if (
+                self.CODEAPP_DB_USER is None
+                or self.CODEAPP_DB_USER == "USER_FROM_SETUP_STEP4"
+            ):
                 raise Exception(
                     """
                     Failed to connect to database. 
@@ -128,6 +133,7 @@ class MyCodebase:
 
     def _update_files_and_embeddings(self, directory):
         for root, dirs, files in os.walk(directory):
+            print(self.IGNORE_DIRS)
             dirs[:] = [d for d in dirs if d not in self.IGNORE_DIRS]
             for file_name in files:
                 if self._is_valid_file(file_name):

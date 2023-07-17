@@ -130,7 +130,7 @@ async def set_summary_files_in_prompt(input: dict):
     additional_system_prompt_summaries = "\n\n".join(summaries)
     agent.memory_manager.system_file_summaries = additional_system_prompt_summaries
     agent.memory_manager.set_system()
-    return {}, HTTPStatus(400)
+    return JSONResponse(status_code=200, content={})
 
 
 @app.post("/set_files_in_prompt")
@@ -142,4 +142,11 @@ async def set_files_in_prompt(input: dict):
     additional_system_prompt_files = "\n\n".join(content)
     agent.memory_manager.system_file_contents = additional_system_prompt_files
     agent.memory_manager.set_system()
-    return HTTPStatus(404)
+    return JSONResponse(status_code=200, content={})
+
+
+@app.post("/set_model")
+async def set_model(input: dict):
+    model = input.get("model")
+    agent.GPT_MODEL = model
+    return JSONResponse(status_code=200, content={})
