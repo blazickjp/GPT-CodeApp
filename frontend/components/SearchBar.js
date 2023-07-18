@@ -71,7 +71,7 @@ const SearchBar = ({ addFileToContext }) => {
     const fetchSearchData = () => {
         setOptions([]);
         setRefreshStatus('loading');
-        fetch('http://127.0.0.1:8000/get_summaries')
+        fetch('http://127.0.0.1:8000/get_summaries?reset=true')
             .then(response => response.json())
             .then(data => {
                 data.forEach(file => {
@@ -98,7 +98,7 @@ const SearchBar = ({ addFileToContext }) => {
 
     useEffect(() => {
         fetchSearchData();
-    }, []);  // Empty dependency array means this effect runs once when the component mounts
+    }, []);
 
     // Define custom styles
     const customStyles = {

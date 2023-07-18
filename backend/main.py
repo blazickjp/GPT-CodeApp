@@ -14,7 +14,9 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from agent.agent import CodingAgent
 from agent.memory_manager import MemoryManager
 from database.my_codebase import MyCodebase, get_git_root
-from agent.openai_function_call import openai_function
+from openai_function_call import openai_function
+
+# from agent.agent_functions import Shell
 
 app = FastAPI()
 
@@ -49,6 +51,8 @@ agent = CodingAgent(
         model="gpt-3.5-turbo-0613",
         tree=tree,
     ),
+    # functions=[Shell.openai_schema],
+    # callables=[Shell],
     functions=[code_search.openai_schema],
     callables=[code_search.func],
 )
@@ -100,7 +104,11 @@ async def get_messages():
 
 
 @app.get("/get_summaries")
-async def get_summaries():
+async def get_summaries(reset: bool | None = None):
+    if reset:
+        print("Refreshing Data")
+        codebase._update_files_and_embeddings()
+
     cur.execute("SELECT DISTINCT file_path, summary, token_count FROM files")
     results = cur.fetchall()
     root_path = get_git_root(".")

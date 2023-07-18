@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { get_encoding } from "@dqbd/tiktoken";
 // import CustomModal from './CustomModal';
-import Modal from 'react-modal';
+import ReactModal from 'react-modal';
 
 
 const encoding = get_encoding("cl100k_base");
-Modal.setAppElement('#__next');
+ReactModal.setAppElement('#__next');
 
 const ModalBar = () => {
     const [systemPrompt, setSystemPrompt] = useState("");
@@ -82,6 +82,14 @@ const ModalBar = () => {
             .catch(console.error);
     };
 
+    const handleFunctionClose = (e) => {
+        setIsFunctionModalOpen(false);
+    };
+    const handleSystemClose = (e) => {
+        e.preventDefault();
+        setIsModalOpen(false);
+    };
+
     useEffect(() => {
         fetchSystemPromptAndOpenModal(false);
         fetchFunctionsAndOpenModal(false);
@@ -96,10 +104,11 @@ const ModalBar = () => {
                         {systemTokens} tokens
                     </span>
                 </button>
-                <Modal
+                <ReactModal
                     isOpen={isModalOpen}
                     onRequestClose={() => setIsModalOpen(false)}
-                    className="fixed inset-0 flex items-center justify-center p-4"
+                    shouldCloseOnOverlayClick={true}
+                    className="fixed inset-0 flex items-center justify-center m-96"
                     overlayClassName="fixed inset-0 bg-black bg-opacity-50"
                 >
                     <div className="relative bg-white rounded p-4 w-full max-w-screen-lg mx-auto text-gray-900">
@@ -119,7 +128,7 @@ const ModalBar = () => {
                             </button>
                         </form>
                     </div>
-                </Modal>
+                </ReactModal>
             </div>
             <div className='px-5'>
                 <button onClick={fetchFunctionsAndOpenModal}>
@@ -129,25 +138,26 @@ const ModalBar = () => {
                     </span>
                 </button>
 
-                <Modal
+                <ReactModal
                     isOpen={isFunctionModalOpen}
                     onRequestClose={() => setIsFunctionModalOpen(false)}
-                    className="fixed inset-0 flex items-center justify-center p-4 w-auto"
+                    shouldCloseOnOverlayClick={true}
+                    className="fixed inset-0 flex items-center justify-center m-96 w-auto"
                     overlayClassName="fixed inset-0 bg-black bg-opacity-50"
                 >
                     <div className="relative bg-white rounded p-4 max-w-screen-lg mx-auto text-gray-900 overflow-scroll">
                         <h2 className="text-xl">Functions</h2>
                         <pre>
-                            {functions.map((f) => (
-                                <div key={f.name}>
-                                    <h3 className="text-lg">{f.name}</h3>
-                                    <p>{f.description}</p>
+                            {functions?.map((f) => (
+                                <div key={f?.name}>
+                                    <h3 className="text-lg">{f?.name}</h3>
+                                    <p>{f?.description}</p>
                                     <hr />
                                 </div>
                             ))}
                         </pre>
                     </div>
-                </Modal>
+                </ReactModal>
 
             </div>
             <div className='px-5'>
@@ -157,39 +167,14 @@ const ModalBar = () => {
                         {messageTokens} tokens
                     </span>
                 </button>
-
-                {/* <Modal
+                <ReactModal
                     isOpen={isMessageModalOpen}
                     onRequestClose={() => setIsMessageModalOpen(false)}
-                    className="flex inset-0 items-center justify-center p-4 max-h-96"
+                    shouldCloseOnOverlayClick={true}
+                    className="fixed inset-0 flex items-center justify-center m-96"
                     overlayClassName="fixed inset-0 bg-black bg-opacity-50"
                 >
-                    <div className='relative'>
-                        Hi
-                    </div>
-
-                </Modal> */}
-                <Modal
-                    isOpen={isMessageModalOpen}
-                    onRequestClose={() => setIsMessageModalOpen(false)}
-                    className="fixed inset-0 flex items-center justify-center p-4"
-                    overlayClassName="fixed inset-0 bg-black bg-opacity-50"
-                //                 style={{
-                //     overlay: {
-                //         backgroundColor: 'rgba(0,0,0,0.5)'
-                //     },
-                //     content: {
-                //         position: 'absolute',
-                //         top: '50%',
-                //         left: '50%',
-                //         right: 'auto',
-                //         bottom: 'auto',
-                //         marginRight: '-50%',
-                //         transform: 'translate(-50%, -50%)'
-                //     }
-                // 
-                >
-                    <div className="bg-gray-700 rounded p-4 w-1/2 h-1/2 overflow-y-scroll mx-auto text-gray-200">
+                    <div className="bg-gray-700 rounded p-4 max-w-screen-lg max-h-96 overflow-y-scroll mx-auto text-gray-200">
                         <h2 className="text-xl text-white">Messages</h2>
                         {messageHistory.map((m, index) => (
                             <div key={index} className={m.role === 'user' ? 'my-4 p-2 rounded bg-blue-600 text-white' : 'my-4 p-2 rounded bg-green-600 text-white'}>
@@ -198,7 +183,7 @@ const ModalBar = () => {
                             </div>
                         ))}
                     </div>
-                </Modal>
+                </ReactModal>
             </div>
         </div >
     );

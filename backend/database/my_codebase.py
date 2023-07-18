@@ -91,13 +91,13 @@ class MyCodebase:
         self.embeddings = []
         self.file_dict = {}
 
-        directory = os.path.abspath(directory)
+        self.directory = os.path.abspath(directory)
         self._connect_to_database()
         self.cur = self.conn.cursor()
         self.create_tables()
 
         # Read and embed the files
-        self._update_files_and_embeddings(directory)
+        self._update_files_and_embeddings()
 
         self.remove_old_files()
         # Build the embeddings array from the file_dict
@@ -131,8 +131,8 @@ class MyCodebase:
             else:
                 raise e
 
-    def _update_files_and_embeddings(self, directory):
-        for root, dirs, files in os.walk(directory):
+    def _update_files_and_embeddings(self):
+        for root, dirs, files in os.walk(self.directory):
             print(self.IGNORE_DIRS)
             dirs[:] = [d for d in dirs if d not in self.IGNORE_DIRS]
             for file_name in files:

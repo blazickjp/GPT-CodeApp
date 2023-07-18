@@ -145,37 +145,9 @@ const RightSidebar = ({ isSidebarOpen }) => {
 
 
     return (
-        <div className={`fixed h-full w-2/5 right-0 bg-neutral-800 transition-all duration-500 overflow-y-scroll p-6 text-gray-200 transform ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'} overflow-x-visible`}>
-            {/* Add your sidebar content here */}
-            <div className="flex flex-row justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold mb-4 text-gray-100">Summaries In Prompt</h2>
-                {summaryStatus === 'success' ? (
-                    <BiCheckCircle className="text-green-500" />
-                ) : (summaryStatus === 'error' ? (
-                    <BiErrorCircle className="text-red-500" />
-                ) : (
-                    <AiOutlineSend onClick={sendSummaryFiles} className="cursor-pointer" />
-                ))}
-            </div>
-            {summariesInPrompt.map((summaryFile, index) => {
-                return (
-                    <div className="flex justify-between items-center mb-1">
-                        <p className="mb-1 text-gray-100">{summaryFile} </p>
-                        <AiOutlineMinus onClick={() => removeSummaryFile(summaryFile)} />
-                    </div>
-                )
-            })}
-            <hr className="border-gray-600 mb-4" />
-
-            <div className="flex flex-row justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold mb-4 text-gray-100">File Contents in Prompt</h2>
-                {fileStatus === 'success' ? (
-                    <BiCheckCircle className="text-green-500" />
-                ) : (fileStatus === 'error' ? (
-                    <BiErrorCircle className="text-red-500" />
-                ) : (
-                    <AiOutlineSend onClick={sendFiles} className="cursor-pointer" />
-                ))}
+        <div className={`fixed h-full w-1/3 right-0 bg-neutral-800 transition-all duration-500 overflow-y-scroll p-6 text-gray-200 transform ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'} overflow-x-visible`}>
+            <div className="flex flex-row justify-between items-center mb-2">
+                <h2 className="text-xl font-bold mb-4 text-gray-100">Files and Summaries</h2>
             </div>
             {filesInPrompt.map((file, index) => {
                 return (
