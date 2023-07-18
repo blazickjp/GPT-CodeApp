@@ -11,16 +11,16 @@
 - [x] Breakup the Chatbox historical messages from the current streaming message. Reduce number of re-renders.
 - [x] Switch between GPT-4 and GPT-3.5 (Other Models too)
 - [ ] Testing
-- [ ] Give LLM function to edit Todo of README.md
+- [ ] Improve quality of conversation memory
 - [ ] Give LLM functions to create files and add boiler plate code
 - [ ] Edit User Files with LLM
 - [ ] Support Multiple Conversations
 - [ ] Support Multiple "Identities" for LLM (debugging, adding feature, refactor, etc...)
 - [ ] Display Sidebar Files with a File Explorer
 - [ ] Comprehensive User Documentation
-- [ ] Better Interface for Functions
-- [ ] User authentication system
+- [ ] Better Interface for Adding / Changing LLM Functions
 - [ ] Use Wisper to add voice interface
+- [ ] User authentication system
 
 ## Table of Contents
 
