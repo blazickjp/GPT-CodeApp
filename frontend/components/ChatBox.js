@@ -7,6 +7,9 @@ import ReactTooltip from 'react-tooltip';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 import { Virtuoso } from 'react-virtuoso';
+import { CopyToClipboard } from 'react-copy-to-clipboard';
+import { FaClipboardCheck } from 'react-icons/fa';
+
 
 const encoding = get_encoding("cl100k_base");
 
@@ -18,9 +21,17 @@ const Chatbox = ({ messages }) => {
         const lang = match && match[1] ? match[1] : '';
         console.log("Language:", lang);
         return !inline && match ? (
-            <SyntaxHighlighter language={lang} style={oneDark}>
-                {String(children)}
-            </SyntaxHighlighter>
+            <div className='relative bg-zinc-800 rounded'>
+                <text className='text-sm flex pt-2 pl-2'>{lang}</text>
+                <CopyToClipboard className='absolute top-2 right-2 text-sm mb-0' text={String(children)}>
+                    <button >
+                        <FaClipboardCheck className='text-white' />
+                    </button>
+                </CopyToClipboard>
+                <SyntaxHighlighter language={lang} style={oneDark}>
+                    {String(children)}
+                </SyntaxHighlighter>
+            </div>
         ) : (
             <code className={className}>{children}</code>
         );
