@@ -1,6 +1,6 @@
 # GPT-CodeApp
 
-> This project is a chat application where users can get their code reviewed by GPT-4. It utilizes a token counter to evaluate the complexity of the input and also has features like code highlighting and a beautiful user interface.
+> This project is a clone of Chat-GPT with all the features we wish were available. After getting frustrated by constantly copying and pasting from VS Code into the UI, losing context in the conversation memory, and having little visibility into what's going on under the hood I decided to test the AI's coding ability by making this app. This project started as a tool to better manage the model's conversational memory and context but now we're setting new goals! We're giving the models access to read, write, and edit files but the user has full control! Until these models get better (GPT-5?) we're putting more control in the users hands, but offloading all of the tedious work to the models. This App is very much still a work in progress, but come test it out!
 
 ![](images/ScreenShot-20230719.png)
 
