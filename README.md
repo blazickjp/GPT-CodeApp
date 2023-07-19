@@ -2,6 +2,8 @@
 
 > This project is a chat application where users can get their code reviewed by GPT-4. It utilizes a token counter to evaluate the complexity of the input and also has features like code highlighting and a beautiful user interface.
 
+![](http://github.com/blazickjp/gpt-codeapp/images/ScreenShot-20230719.png)
+
 ## Todo
 
 - [x] Initial setup
@@ -9,10 +11,11 @@
 - [x] Code highlighting
 - [x] SearchBar for adding files
 - [x] Breakup the Chatbox historical messages from the current streaming message. Reduce number of re-renders.
-- [x] Switch between GPT-4 and GPT-3.5 (Other Models too)
+- [x] Switch between GPT-4 and GPT-3.5
+- [x] Enable easy Code Copy to clipboard from UI
+- [ ] Give LLM functions to create files and add boiler plate code
 - [ ] Testing
 - [ ] Improve quality of conversation memory
-- [ ] Give LLM functions to create files and add boiler plate code
 - [ ] Edit User Files with LLM
 - [ ] Support Multiple Conversations
 - [ ] Support Multiple "Identities" for LLM (debugging, adding feature, refactor, etc...)
@@ -20,6 +23,7 @@
 - [ ] Comprehensive User Documentation
 - [ ] Better Interface for Adding / Changing LLM Functions
 - [ ] Use Wisper to add voice interface
+- [ ] Add support for Llamma & Anthropic Models
 - [ ] User authentication system
 
 ## Table of Contents
