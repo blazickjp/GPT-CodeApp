@@ -2,7 +2,7 @@
 
 > This project is a chat application where users can get their code reviewed by GPT-4. It utilizes a token counter to evaluate the complexity of the input and also has features like code highlighting and a beautiful user interface.
 
-![](http://github.com/blazickjp/gpt-codeapp/images/ScreenShot-20230719.png)
+![](images/ScreenShot-20230719.png)
 
 ## Todo
 
