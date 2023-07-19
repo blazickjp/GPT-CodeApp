@@ -3,18 +3,16 @@ import json
 import os
 import time
 from uuid import uuid4
-
-# Third Party
 import tiktoken
-from http import HTTPStatus
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
-
 from agent.agent import CodingAgent
 from agent.memory_manager import MemoryManager
 from database.my_codebase import MyCodebase, get_git_root
 from openai_function_call import openai_function
+from agent.agent_functions import develop
 
 # from agent.agent_functions import Shell
 
@@ -35,17 +33,6 @@ cur = codebase.conn.cursor()
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
 
-@openai_function
-def code_search(query: str) -> str:
-    """
-    Search the Human's codebase to see the most up to date code. This is useful when
-    you are responsding to a question from the Human but need additional information from their code.
-    The function returns the top 2 results which will be the whole file's content.
-    Your input query should be a string which semantically matches the code you are looking for.
-    """
-    return codebase.search(query)
-
-
 agent = CodingAgent(
     MemoryManager(
         model="gpt-3.5-turbo-0613",
@@ -53,8 +40,8 @@ agent = CodingAgent(
     ),
     # functions=[Shell.openai_schema],
     # callables=[Shell],
-    functions=[code_search.openai_schema],
-    callables=[code_search.func],
+    # functions=[develop.openai_schema],
+    # callables=[code_search.func],
 )
 
 

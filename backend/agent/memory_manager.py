@@ -13,6 +13,7 @@ import psycopg2
 import tiktoken
 from dotenv import load_dotenv
 
+
 class MemoryManager:
     """
     A memory manager for managing conversation history and archiving old conversation data.
@@ -94,19 +95,24 @@ class MemoryManager:
         self.system_file_contents = None
         self.messages = []
         try:
-            auth = {"dbname": CODEAPP_DB_NAME, 
-                    "user": CODEAPP_DB_USER,
-                    "password": CODEAPP_DB_PW,
-                    "host": CODEAPP_DB_HOST}
+            auth = {
+                "dbname": CODEAPP_DB_NAME,
+                "user": CODEAPP_DB_USER,
+                "password": CODEAPP_DB_PW,
+                "host": CODEAPP_DB_HOST,
+            }
             self.conn = psycopg2.connect(**auth)
             print("Successfully connected to database")
         except Exception as e:
-            if self.CODEAPP_DB_USER is None or self.CODEAPP_DB_USER == "USER_FROM_SETUP_STEP4":
+            if (
+                self.CODEAPP_DB_USER is None
+                or self.CODEAPP_DB_USER == "USER_FROM_SETUP_STEP4"
+            ):
                 raise Exception(
                     """
-                    Failed to connect to database. 
-                    Credentials not set or changed in .env file or .env file is missing. 
-                    Please set the following environment variables in the .env file in the root directory: 
+                    Failed to connect to database.
+                    Credentials not set or changed in .env file or .env file is missing.
+                    Please set the following environment variables in the .env file in the root directory:
                     CODEAPP_DB_NAME, CODEAPP_DB_USER, CODEAPP_DB_PW, CODEAPP_DB_HOST
                     """
                 )
@@ -159,7 +165,7 @@ class MemoryManager:
         timestamp = datetime.now().isoformat()  # Current timestamp in milliseconds
         message_tokens = self.get_total_tokens_in_message(content)
         summary, summary_tokens = (
-            self.summarize(content) if message_tokens > 200 else (None, None)
+            self.summarize(content) if message_tokens > 500 else (None, None)
         )
         try:
             self.cur.execute(
