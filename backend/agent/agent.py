@@ -8,7 +8,7 @@ TEMPERATURE = 0.2  # or any other temperature you want to use
 
 
 class CodingAgent:
-    def __init__(self, memory_manager, functions=[None], callables=[None]):
+    def __init__(self, memory_manager, functions=None, callables=[None]):
         """
         Initializes a CodingAgent object.
 
@@ -19,9 +19,10 @@ class CodingAgent:
         self.memory_manager = memory_manager
         self.functions = functions
         self.GPT_MODEL = GPT_MODEL
-        self.function_map = {
-            func.__name__: func for func in callables
-        }  # Create a map of function names to functions
+        if callables:
+            self.function_map = {
+                func.__name__: func for func in callables if func is not None
+            }  # Create a map of function names to functions
 
     def query(self, input_text, function_call="auto"):
         """
@@ -41,20 +42,22 @@ class CodingAgent:
             for i in self.memory_manager.get_messages()
         ]
 
-        func_call = {
-            "name": None,
-            "arguments": "",
+        keyword_args = {
+            "model": self.GPT_MODEL,
+            "messages": message_history,
+            "max_tokens": MAX_TOKENS,
+            "temperature": TEMPERATURE,
+            "stream": True,
         }
+        if self.functions:
+            keyword_args["functions"] = self.functions
+            keyword_args["function_call"] = "auto"
+            func_call = {
+                "name": None,
+                "arguments": "",
+            }
 
-        for chunk in openai.ChatCompletion.create(
-            model=self.GPT_MODEL,
-            messages=message_history,
-            functions=self.functions,
-            function_call=function_call,
-            max_tokens=MAX_TOKENS,
-            temperature=TEMPERATURE,
-            stream=True,
-        ):
+        for chunk in openai.ChatCompletion.create(**keyword_args):
             delta = chunk["choices"][0].get("delta", {})
             if "function_call" in delta:
                 if "name" in delta.function_call:
