@@ -74,6 +74,20 @@ To install necessary dependencies, run the following commands:
 
 Remember to replace `your_database_name`, `your_username`, and `your_password` with your desired values.
 
+### Enabling Audio Transcription
+You need an active Google Cloud project and `gcloud` initialized.
+
+Run these commands:
+```sh
+gcloud iam service-accounts create dev-audio-transcription-bot
+gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT --member="serviceAccount:dev-audio-transcription-bot@$GOOGLE_CLOUD_PROJECT.iam.gserviceaccount.com" --role="roles/speech.editor"
+gcloud iam service-accounts keys create dev-audio-transcription-bot.json --iam-account=dev-audio-transcription-bot@$GOOGLE_CLOUD_PROJECT.iam.gserviceaccount.com
+```
+Then add the path to the newly created and downloaded `.json` credential to the `.env` file.
+```sh
+GOOGLE_AUDIO_TRANSCRIPTION_CREDENTIALS="PATH_TO_JSON_CRED"
+```
+
 ## Usage
 
 ```bash
