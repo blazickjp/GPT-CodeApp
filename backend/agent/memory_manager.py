@@ -2,6 +2,7 @@
 import json
 import time
 import sys
+from typing import Optional, List
 from uuid import uuid4
 from datetime import datetime
 import os
@@ -74,8 +75,12 @@ class MemoryManager:
     """
 
     def __init__(
-        self, model="gpt-3.5-turbo", identity=None, tree=None, max_tokens=1000
-    ):
+        self,
+        model: str = "gpt-3.5-turbo",
+        identity: str = None,
+        tree: str = None,
+        max_tokens: int = 1000,
+    ) -> None:
         load_dotenv()
         CODEAPP_DB_NAME = os.getenv("CODEAPP_DB_NAME")
         CODEAPP_DB_USER = os.getenv("CODEAPP_DB_USER")
@@ -123,7 +128,7 @@ class MemoryManager:
         self.conn.commit()
         self.set_system()
 
-    def get_messages(self):
+    def get_messages(self, chat_box: Optional[bool] = None) -> List[dict]:
         self.cur.execute(
             """
             SELECT role, content
@@ -132,6 +137,7 @@ class MemoryManager:
         )
         results = self.cur.fetchall()
         messages = [{"role": result[0], "content": result[1]} for result in results]
+        max_tokens = 10000 if chat_box else self.max_tokens
         self.cur.execute(
             """
             with t1 as (
@@ -147,21 +153,17 @@ class MemoryManager:
             from t1
             WHERE token_cum_sum <= %s
             """,
-            (self.max_tokens,),
+            (max_tokens,),
         )
         results = self.cur.fetchall()
-        tokens = 0
         for result in results[::-1]:
-            tokens += result[3]
-            if tokens > self.max_tokens:
-                break
             messages.append(
                 {"role": result[0], "content": result[2], "full_content": result[1]}
             )
 
         return messages
 
-    def add_message(self, role, content):
+    def add_message(self, role: str, content: str) -> None:
         timestamp = datetime.now().isoformat()  # Current timestamp in milliseconds
         message_tokens = self.get_total_tokens_in_message(content)
         summary, summary_tokens = (
@@ -188,7 +190,7 @@ class MemoryManager:
             print("Failed to insert data: ", str(e))
         return
 
-    def summarize(self, message):
+    def summarize(self, message: str) -> str:
         prompt = """Please summarize the following message. Reply only with the summary and do not
         include any other text in your response.
         MESSAGE: {}
@@ -208,13 +210,13 @@ class MemoryManager:
         tokens = self.get_total_tokens_in_message(summary)
         return summary, tokens
 
-    def get_total_tokens_in_message(self, message):
+    def get_total_tokens_in_message(self, message: str) -> int:
         """Returns the number of tokens in a message."""
         encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
         num_tokens = len(encoding.encode(message))
         return num_tokens
 
-    def get_total_tokens(self):
+    def get_total_tokens(self) -> int:
         """Returns the number of tokens in a text string."""
         total_tokens = 0
         for item in self.messages:
@@ -242,7 +244,7 @@ class MemoryManager:
         self.messages = items_to_load
         self.conn.commit()
 
-    def set_system(self, input: dict = {}):
+    def set_system(self, input: dict = {}) -> None:
         """Set the system message."""
 
         "Update the system prompt manually"

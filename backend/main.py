@@ -1,7 +1,6 @@
 # Base
 import json
 import os
-import time
 from uuid import uuid4
 import tiktoken
 
@@ -12,9 +11,7 @@ from agent.agent import CodingAgent
 from agent.memory_manager import MemoryManager
 from database.my_codebase import MyCodebase, get_git_root
 from openai_function_call import openai_function
-from agent.agent_functions import develop
-
-# from agent.agent_functions import Shell
+from typing import Optional, List
 
 app = FastAPI()
 
@@ -32,7 +29,6 @@ cur = codebase.conn.cursor()
 
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
-
 agent = CodingAgent(
     MemoryManager(
         model="gpt-3.5-turbo-0613",
@@ -46,8 +42,9 @@ agent = CodingAgent(
 
 
 @app.post("/message_streaming")
-async def message_streaming(request: Request):
+async def message_streaming(request: Request) -> StreamingResponse:
     # Get the input data from the POST request
+    # function_data needs keys: "name", "input"
     data = await request.json()
     prompt = data.get("input")
 
@@ -66,6 +63,30 @@ async def message_streaming(request: Request):
     return StreamingResponse(stream(), media_type="text/event-stream")
 
 
+@app.post("/create_program")
+async def create_program(request: Request, save: Optional[bool] = None):
+    # Get the input data from the POST request
+    # function_data needs keys: "name", "input"
+    data = await request.json()
+    input = data.get("input")
+    save = data.get("save")
+    code = data.get("code")
+
+    prompt = f"ADDITIONAL INPUT:\n{input}\n\nCODE:\n{code}"
+    print(prompt)
+
+    def stream():
+        for file_content, file_path in agent.create_program(prompt):
+            print(file_path)
+            print(file_content)
+            if file_content is not None:
+                yield json.dumps(
+                    {"contents": file_content, "file_path": file_path, "save": save}
+                ) + "\n"
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+
+
 @app.get("/system_prompt")
 async def get_system_prompt():
     return {"system_prompt": agent.memory_manager.system}
@@ -79,15 +100,22 @@ async def update_system_prompt(input: dict):
 
 @app.get("/get_functions")
 async def get_functions():
+    if agent.functions is None:
+        return {
+            "functions": [
+                {"name": "The Agent has 0 Functions Loaded", "description": ""}
+            ]
+        }
     return {"functions": agent.functions}
 
 
 @app.get("/get_messages")
-async def get_messages():
+async def get_messages(chatbox: bool | None = None):
+    print(f"ChatBox: {chatbox}")
     if len(agent.memory_manager.messages) == 1:
         return {"messages": []}
     else:
-        return {"messages": agent.memory_manager.get_messages()[1:]}
+        return {"messages": agent.memory_manager.get_messages(chat_box=chatbox)[1:]}
 
 
 @app.get("/get_summaries")
@@ -119,6 +147,9 @@ async def generate_readme():
 
 @app.post("/set_summary_files_in_prompt")
 async def set_summary_files_in_prompt(input: dict):
+    if "files" not in input:
+        return JSONResponse(status_code=400, content={"error": "missing files"})
+
     files = [os.path.join(get_git_root(), file) for file in input.get("files")]
     summaries = codebase.get_summaries()
     summaries = [f"{k}:\n{v}" for k, v in summaries.items() if k in files]
@@ -131,9 +162,12 @@ async def set_summary_files_in_prompt(input: dict):
 @app.post("/set_files_in_prompt")
 async def set_files_in_prompt(input: dict):
     files = [os.path.join(get_git_root(), file) for file in input.get("files")]
-    print(files)
+    if not files:
+        return JSONResponse(status_code=400, content={"error": "No files provided."})
     content = codebase.get_file_contents()
     content = [f"{k}:\n{v}" for k, v in content.items() if k in files]
+    if not content:
+        return JSONResponse(status_code=400, content={"error": "No files found."})
     additional_system_prompt_files = "\n\n".join(content)
     agent.memory_manager.system_file_contents = additional_system_prompt_files
     agent.memory_manager.set_system()
