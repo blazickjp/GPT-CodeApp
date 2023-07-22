@@ -82,14 +82,6 @@ const ModalBar = () => {
             .catch(console.error);
     };
 
-    const handleFunctionClose = (e) => {
-        setIsFunctionModalOpen(false);
-    };
-    const handleSystemClose = (e) => {
-        e.preventDefault();
-        setIsModalOpen(false);
-    };
-
     useEffect(() => {
         fetchSystemPromptAndOpenModal(false);
         fetchFunctionsAndOpenModal(false);

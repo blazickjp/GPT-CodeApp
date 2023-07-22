@@ -7,8 +7,6 @@ import { MdDescription } from 'react-icons/md'; // Readme icon
 import { FaPython } from 'react-icons/fa';
 
 
-
-
 const SearchBar = ({ addFileToContext }) => {
     const [selectedOptions, setSelectedOptions] = useState(null);
     const [options, setOptions] = useState([]);
@@ -96,9 +94,10 @@ const SearchBar = ({ addFileToContext }) => {
             });
     };
 
-    useEffect(() => {
-        fetchSearchData();
-    }, []);
+    // This was taking too long everytime you make a change and need to refresh to UI
+    // useEffect(() => {
+    //     fetchSearchData();
+    // }, []);
 
     // Define custom styles
     const customStyles = {
@@ -171,6 +170,7 @@ const SearchBar = ({ addFileToContext }) => {
         <div className='flex flex-row w-full mb-4 justify-center'>
             <button className='text-purple-700 mr-5 text-lg' onClick={fetchSearchData} title="Refresh options">
                 {refreshStatus === null && <HiOutlineRefresh className='text-purple-700' />}
+                {refreshStatus === 'loading' && <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-purple-700'></div>}
                 {refreshStatus === 'success' && <HiOutlineRefresh className="text-green-500" />}  {/* Green check */}
                 {refreshStatus === 'error' && <HiOutlineRefresh className="text-red-500" />}  {/* Red cross */}
             </button>
