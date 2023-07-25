@@ -1,4 +1,3 @@
-# base
 import json
 import os
 import datetime
@@ -55,36 +54,6 @@ class MyCodebase:
     CODEAPP_DB_HOST = os.getenv("CODEAPP_DB_HOST")
     IGNORE_DIRS = os.getenv("IGNORE_DIRS")
     FILE_EXTENSIONS = os.getenv("FILE_EXTENSIONS")
-    """
-    A class used to represent a local database of files and their embeddings.
-
-    The class takes a directory as an argument during initialization and finds all Python
-    files within that directory and its subdirectories. Each file's content is read and
-    its embedding is generated using OpenAI's Embedding API. The files and their embeddings
-    are then stored for later use.
-
-    Methods
-    -------
-    encode(text_or_tokens: str, model: str = EMBEDDING_MODEL) -> np.ndarray:
-        Generate the OpenAI embedding for the given text.
-
-    search(query: str, k: int = 2) -> List[Tuple[str, str]]:
-        Search for files that match the query and return a sorted list of file names
-        and their content based on their similarity to the query.
-
-    file_lookup(file_identifiers: List[str]) -> List[str]:
-        Look up and return the content of the files given their names or paths.
-
-    Example
-    -------
-    >>> db = LocalRepositoryDB(directory="../")
-    >>> query_results = db.search(query="Your search query")
-    >>> for file_name, content in query_results:
-    ...     print(f"File: {file_name}\nContent: {content}\n\n")
-    >>> file_contents = db.file_lookup(file_identifiers=["file1.py", "/path/to/file2.py"])
-    >>> for content in file_contents:
-    ...     print(f"Content: {content}\n\n")
-    """
 
     def __init__(self, directory: str = "."):
         self.files = []
@@ -172,54 +141,47 @@ class MyCodebase:
                 else:
                     print(f"Updating file {file_path}")
 
-            embedding = pickle.dumps(self.encode(text))
-            token_count = len(ENCODER.encode(text))
-            response = openai.ChatCompletion.create(
-                model=SUMMARY_MODEL,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": SUMMARY_PROMPT.format(text),
-                    },
-                ],
-                max_tokens=250,
-                temperature=0.4,
-            )
-            file_summary = response["choices"][0]["message"]["content"].strip()
-
-            # The dict's key is the file path, and value is a dict containing the text and embedding
-            self.cur.execute(
-                sql.SQL(
-                    """
-                    INSERT INTO files (file_path, text, embedding, token_count, summary, last_updated)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (file_path)
-                    DO UPDATE SET text = %s, embedding = %s, token_count = %s, summary = %s, last_updated = %s
-                    """,
-                ),
-                (
-                    file_path,
-                    text,
-                    embedding,
-                    token_count,
-                    file_summary,
-                    last_modified,
-                    text,
-                    embedding,
-                    token_count,
-                    file_summary,
-                    last_modified,
-                ),
-            )
-            self.conn.commit()
-
-        # Update the embeddings array from the file_dict
-        self.cur.execute(
-            """
-            SELECT embedding FROM files
-        """
+        embedding = list(self.encode(text))
+        token_count = len(ENCODER.encode(text))
+        embedding = np.array(embedding).tobytes()
+        response = openai.ChatCompletion.create(
+            model=SUMMARY_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": SUMMARY_PROMPT.format(text),
+                },
+            ],
+            max_tokens=250,
+            temperature=0.4,
         )
-        self.embeddings = np.array([bytes(file[0]) for file in self.cur.fetchall()])
+        file_summary = response["choices"][0]["message"]["content"].strip()
+
+        # The dict's key is the file path, and value is a dict containing the text and embedding
+        self.cur.execute(
+            sql.SQL(
+                """
+                INSERT INTO files (file_path, text, embedding, token_count, summary, last_updated)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (file_path)
+                DO UPDATE SET text = %s, embedding = %s, token_count = %s, summary = %s, last_updated = %s
+                """,
+            ),
+            (
+                file_path,
+                text,
+                embedding,
+                token_count,
+                file_summary,
+                last_modified,
+                text,
+                embedding,
+                token_count,
+                file_summary,
+                last_modified,
+            ),
+        )
+        self.conn.commit()
 
     def create_tables(self):
         self.cur.execute(
@@ -248,23 +210,46 @@ class MyCodebase:
         """
         Search for files that match the query.
         """
+        self.cur.execute(
+            """
+            SELECT embedding, file_path FROM files
+            """
+        )
+        file_embeddings = [
+            (file[1], np.frombuffer(file[0])) for file in self.cur.fetchall()
+        ]
+        embeddings = np.array([file[1] for file in file_embeddings])
+        file_list = [file[0] for file in file_embeddings]
         query_embedding = self.encode(query)
-        similarities = cosine_similarity([query_embedding], self.embeddings)[0]
+        query_embedding = np.array(query_embedding).reshape(1, -1)
+        print(f"Query embedding shape: {query_embedding.shape}")
+        print(f"Embeddings shape: {embeddings.shape}")
+        similarities = cosine_similarity(query_embedding, embeddings)[0]
+        print(f"Similarities shape: {similarities.shape}")
 
         # Ensure k is not greater than the total number of files
-        k = min(k, len(self.file_dict))
+        k = min(k, len(file_list))
 
         # Sort by similarity
         sorted_indices = np.argsort(similarities)[::-1][:k]
+        out_files = [file_list[i] for i in sorted_indices]
+        print(out_files)
 
         # Return sorted file paths and content
-        results = [
-            (path, self.file_dict[path]["text"])
-            for path in np.array(list(self.file_dict.keys()))[sorted_indices]
-        ]
+        # results = []
         out = ""
-        for file_name, content in results:
-            out += f"File: {file_name}\nContent: {content}\n\n"
+        for file_name in out_files:
+            self.cur.execute(
+                sql.SQL(
+                    """
+                    SELECT text FROM files WHERE file_path = %s
+                    """
+                ),
+                (file_name,),
+            )
+            content = self.cur.fetchall()[0][0]
+            print(f"Search Result: {file_name}")
+            out += f"File: {file_name}\nContent:\n{content}\n"
 
         return out
 

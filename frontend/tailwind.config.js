@@ -16,6 +16,7 @@ module.exports = {
       colors: {
         'python-blue': '#3776ab',
         'python-yellow': '#ffd43b',
+        'onedark': '#282c34',
       }
     }
   },

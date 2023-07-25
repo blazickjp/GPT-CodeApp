@@ -63,28 +63,49 @@ async def message_streaming(request: Request) -> StreamingResponse:
     return StreamingResponse(stream(), media_type="text/event-stream")
 
 
-@app.post("/create_program")
-async def create_program(request: Request, save: Optional[bool] = None):
-    # Get the input data from the POST request
-    # function_data needs keys: "name", "input"
-    data = await request.json()
-    input = data.get("input")
-    save = data.get("save")
-    code = data.get("code")
+@app.post("/edit_files")
+async def edit_files(request: Request):
+    try:
+        data = await request.json()
+        code = data.get("code")
 
-    prompt = f"ADDITIONAL INPUT:\n{input}\n\nCODE:\n{code}"
-    print(prompt)
+        top_file = codebase.search(code, k=1)
 
-    def stream():
-        for file_content, file_path in agent.create_program(prompt):
-            print(file_path)
-            print(file_content)
-            if file_content is not None:
-                yield json.dumps(
-                    {"contents": file_content, "file_path": file_path, "save": save}
-                ) + "\n"
+        # Check if top_file exists
+        if not top_file:
+            return JSONResponse(
+                status_code=404,
+                content={"error": "No file found corresponding to the provided code."},
+            )
+        prompt = f"""
+        You've been helping with a coding project and have been asked to update the following file
+        with updated code shown below. Make sure that this code is correct and that it runs. Your
+        system prompt and conversation history is being included to give you context on the task.
+        Make sure you include the contents for the ENTIRE FILE, not just the code you've been asked to update.
 
-    return StreamingResponse(stream(), media_type="text/event-stream")
+        FULL FILE AND CONTENTS:
+        {top_file}
+
+        NEW CODE:
+        {code}
+        """
+        print(f"Top File: {top_file[0:100]}")
+        print("Running agent.edit_files")
+        contents, program = agent.edit_files(prompt)
+
+        # return json.dumps({"contents": contents}) + "\n"
+        return JSONResponse(
+            status_code=200, content={"old_file": top_file, "new_file": contents}
+        )
+
+    except Exception as e:
+        # Catch any general exception
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": f"An error occurred while processing the request: {str(e)}"
+            },
+        )
 
 
 @app.get("/system_prompt")
@@ -111,7 +132,6 @@ async def get_functions():
 
 @app.get("/get_messages")
 async def get_messages(chatbox: bool | None = None):
-    print(f"ChatBox: {chatbox}")
     if len(agent.memory_manager.messages) == 1:
         return {"messages": []}
     else:
