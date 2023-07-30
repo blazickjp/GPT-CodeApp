@@ -1,4 +1,5 @@
 # Base
+import code
 import json
 import os
 from uuid import uuid4
@@ -10,7 +11,6 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from agent.agent import CodingAgent
 from agent.memory_manager import MemoryManager
 from database.my_codebase import MyCodebase, get_git_root
-from openai_function_call import openai_function
 from typing import Optional, List
 
 app = FastAPI()
@@ -41,6 +41,12 @@ agent = CodingAgent(
 )
 
 
+@app.post("/set_directory")
+async def set_directory(input: dict):
+    path = input.get("path")
+    codebase.set_directory(path)
+
+
 @app.post("/message_streaming")
 async def message_streaming(request: Request) -> StreamingResponse:
     # Get the input data from the POST request
@@ -67,7 +73,7 @@ async def message_streaming(request: Request) -> StreamingResponse:
 async def edit_files(request: Request):
     try:
         data = await request.json()
-        code = data.get("code")
+        new_code = data.get("code")
 
         top_file = codebase.search(code, k=1)
 
@@ -87,7 +93,7 @@ async def edit_files(request: Request):
         {top_file}
 
         NEW CODE:
-        {code}
+        {new_code}
         """
         print(f"Top File: {top_file[0:100]}")
         print("Running agent.edit_files")
@@ -146,7 +152,7 @@ async def get_summaries(reset: bool | None = None):
 
     cur.execute("SELECT DISTINCT file_path, summary, token_count FROM files")
     results = cur.fetchall()
-    root_path = get_git_root(".")
+    root_path = get_git_root(codebase.directory)
     result = [
         {
             "file_path": os.path.relpath(file_path, root_path),
@@ -170,7 +176,10 @@ async def set_summary_files_in_prompt(input: dict):
     if "files" not in input:
         return JSONResponse(status_code=400, content={"error": "missing files"})
 
-    files = [os.path.join(get_git_root(), file) for file in input.get("files")]
+    files = [
+        os.path.join(get_git_root(codebase.directory), file)
+        for file in input.get("files")
+    ]
     summaries = codebase.get_summaries()
     summaries = [f"{k}:\n{v}" for k, v in summaries.items() if k in files]
     additional_system_prompt_summaries = "\n\n".join(summaries)
@@ -181,7 +190,10 @@ async def set_summary_files_in_prompt(input: dict):
 
 @app.post("/set_files_in_prompt")
 async def set_files_in_prompt(input: dict):
-    files = [os.path.join(get_git_root(), file) for file in input.get("files")]
+    files = [
+        os.path.join(get_git_root(codebase.directory), file)
+        for file in input.get("files")
+    ]
     if not files:
         return JSONResponse(status_code=400, content={"error": "No files provided."})
     content = codebase.get_file_contents()

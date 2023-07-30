@@ -4,6 +4,7 @@ import Modal from 'react-modal';
 import { get_encoding } from "@dqbd/tiktoken";
 import ModalBar from '../components/ModalBar';
 import RightSidebar from '../components/RightSidebar';
+import LeftSidebar from '../components/LeftSidebar';
 import { FiMenu } from 'react-icons/fi';
 import SearchBar from '../components/SearchBar';
 import ChatInput from '../components/ChatInput';  // adjust this path to point to the ChatInput file
@@ -19,6 +20,15 @@ const Chat = () => {
   const dispatch = useDispatch();
   const messages = useSelector(state => state.messages);
   const isSidebarOpen = useSelector(state => state.sidebar.isOpen);
+  // Add state for the left sidebar
+  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
+
+  // Add a function to toggle the left sidebar
+  const toggleLeftSidebar = () => {
+    setIsLeftSidebarOpen(!isLeftSidebarOpen);
+    console.log(isLeftSidebarOpen);
+  };
+
 
   const submitMessage = async (input) => {
     console.log(input);
@@ -95,7 +105,7 @@ const Chat = () => {
   return (
     <div className="flex flex-col bg-gray-800 h-screen">
       <div className="flex flex-row p-2 h-1/8 mx-auto">
-        <button className="float-left">
+        <button onClick={toggleLeftSidebar} className="float-left">
           <FiMenu className="ml-2" />
         </button>
         <h1 className="text-4xl font-bold text-center text-dark-secondary px-5">CodeGPT</h1>
@@ -111,6 +121,7 @@ const Chat = () => {
         <ChatBox messages={messages} />
       </div>
       <RightSidebar isSidebarOpen={isSidebarOpen} />
+      <LeftSidebar isLeftSidebarOpen={isLeftSidebarOpen} />
 
       <div className="input-area h-1/5 flex bg-gray-800 text-center justify-center items-center w-full text-gray-900" >
         <div className='w-full'>
