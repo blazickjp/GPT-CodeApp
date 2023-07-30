@@ -22,6 +22,7 @@ class MemoryManager:
         identity: str = None,
         tree: str = None,
         max_tokens: int = 1000,
+        table_name: str = "default",
     ) -> None:
         load_dotenv()
         CODEAPP_DB_NAME = os.getenv("CODEAPP_DB_NAME")
@@ -41,6 +42,11 @@ class MemoryManager:
         self.system_file_summaries = None
         self.system_file_contents = None
         self.messages = []
+
+        # Save the table names
+        self.memory_table_name = f"{table_name}_memory"
+        self.system_table_name = f"{table_name}_system_prompt"
+
         try:
             auth = {
                 "dbname": CODEAPP_DB_NAME,
@@ -72,23 +78,23 @@ class MemoryManager:
 
     def get_messages(self, chat_box: Optional[bool] = None) -> List[dict]:
         self.cur.execute(
-            """
+            f"""
             SELECT role, content
-            FROM system_prompt;
+            FROM {self.system_table_name};
             """
         )
         results = self.cur.fetchall()
         messages = [{"role": result[0], "content": result[1]} for result in results]
         max_tokens = 10000 if chat_box else self.max_tokens
         self.cur.execute(
-            """
+            f"""
             with t1 as (
                 SELECT role,
                     content as full_content,
                     COALESCE(summarized_message, content) as content,
                     COALESCE(summarized_message_tokens, content_tokens) as tokens,
                     sum(COALESCE(summarized_message_tokens, content_tokens)) OVER (ORDER BY interaction_index DESC) as token_cum_sum
-                FROM memory
+                FROM {self.memory_table_name}
                 ORDER BY interaction_index desc
             )
             select role, full_content, content, tokens
@@ -113,8 +119,8 @@ class MemoryManager:
         )
         try:
             self.cur.execute(
-                """
-                INSERT INTO memory
+                f"""
+                INSERT INTO {self.memory_table_name}
                 (interaction_index, role, content, content_tokens, summarized_message, summarized_message_tokens)
                 VALUES (%s, %s, %s, %s, %s, %s);
                 """,
@@ -197,58 +203,45 @@ class MemoryManager:
         self.system = system
 
         self.cur.execute(
-            """
-            TRUNCATE TABLE system_prompt;
-            INSERT INTO system_prompt
-            (role, content, content_tokens, updated_at)
-            VALUES (%s, %s, %s, %s)
+            f"""
+            TRUNCATE TABLE {self.system_table_name};
+            INSERT INTO {self.system_table_name}
+            (role, content)
+            VALUES (%s, %s);
             """,
             (
                 "system",
                 self.system,
-                self.get_total_tokens_in_message(self.system),
-                datetime.now().isoformat(),
             ),
         )
+        self.conn.commit()
+        return True
 
-    def create_tables(self):
-        # Create the table if it doesn't exist
-        self.cur.execute(
-            """
-        CREATE TABLE IF NOT EXISTS memory (
-            interaction_index TIMESTAMP DEFAULT NOW(),
-            conversation_id TEXT,
-            role TEXT,
-            content TEXT,
-            content_tokens INT,
-            summarized_message TEXT,
-            summarized_message_tokens INT
-        );
-
-        CREATE TABLE IF NOT EXISTS system_prompt (
-            role TEXT,
-            content TEXT,
-            content_tokens INT,
-            created_at TIMESTAMP DEFAULT NOW(),
-            updated_at TIMESTAMP DEFAULT NOW()
-        );
-        """
-        )
+    def create_tables(self) -> None:
+        try:
+            self.cur.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS {self.memory_table_name}
+                (
+                    interaction_index TIMESTAMP PRIMARY KEY,
+                    role VARCHAR(100),
+                    content TEXT,
+                    content_tokens INT,
+                    summarized_message TEXT,
+                    summarized_message_tokens INT
+                );
+                """
+            )
+            self.cur.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS {self.system_table_name}
+                (
+                    role VARCHAR(100),
+                    content TEXT
+                );
+                """
+            )
+            self.conn.commit()
+        except Exception as e:
+            print("Failed to create tables: ", str(e))
         return
-
-
-if __name__ == "__main__":
-    # Example usage:
-    memory_manager = MemoryManager(model="gpt-3.5-turbo-0613")
-    # Add messages with interaction indices
-    memory_manager.add_message("user", "What's the weather like in Boston?")
-    memory_manager.add_message("assistant", "The weather in Boston is sunny.")
-    memory_manager.add_message("user", "Tell me a joke.")
-    # Archive a memory item manually
-    idx = int(time.time() * 1000)  # Convert to integer here as well
-    memory_manager.archive_memory_item(
-        {"role": "user", "content": "This is a test message.", "interaction_index": idx}
-    )
-
-    # Retrieve the manually archived memory item
-    memory_manager.display_conversation()

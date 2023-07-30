@@ -74,6 +74,11 @@ class MyCodebase:
             [file["embedding"] for file in self.file_dict.values()]
         )
 
+    def set_directory(self, directory):
+        self.directory = os.path.abspath(directory)
+        self._update_files_and_embeddings()
+        self.remove_old_files()
+
     def _connect_to_database(self):
         try:
             auth = {
