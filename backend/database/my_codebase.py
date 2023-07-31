@@ -274,16 +274,21 @@ class MyCodebase:
             out.update({file_name: text})
         return out
 
-    def tree(self, start_from="GPT-CodeApp"):
+    def tree(self):
         """
         Return a string representing the tree of the files in the database.
         TODO: Configure start_from so it's not hardcoded
         """
         tree = {}
+        start_from = os.path.basename(self.directory)
 
         # Fetch file paths from the database
         self.cur.execute("SELECT file_path, summary FROM files")
-        file_paths = [result[0] for result in self.cur.fetchall()]
+        file_paths = [
+            result[0]
+            for result in self.cur.fetchall()
+            if result[0].startswith(self.directory)
+        ]
 
         # Insert each file into the tree structure
         for file_path in file_paths:

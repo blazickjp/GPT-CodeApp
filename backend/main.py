@@ -4,7 +4,6 @@ import json
 import os
 from uuid import uuid4
 from dotenv import load_dotenv
-from networkx import directed_combinatorial_laplacian_matrix
 import tiktoken
 
 from fastapi import FastAPI, Request
@@ -158,6 +157,7 @@ async def get_summaries(reset: bool | None = None):
             "summary_token_count": len(ENCODER.encode(summary)),
         }
         for file_path, summary, token_count in results
+        if file_path.startswith(root_path)
     ]
     result = sorted(result, key=lambda x: x["file_path"])
     return result
