@@ -3,6 +3,8 @@ import code
 import json
 import os
 from uuid import uuid4
+from dotenv import load_dotenv
+from networkx import directed_combinatorial_laplacian_matrix
 import tiktoken
 
 from fastapi import FastAPI, Request
@@ -14,7 +16,6 @@ from database.my_codebase import MyCodebase, get_git_root
 from typing import Optional, List
 
 app = FastAPI()
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,11 +24,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-codebase = MyCodebase("../")
+load_dotenv()
+ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
+DIRECTORY = os.getenv("PROJECT_DIRECTORY")
+print(DIRECTORY)
+codebase = MyCodebase(DIRECTORY)
 tree = codebase.tree()
 cur = codebase.conn.cursor()
-
-ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
 agent = CodingAgent(
     MemoryManager(
@@ -39,12 +42,6 @@ agent = CodingAgent(
     # functions=[develop.openai_schema],
     # callables=[code_search.func],
 )
-
-
-@app.post("/set_directory")
-async def set_directory(input: dict):
-    path = input.get("path")
-    codebase.set_directory(path)
 
 
 @app.post("/message_streaming")
