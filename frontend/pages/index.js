@@ -121,7 +121,7 @@ const Chat = () => {
         <ChatBox messages={messages} />
       </div>
       <RightSidebar isSidebarOpen={isSidebarOpen} />
-      <LeftSidebar isLeftSidebarOpen={isLeftSidebarOpen} />
+      {/* <LeftSidebar isLeftSidebarOpen={isLeftSidebarOpen} /> */}
 
       <div className="input-area h-1/5 flex bg-gray-800 text-center justify-center items-center w-full text-gray-900" >
         <div className='w-full'>
