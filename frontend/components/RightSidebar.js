@@ -56,7 +56,7 @@ const RightSidebar = ({ isSidebarOpen }) => {
 
 
     return (
-        <div className={`fixed h-full w-1/3 right-0 bg-neutral-800 transition-all duration-500 overflow-y-scroll p-6 text-gray-200 transform ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'} overflow-x-visible`}>
+        <div className={`fixed h-full z-10 w-1/3 right-0 bg-neutral-800 transition-all duration-500 overflow-y-scroll p-6 text-gray-200 transform ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'} overflow-x-visible`}>
             <div className="flex flex-row justify-between items-center mb-2">
                 <h2 className="text-xl font-bold mb-4 text-gray-100">Files and Summaries</h2>
             </div>

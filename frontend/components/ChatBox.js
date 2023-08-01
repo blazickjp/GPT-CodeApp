@@ -2,15 +2,10 @@ import React, { useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
-import { get_encoding } from "@dqbd/tiktoken";
 import ReactTooltip from 'react-tooltip';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 import { Virtuoso } from 'react-virtuoso';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import { FaClipboardCheck } from 'react-icons/fa';
-
-const encoding = get_encoding("cl100k_base");
 
 const CodeBlock = React.memo(({ node, inline, className, children }) => {
     const match = /language-(\w+)/.exec(className || '');
@@ -40,18 +35,13 @@ const Chatbox = ({ messages }) => {
     const chatboxRef = useRef(null);
     const Row = ({ index, data }) => {
         const message = data[index];
-        if (!message.text || !encoding) {
+        if (!message.text) {
             return null;
         }
 
-        const tokens = encoding.encode(message.text);
         return (
             <div className={message.user === 'human' ? "bg-gray-700 text-white p-5" : "bg-gray-600 p-5 text-white"}>
                 <div className='flex flex-row w-1/2 mx-auto'>
-                    <FontAwesomeIcon icon={faInfoCircle} className="cursor-pointer mr-5" data-tip data-for={`tokenTip${index}`} />
-                    <ReactTooltip id={`tokenTip${index}`} place="top" effect='solid' delayHide={500} globalEventOff='mouseout'>
-                        Tokens: {tokens.length}
-                    </ReactTooltip>
                     <ReactMarkdown children={message.text} className='flex-grow overflow-x-auto' components={{ code: CodeBlock }} />
                 </div>
             </div>

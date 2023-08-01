@@ -3,9 +3,9 @@ import { get_encoding } from "@dqbd/tiktoken";
 // import CustomModal from './CustomModal';
 import ReactModal from 'react-modal';
 
+ReactModal.setAppElement('#__next');
 
 const encoding = get_encoding("cl100k_base");
-ReactModal.setAppElement('#__next');
 
 const ModalBar = () => {
     const [systemPrompt, setSystemPrompt] = useState("");
