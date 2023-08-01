@@ -21,9 +21,10 @@ shell = None
 class CommandType(Enum):
     BASH_COMMAND = "bash"
     FILE_CHANGE = "file_change"
+    NEW_FILE = "new_file"
 
 
-class File(OpenAISchema):
+class NewFile(OpenAISchema):
     """
     Correctly named file with contents
     """
@@ -32,18 +33,43 @@ class File(OpenAISchema):
         ...,
         description="The name of the file. Name should be a path from the root of the codebase.",
     )
-    contents: str = Field(
+    description: str = Field(
         ...,
-        description="The entire contents of the file. Ensure to include all file contents.",
+        description="Describe what contents need to be added to the file. Include any and all contextual details.",
     )
 
     def save(self) -> None:
         """
         Save the file to the codebase
         """
+        prompt = f"""
+        File Name: {self.name}
+        Description:
+        {self.description}
+        Contents:
+        """
+
+        messages = [
+            {
+                "role": "system",
+                "content": """
+                You are an AI programmer. You are being requested to create a new file within a codebase in support of a new feature
+                and will be provided with the file name and a description of what the contents of that file should be. Respond back with
+                the entire contents of the new file. Please make sure to write clear, concise, and correct code.
+                """,
+            },
+            {"role": "user", "content": prompt},
+        ]
+        completion = openai.ChatCompletion.create(
+            model="gpt-4",
+            temperature=0.2,
+            messages=messages,
+            max_tokens=3000,
+        )
+        new_contents = completion["choices"][0]["message"]["content"]
         path = os.path.join(ROOT, self.name)
         with open(path, "w") as f:
-            f.write(self.contents)
+            f.write(new_contents)
 
 
 class FileChange(OpenAISchema):
@@ -61,27 +87,28 @@ class FileChange(OpenAISchema):
     )
 
     def save(self) -> None:
-        with open(os.path.join(ROOT, self.name), "r") as f:
+        file_path = os.path.join(ROOT, self.name)
+        with open(file_path, "r") as f:
             current_contents = f.read()
+            print(file_path)
+            print(current_contents[0:100])
 
         prompt = f"""
-        File: {self.name}
-        Current contents:
+        File Name: {self.name}
+        Current File:
         {current_contents}
         Changes Requested:
         {self.changes}
-        Response:
+        New File:
         """
 
         messages = [
             {
                 "role": "system",
                 "content": """
-                You are an AI Pair Programmer and a world class python developer helping the Human work on a project.
-                You will be given a current file and a description of the changes that need to be made. You will then
-                make the changes and response with ONLY the contents of the new and COMPLETE file. Make sure you always include
-                the complete file contents, not just the changes. Also stick to using the same style and packages from the original file
-                unless specifically told not to.
+                You are an AI programmer. You will be given a file and a set of changes that need to me made.
+                Please make all of the changes and respond back with the entire contents
+                of the new file. Please make sure to write clear, concise, and correct code.
                 """,
             },
             {"role": "user", "content": prompt},
@@ -96,14 +123,6 @@ class FileChange(OpenAISchema):
         new_contents = completion["choices"][0]["message"]["content"]
         with open(path, "w") as f:
             f.write(new_contents)
-
-
-class Program(OpenAISchema):
-    """
-    Set of files that represent a complete and correct program
-    """
-
-    files: List[File] = Field(..., description="List of files")
 
 
 class CommandResult(OpenAISchema):
@@ -123,10 +142,26 @@ class Command(OpenAISchema):
         description="List of the IDs of commands that need to be completed before this command can be executed.",
     )
     command_line: Optional[str] = Field(None, description="Command to execute")
-    file_change: Optional[FileChange] = Field(None, description="File changes to make")
+    file_change: Optional[FileChange] = Field(
+        None, description="File name and changes you would like to request"
+    )
+    new_file: Optional[NewFile] = Field(
+        None,
+        description="File name and description of it's contents for a new file to create within the codebase",
+    )
 
     @validator("file_change", always=True)
-    def check_program(cls, v, values):
+    def check_file_change(cls, v, values):
+        if (
+            "command_type" in values
+            and values["command_type"] == CommandType.FILE_CHANGE
+            and v is None
+        ):
+            raise ValueError("Program is required when command_type is FILE_CHANGE")
+        return v
+
+    @validator("new_file", always=True)
+    def check_new_file(cls, v, values):
         if (
             "command_type" in values
             and values["command_type"] == CommandType.FILE_CHANGE
@@ -253,12 +288,10 @@ class CommandPlan(OpenAISchema):
 # @openai_function
 def command_planner(instruction: str) -> CommandPlan:
     """
-    Generates a CommandPlan for a given question using the OpenAI API.
-
-    This function sends a chat message to the OpenAI API, asking it to generate a CommandPlan
-    for the given question. The CommandPlan is a sequence of command line operations that can be executed
+    The CommandPlan is a sequence of command line operations that can be executed
     in a specific order. Each command in the CommandPlan is represented by a Command object,
-    which includes the command line to execute and a list of IDs of commands that it depends on.
+    which includes the command line command to execute or a file change object for requesting
+    changes to a file.
 
     Args:
         question (str): The question to generate a CommandPlan for.

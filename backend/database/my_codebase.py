@@ -1,17 +1,11 @@
-import json
 import os
 import datetime
 import subprocess
-import pickle
-
-# third party
+from dotenv import load_dotenv
 import openai
 import numpy as np
-import psycopg2
 import tiktoken
-from dotenv import load_dotenv
 
-# from typing import List
 from sklearn.metrics.pairwise import cosine_similarity
 from tenacity import (
     retry,
@@ -19,6 +13,7 @@ from tenacity import (
     stop_after_attempt,
 )
 from psycopg2 import sql
+from psycopg2.extensions import connection
 
 
 EMBEDDING_MODEL = "text-embedding-ada-002"
@@ -48,28 +43,19 @@ def get_git_root(path="."):
 
 class MyCodebase:
     load_dotenv()
-    CODEAPP_DB_NAME = os.getenv("CODEAPP_DB_NAME")
-    CODEAPP_DB_USER = os.getenv("CODEAPP_DB_USER")
-    CODEAPP_DB_PW = os.getenv("CODEAPP_DB_PW")
-    CODEAPP_DB_HOST = os.getenv("CODEAPP_DB_HOST")
     IGNORE_DIRS = os.getenv("IGNORE_DIRS")
     FILE_EXTENSIONS = os.getenv("FILE_EXTENSIONS")
 
-    def __init__(self, directory: str = "."):
+    def __init__(self, directory: str = ".", db_connection: connection = None):
         self.files = []
         self.embeddings = []
         self.file_dict = {}
-
         self.directory = os.path.abspath(directory)
-        self._connect_to_database()
+        self.conn = db_connection
         self.cur = self.conn.cursor()
         self.create_tables()
-
-        # Read and embed the files
         self._update_files_and_embeddings()
-
         self.remove_old_files()
-        # Build the embeddings array from the file_dict
         self.embeddings = np.array(
             [file["embedding"] for file in self.file_dict.values()]
         )
@@ -78,49 +64,6 @@ class MyCodebase:
         self.directory = os.path.abspath(directory)
         self._update_files_and_embeddings()
         self.remove_old_files()
-
-    def _connect_to_database(self):
-        try:
-            auth = {
-                "dbname": self.CODEAPP_DB_NAME,
-                "user": self.CODEAPP_DB_USER,
-                "password": self.CODEAPP_DB_PW,
-                "host": self.CODEAPP_DB_HOST,
-            }
-            self.conn = psycopg2.connect(**auth)
-            print("Successfully connected to database")
-        except Exception as e:
-            if (
-                self.CODEAPP_DB_USER is None
-                or self.CODEAPP_DB_USER == "USER_FROM_SETUP_STEP4"
-            ):
-                raise Exception(
-                    """
-                    Failed to connect to database. 
-                    Credentials not set or changed in .env file or .env file is missing. 
-                    Please set the following environment variables in the .env file in the root directory: 
-                    CODEAPP_DB_NAME, CODEAPP_DB_USER, CODEAPP_DB_PW, CODEAPP_DB_HOST
-                    """
-                )
-            else:
-                raise e
-
-    def _update_files_and_embeddings(self):
-        for root, dirs, files in os.walk(self.directory):
-            print(self.IGNORE_DIRS)
-            dirs[:] = [d for d in dirs if d not in self.IGNORE_DIRS]
-            for file_name in files:
-                if self._is_valid_file(file_name):
-                    file_path = os.path.join(root, file_name)
-                    self.update_file(file_path)
-
-    @staticmethod
-    def _is_valid_file(file_name):
-        return (
-            not file_name.startswith(".")
-            and not file_name.startswith("_")
-            and any(file_name.endswith(ext) for ext in MyCodebase.FILE_EXTENSIONS)
-        )
 
     def update_file(self, file_path):
         self.cur.execute(
@@ -274,7 +217,7 @@ class MyCodebase:
             out.update({file_name: text})
         return out
 
-    def tree(self):
+    def tree(self) -> str:
         """
         Return a string representing the tree of the files in the database.
         TODO: Configure start_from so it's not hardcoded
@@ -331,3 +274,20 @@ class MyCodebase:
                 )
                 self.conn.commit()
                 print(f"****    Removed file {file_path} from the database    *****")
+
+    def _update_files_and_embeddings(self):
+        for root, dirs, files in os.walk(self.directory):
+            print(self.IGNORE_DIRS)
+            dirs[:] = [d for d in dirs if d not in self.IGNORE_DIRS]
+            for file_name in files:
+                if self._is_valid_file(file_name):
+                    file_path = os.path.join(root, file_name)
+                    self.update_file(file_path)
+
+    @staticmethod
+    def _is_valid_file(file_name):
+        return (
+            not file_name.startswith(".")
+            and not file_name.startswith("_")
+            and any(file_name.endswith(ext) for ext in MyCodebase.FILE_EXTENSIONS)
+        )

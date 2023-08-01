@@ -1,15 +1,12 @@
-# base
-from typing import Optional, List
-from uuid import uuid4
-from datetime import datetime
-import os
-
-# third party
-import token
 import openai
 import psycopg2
 import tiktoken
+
+from typing import Optional, List
+from datetime import datetime
+from pydantic import BaseModel
 from dotenv import load_dotenv
+from psycopg2.extensions import connection
 
 
 class MemoryManager:
@@ -20,13 +17,9 @@ class MemoryManager:
         tree: str = None,
         max_tokens: int = 1000,
         table_name: str = "default",
+        db_connection: connection = None,
     ) -> None:
         load_dotenv()
-        CODEAPP_DB_NAME = os.getenv("CODEAPP_DB_NAME")
-        CODEAPP_DB_USER = os.getenv("CODEAPP_DB_USER")
-        CODEAPP_DB_PW = os.getenv("CODEAPP_DB_PW")
-        CODEAPP_DB_HOST = os.getenv("CODEAPP_DB_HOST")
-
         self.model = model
         self.max_tokens = max_tokens
         self.system = None
@@ -39,36 +32,11 @@ class MemoryManager:
         self.system_file_summaries = None
         self.system_file_contents = None
         self.messages = []
-
-        # Save the table names
         self.memory_table_name = f"{table_name}_memory"
         self.system_table_name = f"{table_name}_system_prompt"
-
-        try:
-            auth = {
-                "dbname": CODEAPP_DB_NAME,
-                "user": CODEAPP_DB_USER,
-                "password": CODEAPP_DB_PW,
-                "host": CODEAPP_DB_HOST,
-            }
-            self.conn = psycopg2.connect(**auth)
-            print("Successfully connected to database")
-        except Exception as e:
-            if (
-                self.CODEAPP_DB_USER is None
-                or self.CODEAPP_DB_USER == "USER_FROM_SETUP_STEP4"
-            ):
-                raise Exception(
-                    """
-                    Failed to connect to database.
-                    Credentials not set or changed in .env file or .env file is missing.
-                    Please set the following environment variables in the .env file in the root directory:
-                    CODEAPP_DB_NAME, CODEAPP_DB_USER, CODEAPP_DB_PW, CODEAPP_DB_HOST
-                    """
-                )
-            else:
-                raise e
+        self.conn = db_connection
         self.cur = self.conn.cursor()
+
         self.create_tables()
         self.conn.commit()
         self.set_system()

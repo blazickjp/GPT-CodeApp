@@ -2,11 +2,29 @@
 import openai
 import json
 from typing import List, Optional
-from agent.agent_functions import Program, File
+from pydantic import BaseModel
+
+# from agent.agent_functions import Program, File
 
 GPT_MODEL = "gpt-3.5-turbo-0613"  # or any other chat model you want to use
 MAX_TOKENS = 1000  # or any other number of tokens you want to use
 TEMPERATURE = 0.2  # or any other temperature you want to use
+
+
+class FunctionCall(BaseModel):
+    name: Optional[str] = None
+    arguments: str = ""
+
+
+class Message(BaseModel):
+    role: str
+    content: str
+
+    def to_dict(self):
+        return {
+            "role": self.role,
+            "content": self.content,
+        }
 
 
 class CodingAgent:
@@ -38,8 +56,7 @@ class CodingAgent:
         print(f"Input Text: {input_text}")
         self.memory_manager.add_message("user", input_text)
         message_history = [
-            {"role": i["role"], "content": i["content"]}
-            for i in self.memory_manager.get_messages()
+            Message(**i).to_dict() for i in self.memory_manager.get_messages()
         ]
 
         keyword_args = {
@@ -52,27 +69,24 @@ class CodingAgent:
         if self.functions:
             keyword_args["functions"] = self.functions
             keyword_args["function_call"] = "auto"
-            func_call = {
-                "name": None,
-                "arguments": "",
-            }
+            func_call = FunctionCall()
 
         for chunk in openai.ChatCompletion.create(**keyword_args):
             delta = chunk["choices"][0].get("delta", {})
             if "function_call" in delta:
                 if "name" in delta.function_call:
-                    func_call["name"] = delta.function_call["name"]
+                    func_call.name = delta.function_call["name"]
                 if "arguments" in delta.function_call:
-                    func_call["arguments"] += delta.function_call["arguments"]
+                    func_call.arguments += delta.function_call["arguments"]
             if chunk.choices[0].finish_reason == "function_call":
-                print(f"Func Call: {func_call}")
-                function_response = {
-                    "role": "assistant",
-                    "content": json.dumps(
-                        obj=self.function_map[func_call["name"]](func_call["arguments"])
+                print(f"Func Call: {func_call.name}")
+                function_response = Message(
+                    role="assistant",
+                    content=json.dumps(
+                        obj=self.function_map[func_call.name](func_call.arguments)
                     ),
-                }
-                message_history.append(function_response)
+                )
+                message_history.append(function_response.to_dict())
                 for chunk in openai.ChatCompletion.create(
                     model=self.GPT_MODEL,
                     messages=message_history,
@@ -84,32 +98,3 @@ class CodingAgent:
                     yield content
             else:
                 yield delta.get("content")
-
-    def edit_files(self, data: str, save: Optional[bool] = None) -> None:
-        """
-        Takes in natural language instructions which describe files and code to be written
-        by another AI agent. Be as descriptive as possible in you input.
-        """
-        message_history = [
-            {"role": i["role"], "content": i["content"]}
-            for i in self.memory_manager.get_messages()
-        ]
-        message_history.append({"role": "user", "content": data})
-
-        completion = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo-16k",
-            temperature=0.1,
-            max_tokens=2000,
-            functions=[Program.openai_schema],
-            function_call={"name": Program.openai_schema["name"]},
-            messages=message_history,
-        )
-
-        program = Program.from_response(completion)
-        out = ""
-        for file in program.files:
-            out += f"File: {file.name}\nContents:\n{file.contents}\n"
-            if save:
-                file.save()
-                print("Saved")
-        return out, program

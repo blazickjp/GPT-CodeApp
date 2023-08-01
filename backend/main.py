@@ -5,42 +5,17 @@ import os
 from uuid import uuid4
 from dotenv import load_dotenv
 import tiktoken
-
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Request
 from fastapi.responses import JSONResponse, StreamingResponse
-from agent.agent import CodingAgent
-from agent.memory_manager import MemoryManager
-from database.my_codebase import MyCodebase, get_git_root
+from database.my_codebase import get_git_root
 from typing import Optional, List
+from app_setup import setup_codebase, setup_agent, app
 
-app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 load_dotenv()
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
-DIRECTORY = os.getenv("PROJECT_DIRECTORY")
-print(DIRECTORY)
-codebase = MyCodebase(DIRECTORY)
-tree = codebase.tree()
-cur = codebase.conn.cursor()
-
-agent = CodingAgent(
-    MemoryManager(
-        model="gpt-3.5-turbo-0613",
-        tree=tree,
-    ),
-    # functions=[Shell.openai_schema],
-    # callables=[Shell],
-    # functions=[develop.openai_schema],
-    # callables=[code_search.func],
-)
+codebase = setup_codebase()
+agent = setup_agent()
 
 
 @app.post("/message_streaming")
@@ -146,6 +121,7 @@ async def get_summaries(reset: bool | None = None):
         print("Refreshing Data")
         codebase._update_files_and_embeddings()
 
+    cur = codebase.conn.cursor()
     cur.execute("SELECT DISTINCT file_path, summary, token_count FROM files")
     results = cur.fetchall()
     root_path = get_git_root(codebase.directory)
