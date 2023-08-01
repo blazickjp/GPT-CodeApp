@@ -113,7 +113,7 @@ const Chat = () => {
           <FiMenu className="mr-2" />
         </button>
       </div>
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center border-b border-slate-500">
         <SearchBar />
         <ModalBar />
       </div>
@@ -123,7 +123,7 @@ const Chat = () => {
       <RightSidebar isSidebarOpen={isSidebarOpen} />
       {/* <LeftSidebar isLeftSidebarOpen={isLeftSidebarOpen} /> */}
 
-      <div className="input-area h-1/5 flex bg-gray-800 text-center justify-center items-center w-full text-gray-900" >
+      <div className="input-area h-1/5 flex bg-gray-800 text-center justify-center items-center w-full text-gray-900 border-t border-slate-500" >
         <div className='w-full'>
           <ChatInput onSubmit={submitMessage} />
           <ModelSelector />

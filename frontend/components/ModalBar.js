@@ -123,12 +123,12 @@ const ModalBar = () => {
                 </ReactModal>
             </div>
             <div className='px-5'>
-                <button onClick={fetchFunctionsAndOpenModal}>
+                < button onClick={fetchFunctionsAndOpenModal} >
                     Functions:
                     <span className="ml-2 inline-block bg-green-500 text-white text-xs px-2 rounded-full uppercase font-semibold tracking-wide">
                         {functionTokens} tokens
                     </span>
-                </button>
+                </button >
 
                 <ReactModal
                     isOpen={isFunctionModalOpen}
@@ -151,7 +151,7 @@ const ModalBar = () => {
                     </div>
                 </ReactModal>
 
-            </div>
+            </div >
             <div className='px-5'>
                 <button onClick={fetchMessagesAndOpenModal}>
                     Message History:
