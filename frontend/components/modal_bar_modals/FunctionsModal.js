@@ -5,7 +5,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setIsFunctionModalOpen } from '../../store/modal_bar_modals/functionsSlice';
 
 const FunctionsModal = () => {
-    const functions = useSelector(state => state.functions.functions);
+    const agentFunctions = useSelector(state => state.functions.agent_functions);
+    const agentTokens = useSelector(state => state.functions.agent_tokens);
+    const onDemandFunctions = useSelector(state => state.functions.on_demand_functions);
+    const onDemandTokens = useSelector(state => state.functions.onDemandTokens);
     const isOpen = useSelector(state => state.functions.isFunctionModalOpen);
     const dispatch = useDispatch();
 
@@ -14,20 +17,39 @@ const FunctionsModal = () => {
             isOpen={isOpen}
             onRequestClose={() => dispatch(setIsFunctionModalOpen(false))}
             shouldCloseOnOverlayClick={true}
-            className="fixed inset-0 flex items-center justify-center m-96 w-auto"
+            className="fixed inset-0 flex items-center justify-center w-1/2 h-1/2 mx-auto my-auto border border-gray-200 rounded"
             overlayClassName="fixed inset-0 bg-black bg-opacity-50"
         >
-            <div className="relative bg-white rounded p-4 max-w-screen-lg mx-auto text-gray-900 overflow-scroll">
-                <h2 className="text-xl">Functions</h2>
-                <pre>
-                    {functions?.map((f) => (
-                        <div key={f?.name}>
-                            <h3 className="text-lg">{f?.name}</h3>
-                            <p>{f?.description}</p>
-                            <hr />
-                        </div>
-                    ))}
-                </pre>
+            <div className="relative bg-slate-600 rounded p-4 w-full h-full text-gray-200 overflow-scroll">
+                <h2 className="text-xl pb-2">Agent Functions: {agentTokens} Tokens</h2>
+                <hr />
+                <p className='text-gray-400'>
+                    Agent functions are automatically called by the agent when needed (like OpenAI indended).
+                    You may create new functions in the <pre className='inline-block'>agent_functions.py</pre> file and add them to
+                    the agent in the <pre className='inline-block'>setup_app.py</pre> file.
+                </p>
+                <br />
+                {agentFunctions?.map((f) => (
+                    <div key={f?.name} className='pt-2'>
+                        <pre className="text-md "><strong>{f?.name}</strong></pre>
+                        <p className='text-sm whitespace-pre'>{f?.description}</p>
+                    </div>
+                ))}
+                <br /><br />
+                <h2 className=" text-xl pb-2 pt-4">On Demand Functions: {onDemandTokens} Tokens</h2>
+                <hr />
+                <p className='text-gray-400'>
+                    On Demand Functions can be run at any time and will not automatically be called by
+                    your agent. When activated they will be run on the next turn of the conversation.
+                </p>
+                <br />
+                {onDemandFunctions?.map((f) => (
+                    <div key={f?.name} className='pt-2'>
+                        <pre className="text-md "><strong>{f?.name}</strong></pre>
+                        <p className='text-sm whitespace-pre'>{f?.description}</p>
+                        {/* {f?.description} */}
+                    </div>
+                ))}
             </div>
         </ReactModal>
     );

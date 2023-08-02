@@ -6,7 +6,7 @@ import SystemPromptModal from './modal_bar_modals/SystemPromptModal';
 import MessageHistoryModal from './modal_bar_modals/MessageHistoryModal';
 import { useDispatch, useSelector } from 'react-redux';
 import { setSystemPrompt, setSystemTokens, setIsModalOpen, setEditablePrompt } from '../store/modal_bar_modals/systemPromptSlice';
-import { setFunctions, setFunctionTokens, setIsFunctionModalOpen } from '../store/modal_bar_modals/functionsSlice';
+import { setFunctionTokens, setIsFunctionModalOpen, setAgentFunctions, setAgentTokens, setOnDemandFunctions, setOnDemandTokens } from '../store/modal_bar_modals/functionsSlice';
 import { setMessageHistory, setMessageTokens, setIsMessageModalOpen } from '../store/modal_bar_modals/messageHistorySlice';
 
 
@@ -19,7 +19,6 @@ const ModalBar = () => {
     const systemTokens = useSelector(state => state.systemPrompt.systemTokens);
     const functionTokens = useSelector(state => state.functions.functionTokens);
     const messageTokens = useSelector(state => state.messageHistory.messageTokens);
-
 
     const fetchSystemPromptAndOpenModal = (modal = true) => {
         fetch('http://127.0.0.1:8000/system_prompt')
@@ -40,12 +39,24 @@ const ModalBar = () => {
         fetch('http://127.0.0.1:8000/get_functions')
             .then(response => response.json())
             .then(data => {
-                dispatch(setFunctions(data.functions));
+                console.log(data)
+                dispatch(setAgentFunctions(data.agent_functions));
+                dispatch(setOnDemandFunctions(data.on_demand_functions));
                 if (modal) {
                     dispatch(setIsFunctionModalOpen(true));
                 }
-                const f_tokens = encoding.encode(JSON.stringify(data.functions[0]));
-                dispatch(setFunctionTokens(f_tokens.length));
+                let agent_tokens = 0;
+                let on_demand_tokens = 0;
+                data.agent_functions.forEach((f) => {
+                    agent_tokens += encoding.encode(JSON.stringify(f)).length;
+                });
+                data.on_demand_functions.forEach((f) => {
+                    on_demand_tokens += encoding.encode(JSON.stringify(f)).length;
+                });
+                // const f_tokens = encoding.encode(JSON.stringify(data.auto_functions[0]));
+                dispatch(setFunctionTokens(agent_tokens));
+                dispatch(setOnDemandTokens(on_demand_tokens));
+                dispatch(setAgentTokens(agent_tokens));
             })
             .catch(console.error);
     };

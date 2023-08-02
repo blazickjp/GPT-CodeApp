@@ -6,9 +6,11 @@ from agent.memory_manager import MemoryManager
 from database.my_codebase import MyCodebase
 from psycopg2.extensions import connection
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
+from typing import Optional, List, Any, Callable
+from pydantic import BaseModel
+from agent.agent_functions import command_planner, single_file_edit
 
 
 load_dotenv()
@@ -26,6 +28,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+class FunctionCall(BaseModel):
+    callable: Callable
+    name: str = ""
+    arguments: str = ""
+
+    def __call__(self) -> Any:
+        return self.callable(self.arguments)
 
 
 def create_database_connection() -> connection:
@@ -53,22 +64,23 @@ def create_database_connection() -> connection:
             raise e
 
 
+DB_CONNECTION = create_database_connection()
+
+
 def setup_memory_manager(tree: Optional[str]) -> MemoryManager:
-    db_connection = create_database_connection()
-    memory_manager = MemoryManager(db_connection=db_connection, tree=tree)
+    memory_manager = MemoryManager(db_connection=DB_CONNECTION, tree=tree)
     return memory_manager
 
 
 def setup_codebase() -> MyCodebase:
-    db_connection = create_database_connection()
-    my_codebase = MyCodebase(directory=DIRECTORY, db_connection=db_connection)
+    my_codebase = MyCodebase(directory=DIRECTORY, db_connection=DB_CONNECTION)
     return my_codebase
 
 
-def setup_agent() -> CodingAgent:
+def setup_app() -> CodingAgent:
     codebase = setup_codebase()
-    tree = codebase.tree()
-    memory = setup_memory_manager(tree=tree)
-
-    agent = CodingAgent(memory_manager=memory, functions=None, callables=[None])
-    return agent
+    memory = setup_memory_manager(tree=codebase.tree())
+    agent = CodingAgent(
+        memory_manager=memory, callables=[command_planner.func, single_file_edit.func]
+    )
+    return agent, codebase

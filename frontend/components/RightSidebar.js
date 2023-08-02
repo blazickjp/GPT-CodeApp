@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { AiOutlineMinus } from "react-icons/ai";
+import { BiCoin } from "react-icons/bi";
 
 const CodeBlock = ({ node, inline, className, children }) => {
     const match = /language-(\w+)/.exec(className || '')
@@ -76,9 +77,9 @@ const RightSidebar = ({ isSidebarOpen }) => {
 
                 return (
                     <details>
-                        <summary className="font-semibold hover:text-white cursor-pointer py-1">
+                        <summary className="flex font-semibold hover:text-white cursor-pointer py-1">
                             {summary.file_path} &nbsp;
-                            <span style={colorStyle}>{summary.file_token_count}</span> tokens
+                            <span style={colorStyle} className='flex items-center'>{summary.file_token_count}&nbsp;T</span>
                         </summary>
                         <br />
                         {/* <p className="pl-2 text-sm">{summary.summary}</p> */}

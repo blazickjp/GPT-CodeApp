@@ -12,7 +12,7 @@ const CodeBlock = React.memo(({ node, inline, className, children }) => {
     const lang = match && match[1] ? match[1] : '';
 
     return !inline && match ? (
-        <div className='relative bg-zinc-800 rounded overflow-x-scroll'>
+        <div className='relative bg-zinc-800 my-4 rounded overflow-x-scroll'>
             <p className='text-sm flex pt-2 pl-2'>{lang}</p>
             <CopyToClipboard className='absolute top-2 right-2 text-sm mb-0' text={String(children)}>
                 <button >
@@ -22,7 +22,7 @@ const CodeBlock = React.memo(({ node, inline, className, children }) => {
             <ReactTooltip id='copyCodeTip' place="top" effect='solid'>
                 Copy Code
             </ReactTooltip>
-            <SyntaxHighlighter language={lang} style={oneDark} className='!mb-0'>
+            <SyntaxHighlighter language={lang} style={oneDark} className='!mb-0 text-sm'>
                 {String(children)}
             </SyntaxHighlighter>
         </div>

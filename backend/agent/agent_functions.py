@@ -308,22 +308,26 @@ class CommandPlan(OpenAISchema):
         return task_results
 
 
-# @openai_function
+@openai_function
 def command_planner(instruction: str) -> CommandPlan:
     """
-    The CommandPlan is a sequence of command line operations that can be executed
-    in a specific order. Each command in the CommandPlan is represented by a Command object,
-    which includes the command line command to execute or a file change object for requesting
-    changes to a file. File paths shall always be relative to the root directory of the project.
+    The command planner is an AI generated sequence of commands where the command type Enum is
+    BASH_COMMAND, NEW_FILE, or FILE_CHANGE. The command planner takes in a string instruction and
+    GPT-4 will generate a sequence of commands to complete the task given your instruction.
+    Once a command plan is generated, it can be executed by calling the execute method.
 
     Args:
-        question (str): The question to generate a CommandPlan for.
+        instruction (str): The instructions to generate a CommandPlan.
 
     Returns:
-        CommandPlan: The generated CommandPlan.
+        CommandPlan (CommandPlan): The generated CommandPlan.
 
     Raises:
         openai.OpenAIError: If there was a problem with the OpenAI API request.
+
+    Examples:
+        >>> command_planner("Create a new file named 'hello.txt' with the contents 'Hello World!'")
+        CommandPlan(command_graph=[Command(command_type=<CommandType.NEW_FILE: 'NEW_FILE'>, new_file=NewFile(file_path='hello.txt', file_contents='Hello World!'))])
     """
     messages = [
         {
@@ -350,5 +354,56 @@ def command_planner(instruction: str) -> CommandPlan:
         max_tokens=2000,
     )
     root = CommandPlan.from_response(completion)
+
+    return root
+
+
+@openai_function
+def single_file_edit(instructions: str) -> FileChange:
+    """
+    The single file edit function takes in a set of instructions and let's GPT-4 generate a
+    FileChange object given your request. The FileChange object contains the file path and the
+    changes that need to be made to the file. The main benefit here is that GPT-4 determines the
+    correct file path. Mostly the changes block will be verbatim from the instructions, but
+    sometimes GPT-4 will add additional information to the changes block.
+
+    Args:
+        instruction (str): The instructions to generate a CommandPlan.
+
+    Returns:
+        CommandPlan (CommandPlan): The generated CommandPlan.
+
+    Raises:
+        openai.OpenAIError: If there was a problem with the OpenAI API request.
+
+    Examples:
+        >>> single_file_edit("Add an endpoint called 'hello_worlld' to my main.py file")
+        FileChange(name='backend/main.py', changes='Add a GET endpoint called 'hello_worlld' which returns the words 'Hello World!')
+    """
+    messages = [
+        {
+            "role": "system",
+            "content": """
+            You are a world class bash command planning algorithm capable of breaking apart tasks into dependant
+            subtasks, such that the results of one command can be used to enable the system completing the main task.
+            Do not complete the user task, simply provide a correct compute graph with good specific
+            commands and relevant subcommands. Before completing the list of tasks, think step by
+            step to get a better understanding the problem.""",
+        },
+        {
+            "role": "user",
+            "content": f"{instructions}",
+        },
+    ]
+
+    completion = openai.ChatCompletion.create(
+        model="gpt-4-0613",
+        temperature=0,
+        functions=[FileChange.openai_schema],
+        function_call={"name": FileChange.openai_schema["name"]},
+        messages=messages,
+        max_tokens=2000,
+    )
+    root = FileChange.from_response(completion)
 
     return root
