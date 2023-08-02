@@ -1,14 +1,18 @@
-The new file "FunctionsModal.js" will contain the code for the functions modal. Here is the content of the file:
 
-```jsx
 import React from 'react';
 import ReactModal from 'react-modal';
+import { useDispatch, useSelector } from 'react-redux';
+import { setIsFunctionModalOpen } from '../../store/modal_bar_modals/functionsSlice';
 
-const FunctionsModal = ({ isOpen, onRequestClose, functions }) => {
+const FunctionsModal = () => {
+    const functions = useSelector(state => state.functions.functions);
+    const isOpen = useSelector(state => state.functions.isFunctionModalOpen);
+    const dispatch = useDispatch();
+
     return (
         <ReactModal
             isOpen={isOpen}
-            onRequestClose={onRequestClose}
+            onRequestClose={() => dispatch(setIsFunctionModalOpen(false))}
             shouldCloseOnOverlayClick={true}
             className="fixed inset-0 flex items-center justify-center m-96 w-auto"
             overlayClassName="fixed inset-0 bg-black bg-opacity-50"
@@ -30,6 +34,3 @@ const FunctionsModal = ({ isOpen, onRequestClose, functions }) => {
 };
 
 export default FunctionsModal;
-```
-
-This component receives three props: `isOpen`, `onRequestClose`, and `functions`. `isOpen` is a boolean that determines whether the modal is open or not. `onRequestClose` is a function that will be called when the user requests to close the modal (for example, by clicking on the overlay). `functions` is an array of function objects, each with a `name` and `description` property, which will be displayed in the modal.

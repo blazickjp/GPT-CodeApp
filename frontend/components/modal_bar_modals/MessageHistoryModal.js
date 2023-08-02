@@ -1,16 +1,17 @@
-The new file `MessageHistoryModal.js` will contain a React component for the message history modal. The component will receive `messageHistory` and `isMessageModalOpen` as props and will display a list of messages in a modal. The modal will be closed when the `onRequestClose` event is triggered.
-
-Here is the code for the new file:
-
-```jsx
 import React from 'react';
 import ReactModal from 'react-modal';
+import { useDispatch, useSelector } from 'react-redux';
+import { setIsMessageModalOpen } from '../../store/modal_bar_modals/messageHistorySlice';
 
-const MessageHistoryModal = ({ messageHistory, isMessageModalOpen, setIsMessageModalOpen }) => {
+const MessageHistoryModal = () => {
+    const dispatch = useDispatch();
+    const messageHistory = useSelector(state => state.messageHistory.messageHistory);
+    const isMessageModalOpen = useSelector(state => state.messageHistory.isMessageModalOpen);
+
     return (
         <ReactModal
             isOpen={isMessageModalOpen}
-            onRequestClose={() => setIsMessageModalOpen(false)}
+            onRequestClose={() => dispatch(setIsMessageModalOpen(false))}
             shouldCloseOnOverlayClick={true}
             className="fixed inset-0 flex items-center justify-center m-96"
             overlayClassName="fixed inset-0 bg-black bg-opacity-50"
@@ -29,6 +30,3 @@ const MessageHistoryModal = ({ messageHistory, isMessageModalOpen, setIsMessageM
 }
 
 export default MessageHistoryModal;
-```
-
-In this component, `messageHistory` is an array of messages, where each message is an object with properties `role` and `content`. The `role` can be either 'user' or 'system', and `content` is the text of the message. The messages are displayed in a list, with user messages having a blue background and system messages having a green background.
