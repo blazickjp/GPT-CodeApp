@@ -6,6 +6,8 @@ import pexpect
 import subprocess
 
 from typing import Optional, List, Generator
+
+from sympy import Rel
 from database.my_codebase import get_git_root
 from pydantic import Field, validator
 from openai_function_call import OpenAISchema, openai_function
@@ -35,16 +37,32 @@ class NewFile(OpenAISchema):
     )
     description: str = Field(
         ...,
-        description="Describe what contents need to be added to the file. Include any and all contextual details.",
+        description="Describe what the file should do and what it should contain.",
+    )
+    reference_files: List[str] = Field(
+        ...,
+        description="""
+        A list of reference files which already exist.
+        These files will be provided to the AI to aid in creating the new file you are requesting.
+        """,
     )
 
     def save(self) -> None:
         """
         Save the file to the codebase
         """
+        relevent_file_contents = ""
+        for file in self.reference_files:
+            path = os.path.join(ROOT, file)
+            with open(path, "r") as f:
+                contents = f.read()
+                relevent_file_contents += path + "\n" + contents + "\n\n"
+
         prompt = f"""
-        File Name: {self.name}
-        Description:
+        New File Name: {self.name}
+        Relevant Files:
+        {relevent_file_contents}
+        Description of contents:
         {self.description}
         Contents:
         """
@@ -147,7 +165,8 @@ class Command(OpenAISchema):
     )
     new_file: Optional[NewFile] = Field(
         None,
-        description="File name and description of it's contents for a new file to create within the codebase",
+        description="""File name (path from root directory), description, and reference
+        files (path from root directory) which provide additional context to the AI.""",
     )
 
     @validator("file_change", always=True)
@@ -157,17 +176,17 @@ class Command(OpenAISchema):
             and values["command_type"] == CommandType.FILE_CHANGE
             and v is None
         ):
-            raise ValueError("Program is required when command_type is FILE_CHANGE")
+            raise ValueError("file_change is required when command_type is FILE_CHANGE")
         return v
 
     @validator("new_file", always=True)
     def check_new_file(cls, v, values):
         if (
             "command_type" in values
-            and values["command_type"] == CommandType.FILE_CHANGE
+            and values["command_type"] == CommandType.NEW_FILE
             and v is None
         ):
-            raise ValueError("Program is required when command_type is FILE_CHANGE")
+            raise ValueError("new_file is required when command_type is FILE_CHANGE")
         return v
 
     @validator("command_line", always=True)
@@ -185,6 +204,10 @@ class Command(OpenAISchema):
         if self.command_type == CommandType.FILE_CHANGE:
             self.file_change.save()
             output = "changes complete"
+
+        if self.command_type == CommandType.NEW_FILE:
+            self.new_file.save()
+            output = "file created"
 
         # If the command type is SHELL, execute the command line
         if self.command_type == CommandType.BASH_COMMAND:
@@ -291,7 +314,7 @@ def command_planner(instruction: str) -> CommandPlan:
     The CommandPlan is a sequence of command line operations that can be executed
     in a specific order. Each command in the CommandPlan is represented by a Command object,
     which includes the command line command to execute or a file change object for requesting
-    changes to a file.
+    changes to a file. File paths shall always be relative to the root directory of the project.
 
     Args:
         question (str): The question to generate a CommandPlan for.
