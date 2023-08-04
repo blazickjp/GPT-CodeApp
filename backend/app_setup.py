@@ -1,17 +1,16 @@
 # app_setup.py
-import psycopg2
 import os
+import psycopg2
+from psycopg2.extensions import connection
 from agent.agent import CodingAgent
 from agent.memory_manager import MemoryManager
 from database.my_codebase import MyCodebase
-from psycopg2.extensions import connection
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List, Any, Callable
 from pydantic import BaseModel
-from agent.agent_functions import command_planner, single_file_edit
-
+from agent.agent_functions import CommandPlan, FileChange
 
 load_dotenv()
 CODEAPP_DB_NAME = os.getenv("CODEAPP_DB_NAME")
@@ -19,24 +18,6 @@ CODEAPP_DB_USER = os.getenv("CODEAPP_DB_USER")
 CODEAPP_DB_PW = os.getenv("CODEAPP_DB_PW")
 CODEAPP_DB_HOST = os.getenv("CODEAPP_DB_HOST")
 DIRECTORY = os.getenv("PROJECT_DIRECTORY")
-
-app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-class FunctionCall(BaseModel):
-    callable: Callable
-    name: str = ""
-    arguments: str = ""
-
-    def __call__(self) -> Any:
-        return self.callable(self.arguments)
 
 
 def create_database_connection() -> connection:
@@ -66,6 +47,27 @@ def create_database_connection() -> connection:
 
 DB_CONNECTION = create_database_connection()
 
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+class FunctionCall(BaseModel):
+    callable: Callable
+    name: str = ""
+    arguments: str = ""
+
+    def __call__(self) -> Any:
+        return self.callable(self.arguments)
+
+
+DB_CONNECTION = create_database_connection()
+
 
 def setup_memory_manager(tree: Optional[str]) -> MemoryManager:
     memory_manager = MemoryManager(db_connection=DB_CONNECTION, tree=tree)
@@ -80,7 +82,5 @@ def setup_codebase() -> MyCodebase:
 def setup_app() -> CodingAgent:
     codebase = setup_codebase()
     memory = setup_memory_manager(tree=codebase.tree())
-    agent = CodingAgent(
-        memory_manager=memory, callables=[command_planner.func, single_file_edit.func]
-    )
+    agent = CodingAgent(memory_manager=memory, callables=[CommandPlan, FileChange])
     return agent, codebase

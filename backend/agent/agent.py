@@ -1,5 +1,6 @@
 # import os
 from ast import Call
+from matplotlib.font_manager import json_load
 import openai
 import json
 from typing import Any, List, Optional, Callable
@@ -43,10 +44,11 @@ class CodingAgent:
             self.function_map = {
                 func.__name__: func for func in callables if func is not None
             }
+        print(f"Function Map: {self.function_map}")
 
-    def query(self, input_text: str, function_name: Optional[str] = None) -> List[str]:
-        print(f"Input Text: {input_text}")
-        self.memory_manager.add_message("user", input_text)
+    def query(self, input: str, command: Optional[str] = None) -> List[str]:
+        print(f"Input Text: {input}")
+        self.memory_manager.add_message("user", input)
         message_history = [
             Message(**i).to_dict() for i in self.memory_manager.get_messages()
         ]
@@ -64,14 +66,12 @@ class CodingAgent:
             function_to_call = FunctionCall()
 
         # Override normal function calling when function_name is provided
-        if function_name:
-            if function_name not in self.function_map:
-                raise ValueError(f"Function {function_name} not registered with Agent")
+        if command:
+            if command not in self.function_map:
+                raise ValueError(f"Function {command} not registered with Agent")
 
-            keyword_args["functions"] = self.function_map.get(
-                function_name
-            ).openai_schema
-            keyword_args["function_call"] = {"name": function_name}
+            keyword_args["functions"] = [self.function_map.get(command).openai_schema]
+            keyword_args["function_call"] = {"name": command}
             function_to_call = FunctionCall()
 
         for chunk in openai.ChatCompletion.create(**keyword_args):
@@ -81,25 +81,28 @@ class CodingAgent:
                     function_to_call.name = delta.function_call["name"]
                 if "arguments" in delta.function_call:
                     function_to_call.arguments += delta.function_call["arguments"]
-            if chunk.choices[0].finish_reason == "function_call":
-                print(f"Func Call: {function_to_call.name}")
-                function_response = Message(
-                    role="assistant",
-                    content=json.dumps(
-                        obj=self.function_map[function_to_call.name](
-                            function_to_call.arguments
-                        )
-                    ),
+            if chunk.choices[0].finish_reason == "stop":
+                print(
+                    f"\n\nFunc Call: {function_to_call.name}\n\n{function_to_call.arguments}"
                 )
-                message_history.append(function_response.to_dict())
-                for chunk in openai.ChatCompletion.create(
-                    model=self.GPT_MODEL,
-                    messages=message_history,
-                    max_tokens=MAX_TOKENS,
-                    temperature=TEMPERATURE,
-                    stream=True,
-                ):
-                    content = chunk["choices"][0].get("delta", {}).get("content")
-                    yield content
+                args = json.loads(function_to_call.arguments)
+                function_response = self.function_map[function_to_call.name](**args)
+                function_response.save()
+                print(f"Func Response: {json.dumps(function_response.to_dict())}")
+                # function_message = {
+                #     "role": "function",
+                #     "name": function_to_call.name,
+                #     "content": json.dumps(function_response.to_dict()),
+                # }
+                # message_history.append(function_message)
+                # for chunk in openai.ChatCompletion.create(
+                #     model=self.GPT_MODEL,
+                #     messages=message_history,
+                #     max_tokens=MAX_TOKENS,
+                #     temperature=TEMPERATURE,
+                #     stream=True,
+                # ):
+                #     content = chunk["choices"][0].get("delta", {}).get("content")
+                yield json.dumps(function_response.to_dict())
             else:
                 yield delta.get("content")

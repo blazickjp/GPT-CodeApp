@@ -40,7 +40,10 @@ const FunctionsModal = () => {
                 <hr />
                 <p className='text-gray-400'>
                     On Demand Functions can be run at any time and will not automatically be called by
-                    your agent. When activated they will be run on the next turn of the conversation.
+                    your agent. When activated they will be run on the next turn of the conversation. We find
+                    the best way to leverage on demand functions is to work within your normal chat to
+                    develop a detailed prompt. Once you have one you like, copy and paste it into the
+                    function call.
                 </p>
                 <br />
                 {onDemandFunctions?.map((f) => (

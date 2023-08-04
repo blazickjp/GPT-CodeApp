@@ -6,6 +6,19 @@ const ChatInput = ({ onSubmit }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (input.startsWith('/CommandPlan')) {
+            console.log('CommandPlan');
+            onSubmit(input, 'CommandPlan');
+            setInput('');
+            return;
+        }
+        if (input.startsWith('/FileChange')) {
+            console.log('FileChange');
+            onSubmit(input, 'FileChange');
+            setInput('');
+            return;
+        }
+
         onSubmit(input);
         setInput('');
     };

@@ -30,21 +30,25 @@ const Chat = () => {
   };
 
 
-  const submitMessage = async (input) => {
+  const submitMessage = async (input, command = null) => {
     console.log(input);
     let messageData = null;
     let currentId = null;
-    const inputValue = input;  // get the input value from the event
+    let body = null;
 
-    dispatch(addMessage({ text: inputValue, user: 'human' }));
-
+    dispatch(addMessage({ text: input, user: 'human' }));
+    if (command) {
+      body = JSON.stringify({ input: input, command: command });
+    } else {
+      body = JSON.stringify({ input: input })
+    };
 
     const response = await fetch('http://127.0.0.1:8000/message_streaming', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ input: input }),
+      body: body,
     });
     let reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
     let buffer = '';
@@ -66,7 +70,6 @@ const Chat = () => {
           const messageData = JSON.parse(jsonObjectStr);
           let id = messageData.id;
           let content = messageData.content;
-          console.log(content, id);
           if (id != currentId) {
             dispatch(addMessage({ text: content, user: 'ai' }));
             currentId = id;
