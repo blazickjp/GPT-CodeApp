@@ -102,6 +102,9 @@ class FileChange(OpenAISchema):
         description="A detailed and robust natural language description of the correct changes to be made. Do not write code here.",
     )
 
+    def to_dict(self) -> dict:
+        return {"name": self.name, "changes": self.changes}
+
     def save(self) -> None:
         file_path = os.path.join(ROOT, self.name)
         with open(file_path, "r") as f:
@@ -128,15 +131,16 @@ class FileChange(OpenAISchema):
                 "content": """
                 You are an AI programmer. You will be given a file and a set of changes that need to me made. Please respond
                 with the correct diff of the file after the changes have been made. Do not make any changes that haven't been requested.
+                Do not include any other text besides the diff.
                 """,
             },
             {"role": "user", "content": prompt},
         ]
         completion = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             temperature=0.2,
             messages=messages,
-            max_tokens=3000,
+            max_tokens=1000,
         )
         path = os.path.join(ROOT, self.name)
         new_contents = completion["choices"][0]["message"]["content"]
