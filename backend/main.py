@@ -1,5 +1,4 @@
 # Base
-import code
 import json
 import os
 from uuid import uuid4
@@ -8,9 +7,6 @@ from fastapi import Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from database.my_codebase import get_git_root
 from app_setup import setup_app, app
-from agent.agent_functions import command_planner
-
-ON_DEMAND_FUNCTIONS = [command_planner]
 
 
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
@@ -20,12 +16,11 @@ AGENT, CODEBASE = setup_app()
 @app.post("/message_streaming")
 async def message_streaming(request: Request) -> StreamingResponse:
     data = await request.json()
-    prompt = data.get("input")
 
     def stream():
         id = str(uuid4())
         accumulated_messages = {id: ""}
-        for content in AGENT.query(prompt):
+        for content in AGENT.query(**data):
             if content is not None:
                 accumulated_messages[id] += content
                 # TODO: This is a hack to prevent multiple messages from being
