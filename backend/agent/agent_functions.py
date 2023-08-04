@@ -1,13 +1,11 @@
 import os
-from token import OP
 from dotenv import load_dotenv
 import openai
 import pexpect
 import subprocess
+import difflib
 
 from typing import Optional, List, Generator
-
-from sympy import Rel
 from database.my_codebase import get_git_root
 from pydantic import Field, validator
 from openai_function_call import OpenAISchema, openai_function
@@ -101,32 +99,35 @@ class FileChange(OpenAISchema):
     )
     changes: str = Field(
         ...,
-        description="A VERY detailed and robust description of the correct changes to be made. Please be as verbose as possible",
+        description="A detailed and robust natural language description of the correct changes to be made. Do not write code here.",
     )
 
     def save(self) -> None:
         file_path = os.path.join(ROOT, self.name)
         with open(file_path, "r") as f:
             current_contents = f.read()
+            current_contents = "\n".join(
+                f"{i+1}: {line}" for i, line in enumerate(current_contents.split("\n"))
+            )
             print(file_path)
             print(current_contents[0:100])
 
         prompt = f"""
+        Line numbers have been added to the Current File section to aid in your response. They are not part of the actual file.
         File Name: {self.name}
         Current File:
         {current_contents}
         Changes Requested:
         {self.changes}
-        New File:
+        Diff:
         """
 
         messages = [
             {
                 "role": "system",
                 "content": """
-                You are an AI programmer. You will be given a file and a set of changes that need to me made.
-                Please make all of the changes and respond back with the entire contents
-                of the new file. Please make sure to write clear, concise, and correct code.
+                You are an AI programmer. You will be given a file and a set of changes that need to me made. Please respond
+                with the correct diff of the file after the changes have been made. Do not make any changes that haven't been requested.
                 """,
             },
             {"role": "user", "content": prompt},
@@ -306,104 +307,3 @@ class CommandPlan(OpenAISchema):
             if len(task_results) == len(execution_order):
                 break
         return task_results
-
-
-@openai_function
-def command_planner(instruction: str) -> CommandPlan:
-    """
-    The command planner is an AI generated sequence of commands where the command type Enum is
-    BASH_COMMAND, NEW_FILE, or FILE_CHANGE. The command planner takes in a string instruction and
-    GPT-4 will generate a sequence of commands to complete the task given your instruction.
-    Once a command plan is generated, it can be executed by calling the execute method.
-
-    Args:
-        instruction (str): The instructions to generate a CommandPlan.
-
-    Returns:
-        CommandPlan (CommandPlan): The generated CommandPlan.
-
-    Raises:
-        openai.OpenAIError: If there was a problem with the OpenAI API request.
-
-    Examples:
-        >>> command_planner("Create a new file named 'hello.txt' with the contents 'Hello World!'")
-        CommandPlan(command_graph=[Command(command_type=<CommandType.NEW_FILE: 'NEW_FILE'>, new_file=NewFile(file_path='hello.txt', file_contents='Hello World!'))])
-    """
-    messages = [
-        {
-            "role": "system",
-            "content": """
-            You are a world class bash command planning algorithm capable of breaking apart tasks into dependant
-            subtasks, such that the results of one command can be used to enable the system completing the main task.
-            Do not complete the user task, simply provide a correct compute graph with good specific
-            commands and relevant subcommands. Before completing the list of tasks, think step by
-            step to get a better understanding the problem.""",
-        },
-        {
-            "role": "user",
-            "content": f"{instruction}",
-        },
-    ]
-
-    completion = openai.ChatCompletion.create(
-        model="gpt-4-0613",
-        temperature=0,
-        functions=[CommandPlan.openai_schema],
-        function_call={"name": CommandPlan.openai_schema["name"]},
-        messages=messages,
-        max_tokens=2000,
-    )
-    root = CommandPlan.from_response(completion)
-
-    return root
-
-
-@openai_function
-def single_file_edit(instructions: str) -> FileChange:
-    """
-    The single file edit function takes in a set of instructions and let's GPT-4 generate a
-    FileChange object given your request. The FileChange object contains the file path and the
-    changes that need to be made to the file. The main benefit here is that GPT-4 determines the
-    correct file path. Mostly the changes block will be verbatim from the instructions, but
-    sometimes GPT-4 will add additional information to the changes block.
-
-    Args:
-        instruction (str): The instructions to generate a CommandPlan.
-
-    Returns:
-        CommandPlan (CommandPlan): The generated CommandPlan.
-
-    Raises:
-        openai.OpenAIError: If there was a problem with the OpenAI API request.
-
-    Examples:
-        >>> single_file_edit("Add an endpoint called 'hello_worlld' to my main.py file")
-        FileChange(name='backend/main.py', changes='Add a GET endpoint called 'hello_worlld' which returns the words 'Hello World!')
-    """
-    messages = [
-        {
-            "role": "system",
-            "content": """
-            You are a world class bash command planning algorithm capable of breaking apart tasks into dependant
-            subtasks, such that the results of one command can be used to enable the system completing the main task.
-            Do not complete the user task, simply provide a correct compute graph with good specific
-            commands and relevant subcommands. Before completing the list of tasks, think step by
-            step to get a better understanding the problem.""",
-        },
-        {
-            "role": "user",
-            "content": f"{instructions}",
-        },
-    ]
-
-    completion = openai.ChatCompletion.create(
-        model="gpt-4-0613",
-        temperature=0,
-        functions=[FileChange.openai_schema],
-        function_call={"name": FileChange.openai_schema["name"]},
-        messages=messages,
-        max_tokens=2000,
-    )
-    root = FileChange.from_response(completion)
-
-    return root
