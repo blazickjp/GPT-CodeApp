@@ -1,27 +1,19 @@
 import os
-from dotenv import load_dotenv
 import openai
 import pexpect
-import subprocess
-import difflib
+import numpy as np
 
-from typing import Optional, List, Generator
-from database.my_codebase import get_git_root
-from pydantic import Field, validator
-from openai_function_call import OpenAISchema, openai_function
+from dotenv import load_dotenv
 from enum import Enum
+from typing import LiteralString, Optional, List, Generator, Tuple
+from pydantic import Field, field_validator, validator, BaseModel
+from openai_function_call import OpenAISchema
+from diff_match_patch import diff_match_patch, patch_obj
 
 
 load_dotenv()
 DIRECTORY = os.getenv("PROJECT_DIRECTORY")
-ROOT = get_git_root(DIRECTORY)
 shell = None
-
-
-class CommandType(Enum):
-    BASH_COMMAND = "bash"
-    FILE_CHANGE = "file_change"
-    NEW_FILE = "new_file"
 
 
 class NewFile(OpenAISchema):
@@ -51,7 +43,7 @@ class NewFile(OpenAISchema):
         """
         relevent_file_contents = ""
         for file in self.reference_files:
-            path = os.path.join(ROOT, file)
+            path = os.path.join(DIRECTORY, file)
             with open(path, "r") as f:
                 contents = f.read()
                 relevent_file_contents += path + "\n" + contents + "\n\n"
@@ -83,19 +75,69 @@ class NewFile(OpenAISchema):
             max_tokens=3000,
         )
         new_contents = completion["choices"][0]["message"]["content"]
-        path = os.path.join(ROOT, self.name)
+        path = os.path.join(DIRECTORY, self.name)
         with open(path, "w") as f:
             f.write(new_contents)
 
 
+class Change(OpenAISchema):
+    """
+    The correct changes to make to a file
+
+    Args:
+        line (int): The line number of the change.
+        old_string (str): The old string.
+        new_string (str): The new string.
+    """
+
+    line: int = Field(..., description="The line number of the change.")
+    old_string: str = Field(..., description="The old string.")
+    new_string: str = Field(..., description="The new string.")
+
+    def to_patch_obj(self):
+        # Initialize a patch object
+        patch = patch_obj()
+
+        # if self.new_string != "" and not self.new_string.endswith("\n"):
+        #     self.new_string += "\n"
+        dmp = diff_match_patch()
+
+        # Set the attributes of the patch object
+        patch.start1 = self.line - 1
+        patch.start2 = self.line - 1
+        patch.length1 = len(self.old_string)
+        patch.length2 = len(self.new_string)
+
+        # Create diffs
+        if self.old_string != "":
+            patch.diffs.append((dmp.DIFF_DELETE, self.old_string))
+        if self.new_string != "":
+            patch.diffs.append((dmp.DIFF_INSERT, self.new_string))
+        return str(patch)
+
+
+class Changes(OpenAISchema):
+    """
+    A list of changes to make to a file.
+
+    Args:
+        changes (List[Change]): A list of Change Objects.
+    """
+
+    changes: List[Change] = Field(..., description="A list of Change objects.")
+
+
 class FileChange(OpenAISchema):
     """
-    Correctly named file with contents
+    Correctly named file and description of changes.
+    Args:
+        name (str): The correct name of the file. Name should be a path from the root of the codebase.
+        changes (str): A detailed and robust natural language description of the correct changes to be made. Do not write code here.
     """
 
     name: str = Field(
         ...,
-        description="The name of the file. Name should be a path from the root of the codebase.",
+        description="The correct name of the file. Name should be a path from the root of the codebase.",
     )
     changes: str = Field(
         ...,
@@ -105,47 +147,88 @@ class FileChange(OpenAISchema):
     def to_dict(self) -> dict:
         return {"name": self.name, "changes": self.changes}
 
+    def apply_changes(self, changes):
+        file_path = os.path.join(DIRECTORY, self.name)
+        with open(file_path, "r") as f:
+            lines = f.readlines()
+
+        # Normalize tabs to spaces (assuming 4 spaces for a tab)
+        # This can be adjusted based on the file's style
+        lines = [line.replace("\t", "    ") for line in lines]
+
+        for change in changes:
+            # Check for line number mismatch
+            if change.line > len(lines):
+                print(f"Warning: Line {change.line} not found in file.")
+                continue
+
+            # Count the spaces at the beginning of the line
+            spaces = 0
+            for char in lines[change.line - 1]:
+                if char == " ":
+                    spaces += 1
+                else:
+                    break
+
+            # Check if the expected old_string matches the content of the specified line
+            if change.old_string.strip() == lines[change.line - 1].strip():
+                # Replace the line with the new_string
+                lines[change.line - 1] = " " * spaces + change.new_string + "\n"
+            else:
+                print(
+                    f"Warning: Expected content not found at line {change.line}. No changes made."
+                )
+
+        # Write the modified content back to the file
+        return "".join(lines)
+
     def save(self) -> None:
-        file_path = os.path.join(ROOT, self.name)
+        file_path = os.path.join(DIRECTORY, self.name)
         with open(file_path, "r") as f:
             current_contents = f.read()
-            current_contents = "\n".join(
+            current_contents_with_line_numbers = "\n".join(
                 f"{i+1}: {line}" for i, line in enumerate(current_contents.split("\n"))
             )
-            print(file_path)
-            print(current_contents[0:100])
 
         prompt = f"""
-        Line numbers have been added to the Current File section to aid in your response. They are not part of the actual file.
+        Line numbers have been added to the Current File to aid in your response. They are not part of the actual file.
         File Name: {self.name}
         Current File:
-        {current_contents}
+        {current_contents_with_line_numbers}
         Changes Requested:
         {self.changes}
-        Diff:
         """
 
         messages = [
             {
                 "role": "system",
-                "content": """
-                You are an AI programmer. You will be given a file and a set of changes that need to me made. Please respond
-                with the correct diff of the file after the changes have been made. Do not make any changes that haven't been requested.
-                Do not include any other text besides the diff.
-                """,
+                "content": prompt,
             },
-            {"role": "user", "content": prompt},
+            {"role": "user", "content": "Reply with the correct GNU style git patch."},
         ]
         completion = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            temperature=0.2,
+            model="gpt-4",
+            temperature=0,
+            functions=[Changes.openai_schema],
+            function_call={"name": Changes.openai_schema["name"]},
             messages=messages,
             max_tokens=1000,
         )
-        path = os.path.join(ROOT, self.name)
-        new_contents = completion["choices"][0]["message"]["content"]
-        with open(path, "w") as f:
-            f.write(new_contents)
+
+        changes = Changes.from_response(completion).changes
+        new_text = self.apply_changes(changes)
+        print(f"New Text: {new_text}")
+
+        with open(file_path, "w") as f:
+            f.write(new_text)
+
+        return new_text
+
+
+class CommandType(Enum):
+    BASH_COMMAND = "bash"
+    FILE_CHANGE = "file_change"
+    NEW_FILE = "new_file"
 
 
 class CommandResult(OpenAISchema):
@@ -174,7 +257,7 @@ class Command(OpenAISchema):
         files (path from root directory) which provide additional context to the AI.""",
     )
 
-    @validator("file_change", always=True)
+    @field_validator("file_change")
     def check_file_change(cls, v, values):
         if (
             "command_type" in values
@@ -184,7 +267,7 @@ class Command(OpenAISchema):
             raise ValueError("file_change is required when command_type is FILE_CHANGE")
         return v
 
-    @validator("new_file", always=True)
+    @field_validator("new_file")
     def check_new_file(cls, v, values):
         if (
             "command_type" in values
@@ -194,7 +277,7 @@ class Command(OpenAISchema):
             raise ValueError("new_file is required when command_type is FILE_CHANGE")
         return v
 
-    @validator("command_line", always=True)
+    @field_validator("command_line")
     def check_command(cls, v, values):
         if (
             "command_type" in values

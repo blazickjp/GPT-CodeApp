@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import Mock
-from ..agent.memory_manager import MemoryManager
+from agent.memory_manager import MemoryManager
+from app_setup import DB_CONNECTION
 
 
 @pytest.fixture
@@ -12,6 +13,7 @@ def setup(mocker):
     memory_manager = MemoryManager(
         model="gpt-3.5-turbo-0613",
         table_name="test",
+        db_connection=DB_CONNECTION,
     )
     return memory_manager
 
@@ -23,6 +25,7 @@ class TestMemoryManager:
 
     def test_get_total_tokens_in_message(self):
         message = "This is a test message."
+        print(self.memory_manager)
         tokens = self.memory_manager.get_total_tokens_in_message(message)
         assert isinstance(tokens, int)
 
