@@ -5,8 +5,8 @@ import numpy as np
 
 from dotenv import load_dotenv
 from enum import Enum
-from typing import LiteralString, Optional, List, Generator, Tuple
-from pydantic import Field, field_validator, validator, BaseModel
+from typing import Optional, List, Generator
+from pydantic import Field, field_validator
 from openai_function_call import OpenAISchema
 from diff_match_patch import diff_match_patch, patch_obj
 
@@ -27,7 +27,7 @@ class NewFile(OpenAISchema):
     )
     description: str = Field(
         ...,
-        description="Describe what the file should do and what it should contain.",
+        description="Describe the contents of the file in natural language. Add clarifying details when necessary. Think before you write!",
     )
     reference_files: List[str] = Field(
         ...,

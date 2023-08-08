@@ -84,7 +84,6 @@ class MyCodebase:
 
             if len(result) > 0:
                 if result[0][0] >= last_modified:
-                    print(f"File {file_path} is up to date")
                     return
                 else:
                     print(f"Updating file {file_path}")
@@ -277,12 +276,14 @@ class MyCodebase:
 
     def _update_files_and_embeddings(self):
         for root, dirs, files in os.walk(self.directory):
-            print(self.IGNORE_DIRS)
             dirs[:] = [d for d in dirs if d not in self.IGNORE_DIRS]
             for file_name in files:
                 if self._is_valid_file(file_name):
                     file_path = os.path.join(root, file_name)
-                    self.update_file(file_path)
+                    try:
+                        self.update_file(file_path)
+                    except Exception as e:
+                        print(f"Error updating file {file_path}: {e}")
 
     @staticmethod
     def _is_valid_file(file_name):
