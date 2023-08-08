@@ -14,6 +14,7 @@ from tenacity import (
 )
 from psycopg2 import sql
 from psycopg2.extensions import connection
+from typing import List, Optional, Union, Dict
 
 
 EMBEDDING_MODEL = "text-embedding-ada-002"
@@ -28,7 +29,7 @@ SUMMARY:
 """
 
 
-def get_git_root(path="."):
+def get_git_root(path: str = ".") -> Union[str, None]:
     try:
         root = (
             subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=path)
@@ -46,7 +47,9 @@ class MyCodebase:
     IGNORE_DIRS = os.getenv("IGNORE_DIRS")
     FILE_EXTENSIONS = os.getenv("FILE_EXTENSIONS")
 
-    def __init__(self, directory: str = ".", db_connection: connection = None):
+    def __init__(
+        self, directory: str = ".", db_connection: Optional[connection] = None
+    ):
         self.files = []
         self.embeddings = []
         self.file_dict = {}
@@ -60,12 +63,12 @@ class MyCodebase:
             [file["embedding"] for file in self.file_dict.values()]
         )
 
-    def set_directory(self, directory):
+    def set_directory(self, directory: str) -> None:
         self.directory = os.path.abspath(directory)
         self._update_files_and_embeddings()
         self.remove_old_files()
 
-    def update_file(self, file_path):
+    def update_file(self, file_path: str) -> None:
         self.cur.execute(
             sql.SQL(
                 """
@@ -130,7 +133,7 @@ class MyCodebase:
         )
         self.conn.commit()
 
-    def create_tables(self):
+    def create_tables(self) -> None:
         self.cur.execute(
             """
             CREATE TABLE IF NOT EXISTS files (
@@ -149,11 +152,13 @@ class MyCodebase:
         wait=wait_random_exponential(min=1, max=20),
         stop=stop_after_attempt(6),
     )
-    def encode(self, text_or_tokens, model=EMBEDDING_MODEL):
+    def encode(
+        self, text_or_tokens: Union[str, List[str]], model: str = EMBEDDING_MODEL
+    ) -> List[float]:
         result = openai.Embedding.create(input=text_or_tokens, model=model)
         return result["data"][0]["embedding"]
 
-    def search(self, query, k=2):
+    def search(self, query: str, k: int = 2) -> str:
         """
         Search for files that match the query.
         """
@@ -200,7 +205,7 @@ class MyCodebase:
 
         return out
 
-    def get_summaries(self):
+    def get_summaries(self) -> Dict[str, str]:
         self.cur.execute("SELECT file_path, summary FROM files")
         results = self.cur.fetchall()
         out = {}
@@ -208,7 +213,7 @@ class MyCodebase:
             out.update({file_name: summary})
         return out
 
-    def get_file_contents(self):
+    def get_file_contents(self) -> Dict[str, str]:
         self.cur.execute("SELECT file_path, text FROM files")
         results = self.cur.fetchall()
         out = {}
@@ -217,10 +222,6 @@ class MyCodebase:
         return out
 
     def tree(self) -> str:
-        """
-        Return a string representing the tree of the files in the database.
-        TODO: Configure start_from so it's not hardcoded
-        """
         tree = {}
         start_from = os.path.basename(self.directory)
 
@@ -255,14 +256,14 @@ class MyCodebase:
         # Build the tree string starting from the root
         return build_tree_string(tree)
 
-    def remove_old_files(self):
+    def remove_old_files(self) -> None:
         """
         Remove files from the database that are no longer present in the codebase.
         """
         self.cur.execute("SELECT file_path FROM files")
         file_paths = [result[0] for result in self.cur.fetchall()]
         for file_path in file_paths:
-            if not os.path.exists(file_path) or file_path in self.file_dict.keys():
+            if not os.path.exists(file_path) and file_path in self.file_dict.keys():
                 self.cur.execute(
                     sql.SQL(
                         """
@@ -274,7 +275,7 @@ class MyCodebase:
                 self.conn.commit()
                 print(f"****    Removed file {file_path} from the database    *****")
 
-    def _update_files_and_embeddings(self):
+    def _update_files_and_embeddings(self) -> None:
         for root, dirs, files in os.walk(self.directory):
             dirs[:] = [d for d in dirs if d not in self.IGNORE_DIRS]
             for file_name in files:

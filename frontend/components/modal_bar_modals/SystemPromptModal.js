@@ -32,21 +32,21 @@ const SystemPromptModal = () => {
                 isOpen={isOpen}
                 onRequestClose={() => dispatch(setIsModalOpen(false))}
                 shouldCloseOnOverlayClick={true}
-                className="fixed inset-0 flex items-center justify-center m-96"
-                overlayClassName="fixed inset-0 bg-black bg-opacity-50"
+                className="fixed inset-0 flex items-center justify-center m-96 bg-gray-800 text-white border-blue-500"
+                overlayClassName="fixed inset-0 bg-gray-800 bg-opacity-50"
             >
-                <div className="relative bg-white rounded p-4 w-full max-w-screen-lg mx-auto text-gray-900">
+                <div className="relative flex flex-col bg-gray-800 rounded p-4 w-full mx-auto text-white border border-purple-200">
                     <h2 className="text-xl">System Prompt</h2>
                     <p className="text-sm text-green-800">Tokens: {systemTokens}</p>
                     <form onSubmit={updateSystemPrompt}>
                         <textarea
                             value={editablePrompt}
                             onChange={(e) => dispatch(setEditablePrompt(e.target.value))}
-                            className="mt-2 w-full h-96 p-2 border border-gray-300 rounded"
+                            className="relative mt-2 w-full h-96 p-2 border bg-slate-600 rounded items-center justify-center"
                         />
                         <button
                             type="submit"
-                            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            className="mt-4 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
                         >
                             Update System Prompt
                         </button>

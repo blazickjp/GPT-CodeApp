@@ -52,6 +52,7 @@ class CodingAgent:
         message_history = [
             Message(**i).to_dict() for i in self.memory_manager.get_messages()
         ]
+        function_to_call = FunctionCall()
 
         keyword_args = {
             "model": self.GPT_MODEL,
@@ -63,7 +64,6 @@ class CodingAgent:
         if self.functions:
             keyword_args["functions"] = self.functions
             keyword_args["function_call"] = "auto"
-            function_to_call = FunctionCall()
 
         # Override normal function calling when function_name is provided
         if command:
@@ -72,7 +72,6 @@ class CodingAgent:
 
             keyword_args["functions"] = [self.function_map.get(command).openai_schema]
             keyword_args["function_call"] = {"name": command}
-            function_to_call = FunctionCall()
 
         for chunk in openai.ChatCompletion.create(**keyword_args):
             delta = chunk["choices"][0].get("delta", {})
@@ -81,28 +80,31 @@ class CodingAgent:
                     function_to_call.name = delta.function_call["name"]
                 if "arguments" in delta.function_call:
                     function_to_call.arguments += delta.function_call["arguments"]
-            if chunk.choices[0].finish_reason == "stop":
+            if chunk.choices[0].finish_reason == "stop" and function_to_call.name:
                 print(
                     f"\n\nFunc Call: {function_to_call.name}\n\n{function_to_call.arguments}"
                 )
                 args = json.loads(function_to_call.arguments)
                 function_response = self.function_map[function_to_call.name](**args)
-                function_response.save()
+                if function_to_call.name == "FileChange":
+                    diff = function_response.save()
+                    function_message = {
+                        "role": "function",
+                        "name": function_to_call.name,
+                        "content": diff,
+                    }
+
                 print(f"Func Response: {json.dumps(function_response.to_dict())}")
-                # function_message = {
-                #     "role": "function",
-                #     "name": function_to_call.name,
-                #     "content": json.dumps(function_response.to_dict()),
-                # }
-                # message_history.append(function_message)
-                # for chunk in openai.ChatCompletion.create(
-                #     model=self.GPT_MODEL,
-                #     messages=message_history,
-                #     max_tokens=MAX_TOKENS,
-                #     temperature=TEMPERATURE,
-                #     stream=True,
-                # ):
-                #     content = chunk["choices"][0].get("delta", {}).get("content")
-                yield json.dumps(function_response.to_dict())
+
+                message_history.append(function_message)
+                for chunk in openai.ChatCompletion.create(
+                    model=self.GPT_MODEL,
+                    messages=message_history,
+                    max_tokens=MAX_TOKENS,
+                    temperature=TEMPERATURE,
+                    stream=True,
+                ):
+                    content = chunk["choices"][0].get("delta", {}).get("content")
+                    yield content
             else:
                 yield delta.get("content")

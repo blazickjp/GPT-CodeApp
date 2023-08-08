@@ -8,7 +8,7 @@ from enum import Enum
 from typing import Optional, List, Generator
 from pydantic import Field, field_validator
 from openai_function_call import OpenAISchema
-from diff_match_patch import diff_match_patch, patch_obj
+from diff_match_patch import diff_match_patch
 
 
 load_dotenv()
@@ -94,26 +94,8 @@ class Change(OpenAISchema):
     old_string: str = Field(..., description="The old string.")
     new_string: str = Field(..., description="The new string.")
 
-    def to_patch_obj(self):
-        # Initialize a patch object
-        patch = patch_obj()
-
-        # if self.new_string != "" and not self.new_string.endswith("\n"):
-        #     self.new_string += "\n"
-        dmp = diff_match_patch()
-
-        # Set the attributes of the patch object
-        patch.start1 = self.line - 1
-        patch.start2 = self.line - 1
-        patch.length1 = len(self.old_string)
-        patch.length2 = len(self.new_string)
-
-        # Create diffs
-        if self.old_string != "":
-            patch.diffs.append((dmp.DIFF_DELETE, self.old_string))
-        if self.new_string != "":
-            patch.diffs.append((dmp.DIFF_INSERT, self.new_string))
-        return str(patch)
+    def __lt__(self, other):
+        return self.line < other.line
 
 
 class Changes(OpenAISchema):
@@ -156,11 +138,12 @@ class FileChange(OpenAISchema):
         # This can be adjusted based on the file's style
         lines = [line.replace("\t", "    ") for line in lines]
 
-        for change in changes:
+        for change in sorted(changes):
             # Check for line number mismatch
             if change.line > len(lines):
-                print(f"Warning: Line {change.line} not found in file.")
-                continue
+                # Append changes to file
+                lines.append(change.new_string + "\n")
+                return "".join(lines)
 
             # Count the spaces at the beginning of the line
             spaces = 0
@@ -217,12 +200,14 @@ class FileChange(OpenAISchema):
 
         changes = Changes.from_response(completion).changes
         new_text = self.apply_changes(changes)
-        print(f"New Text: {new_text}")
 
         with open(file_path, "w") as f:
             f.write(new_text)
 
-        return new_text
+        # TODO: We should return the diff back to the UI
+        dmp = diff_match_patch()
+        diff = dmp.patch_make(current_contents, new_text, False)
+        return "\n".join(str(d) for d in diff)
 
 
 class CommandType(Enum):
