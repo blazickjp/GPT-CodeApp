@@ -167,11 +167,18 @@ class FileChange(OpenAISchema):
 
     def save(self) -> None:
         file_path = os.path.join(DIRECTORY, self.name)
-        with open(file_path, "r") as f:
-            current_contents = f.read()
-            current_contents_with_line_numbers = "\n".join(
-                f"{i+1}: {line}" for i, line in enumerate(current_contents.split("\n"))
+        try:
+            with open(file_path, "r") as f:
+                current_contents = f.read()
+                current_contents_with_line_numbers = "\n".join(
+                    f"{i+1}: {line}"
+                    for i, line in enumerate(current_contents.split("\n"))
+                )
+        except FileNotFoundError:
+            print(
+                f"Error: File {self.name} not found at file_path: {file_path}\nDirectory: {DIRECTORY}"
             )
+            raise
 
         prompt = f"""
         Line numbers have been added to the Current File to aid in your response. They are not part of the actual file.
