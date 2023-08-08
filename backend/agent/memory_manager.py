@@ -1,10 +1,9 @@
 import openai
-import psycopg2
+import os
 import tiktoken
 
 from typing import Optional, List
 from datetime import datetime
-from pydantic import BaseModel
 from dotenv import load_dotenv
 from psycopg2.extensions import connection
 
@@ -20,6 +19,7 @@ class MemoryManager:
         db_connection: connection = None,
     ) -> None:
         load_dotenv()
+        self.project_directory = os.getenv("PROJECT_DIRECTORY")
         self.model = model
         self.max_tokens = max_tokens
         self.system = None
@@ -60,13 +60,17 @@ class MemoryManager:
                     COALESCE(summarized_message_tokens, content_tokens) as tokens,
                     sum(COALESCE(summarized_message_tokens, content_tokens)) OVER (ORDER BY interaction_index DESC) as token_cum_sum
                 FROM {self.memory_table_name}
+                WHERE project_directory = %s
                 ORDER BY interaction_index desc
             )
             select role, full_content, content, tokens
             from t1
             WHERE token_cum_sum <= %s
             """,
-            (max_tokens,),
+            (
+                self.project_directory,
+                max_tokens,
+            ),
         )
         results = self.cur.fetchall()
         for result in results[::-1]:
@@ -86,8 +90,8 @@ class MemoryManager:
             self.cur.execute(
                 f"""
                 INSERT INTO {self.memory_table_name}
-                (interaction_index, role, content, content_tokens, summarized_message, summarized_message_tokens)
-                VALUES (%s, %s, %s, %s, %s, %s);
+                (interaction_index, role, content, content_tokens, summarized_message, summarized_message_tokens, project_directory)
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
                 """,
                 (
                     timestamp,
@@ -96,6 +100,7 @@ class MemoryManager:
                     message_tokens,
                     summary,
                     summary_tokens,
+                    self.project_directory,
                 ),
             )
             self.conn.commit()
@@ -193,7 +198,8 @@ class MemoryManager:
                     content TEXT,
                     content_tokens INT,
                     summarized_message TEXT,
-                    summarized_message_tokens INT
+                    summarized_message_tokens INT,
+                    project_directory TEXT
                 );
                 """
             )

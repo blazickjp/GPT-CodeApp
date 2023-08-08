@@ -8,25 +8,16 @@
 
 ## Todo
 
-- [x] Initial setup
-- [x] Database configuration
-- [x] Code highlighting
-- [x] SearchBar for adding files
-- [x] Breakup the Chatbox historical messages from the current streaming message. Reduce number of re-renders.
-- [x] Switch between GPT-4 and GPT-3.5
-- [x] Enable easy Code Copy to clipboard from UI
-- [ ] Give LLM functions to create files and add boiler plate code
-- [ ] Testing
-- [ ] Improve quality of conversation memory
-- [ ] Edit User Files with LLM
-- [ ] Support Multiple Conversations
+- [x] Testing
+- [x] Improve quality of conversation memory
+- [x] Edit User Files with LLM
+- [x] Give LLM functions to create files and add boiler plate code
+- [x] Support Multiple Conversations
 - [ ] Support Multiple "Identities" for LLM (debugging, adding feature, refactor, etc...)
-- [ ] Display Sidebar Files with a File Explorer
-- [ ] Comprehensive User Documentation
 - [ ] Better Interface for Adding / Changing LLM Functions
 - [ ] Use Wisper to add voice interface
-- [ ] Add support for Llamma & Anthropic Models
 - [ ] User authentication system
+- [ ] Comprehensive User Documentation
 
 ## Table of Contents
 
@@ -102,10 +93,6 @@ Contributions are what make the open-source community such an amazing place to l
 ## Tests
 
 Please provide information on how to run tests for your project, if applicable.
-
-## License
-
-Please provide information on the project's license (if any).
 
 ## Questions
 
