@@ -58,11 +58,15 @@ def test_FileChange_real_world_example():
     )
 
     # Save the changes
-    new_text = file_change.save()
-    new_text_lines = new_text.split("\n")
-
-    assert new_text_lines[31] == '        print("Database connection established")'
-
+    _ = file_change.save()
     # Check that the file was updated correctly
     with open(temp_file.name, "r") as f:
-        assert f.read() == new_text
+        new_text = f.readlines()
+        new_text
+
+    assert new_text[31].strip() == 'print("Database connection established")'
+
+    # Should be 8 spaces for indents and one newline character
+    assert len(new_text[31]) - len('print("Database connection established")') == 9
+    assert new_text[45].strip() == "# This is a new comment"
+    assert new_text[68].strip() == ""

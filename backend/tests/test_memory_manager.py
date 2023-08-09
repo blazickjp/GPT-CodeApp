@@ -25,8 +25,8 @@ class TestMemoryManager:
 
     def test_get_total_tokens_in_message(self):
         message = "This is a test message."
-        print(self.memory_manager)
         tokens = self.memory_manager.get_total_tokens_in_message(message)
+        print(f"TOKENS: {tokens}")
         assert isinstance(tokens, int)
 
     # def test_add_message(self):

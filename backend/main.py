@@ -23,8 +23,6 @@ async def message_streaming(request: Request) -> StreamingResponse:
         for content in AGENT.query(**data):
             if content is not None:
                 accumulated_messages[id] += content
-                # TODO: This is a hack to prevent multiple messages from being
-                # processes at once. We should fix this on the client side.
                 yield json.dumps({"id": id, "content": content}) + "\n"
 
         AGENT.memory_manager.add_message("assistant", accumulated_messages[id])

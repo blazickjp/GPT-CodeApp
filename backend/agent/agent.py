@@ -1,6 +1,4 @@
 # import os
-from ast import Call
-from matplotlib.font_manager import json_load
 import openai
 import json
 from typing import Any, List, Optional, Callable
@@ -80,21 +78,24 @@ class CodingAgent:
                     function_to_call.name = delta.function_call["name"]
                 if "arguments" in delta.function_call:
                     function_to_call.arguments += delta.function_call["arguments"]
+                    yield delta.function_call["arguments"]
             if chunk.choices[0].finish_reason == "stop" and function_to_call.name:
                 print(
                     f"\n\nFunc Call: {function_to_call.name}\n\n{function_to_call.arguments}"
                 )
                 args = json.loads(function_to_call.arguments)
                 function_response = self.function_map[function_to_call.name](**args)
+                print(f"Func Response: {json.dumps(function_response.to_dict())}")
                 if function_to_call.name == "FileChange":
                     diff = function_response.save()
-                    function_message = {
-                        "role": "function",
-                        "name": function_to_call.name,
-                        "content": diff,
-                    }
+                    # Show the diff back to the user
+                    yield diff
 
-                print(f"Func Response: {json.dumps(function_response.to_dict())}")
+                function_message = {
+                    "role": "function",
+                    "name": function_to_call.name,
+                    "content": diff,
+                }
 
                 message_history.append(function_message)
                 for chunk in openai.ChatCompletion.create(

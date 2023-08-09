@@ -1,14 +1,13 @@
 import os
 import openai
 import pexpect
-import numpy as np
+import difflib as dl
 
 from dotenv import load_dotenv
 from enum import Enum
 from typing import Optional, List, Generator
 from pydantic import Field, field_validator
 from openai_function_call import OpenAISchema
-from diff_match_patch import diff_match_patch
 
 
 load_dotenv()
@@ -85,33 +84,44 @@ class Change(OpenAISchema):
     The correct changes to make to a file
 
     Args:
-        line (int): The line number of the change.
+        line (int): The first line number of the change.
         old_string (str): The old string.
         new_string (str): The new string.
     """
 
-    line: int = Field(..., description="The line number of the change.")
+    line: int = Field(..., description="The first line number of the change.")
     old_string: str = Field(..., description="The old string.")
     new_string: str = Field(..., description="The new string.")
 
     def __lt__(self, other):
         return self.line < other.line
 
+    def to_dict(self) -> dict:
+        return {
+            "line": self.line,
+            "old_string": self.old_string,
+            "new_string": self.new_string,
+        }
+
 
 class Changes(OpenAISchema):
     """
-    A list of changes to make to a file.
+    A list of changes to make to a file. Think step by step and ensure the changes cover all requests that were made.
 
     Args:
-        changes (List[Change]): A list of Change Objects.
+        changes (List[Change]): A list of Change Objects that represent all the changes you want to make.
     """
 
     changes: List[Change] = Field(..., description="A list of Change objects.")
+
+    def to_dict(self) -> dict:
+        return [change.to_dict() for change in self.changes]
 
 
 class FileChange(OpenAISchema):
     """
     Correctly named file and description of changes.
+    Example of a good 'changes' string: "Change 'Successfully connected to database' to 'Database connection established', add a comment '# This is a new comment' at the end of the 'create_database_connection' function, and delete the duplicate 'DB_CONNECTION = create_database_connection()' line."
     Args:
         name (str): The correct name of the file. Name should be a path from the root of the codebase.
         changes (str): A detailed and robust natural language description of the correct changes to be made. Do not write code here.
@@ -166,6 +176,7 @@ class FileChange(OpenAISchema):
         return "".join(lines)
 
     def save(self) -> None:
+        model = "gpt-4"
         file_path = os.path.join(DIRECTORY, self.name)
         try:
             with open(file_path, "r") as f:
@@ -178,11 +189,12 @@ class FileChange(OpenAISchema):
             print(
                 f"Error: File {self.name} not found at file_path: {file_path}\nDirectory: {DIRECTORY}"
             )
-            raise
+            return "Invalid File Name. Files should be named relative to the root of the codebase and already exist."
 
         prompt = f"""
         Line numbers have been added to the Current File to aid in your response. They are not part of the actual file.
-        File Name: {self.name}
+        File Name: 
+        {self.name}
         Current File:
         {current_contents_with_line_numbers}
         Changes Requested:
@@ -194,27 +206,47 @@ class FileChange(OpenAISchema):
                 "role": "system",
                 "content": prompt,
             },
-            {"role": "user", "content": "Reply with the correct GNU style git patch."},
+            {
+                "role": "user",
+                "content": """
+                Reply with the correct changes. Make sure you include any and all new imports.
+                There should be one Change Object for each block of code you are changing.
+                Adhere to standard formatting conventions and avoid putting all new code at the
+                end of the file.
+                """,
+            },
         ]
-        completion = openai.ChatCompletion.create(
-            model="gpt-4",
-            temperature=0,
-            functions=[Changes.openai_schema],
-            function_call={"name": Changes.openai_schema["name"]},
-            messages=messages,
-            max_tokens=1000,
-        )
+        try:
+            completion = openai.ChatCompletion.create(
+                model="gpt-4",
+                temperature=0,
+                functions=[Changes.openai_schema],
+                function_call={"name": Changes.openai_schema["name"]},
+                messages=messages,
+                max_tokens=1000,
+            )
+        except openai.error.OpenAIError as e:
+            print(e)
+            print(e.response)
+            return "Error: OpenAI API Error. Please try again."
 
         changes = Changes.from_response(completion).changes
+        print([change.to_dict() for change in changes])
         new_text = self.apply_changes(changes)
 
         with open(file_path, "w") as f:
             f.write(new_text)
 
-        # TODO: We should return the diff back to the UI
-        dmp = diff_match_patch()
-        diff = dmp.patch_make(current_contents, new_text, False)
-        return "\n".join(str(d) for d in diff)
+        # Return the diff back to the UI
+        diff = dl.unified_diff(
+            current_contents.splitlines(),
+            new_text.splitlines(),
+            fromfile="a",
+            tofile="b",
+            n=0,
+        )
+
+        return "\n```diff\n" + "\n".join(str(d) for d in diff) + "\n```\n\n"
 
 
 class CommandType(Enum):
