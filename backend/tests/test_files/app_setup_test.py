@@ -8,9 +8,10 @@ from database.my_codebase import MyCodebase
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional, List, Any, Callable
+from typing import Optional, Any, Callable
 from pydantic import BaseModel
-from agent.agent_functions import CommandPlan, FileChange
+from agent.agent_functions.changes import Changes
+from agent.agent_functions.shell_commands import CommandPlan
 
 load_dotenv()
 CODEAPP_DB_NAME = os.getenv("CODEAPP_DB_NAME")
@@ -82,5 +83,5 @@ def setup_codebase() -> MyCodebase:
 def setup_app() -> CodingAgent:
     codebase = setup_codebase()
     memory = setup_memory_manager(tree=codebase.tree())
-    agent = CodingAgent(memory_manager=memory, callables=[CommandPlan, FileChange])
+    agent = CodingAgent(memory_manager=memory, callables=[CommandPlan, Changes])
     return agent, codebase

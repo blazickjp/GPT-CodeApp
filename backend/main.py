@@ -6,7 +6,7 @@ import tiktoken
 from fastapi import Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from database.my_codebase import get_git_root
-from app_setup import setup_app, app
+from app_setup import setup_app, app, DIRECTORY
 
 
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
@@ -131,19 +131,11 @@ async def set_summary_files_in_prompt(input: dict):
 
 @app.post("/set_files_in_prompt")
 async def set_files_in_prompt(input: dict):
-    files = [
-        os.path.join(get_git_root(CODEBASE.directory), file)
-        for file in input.get("files")
-    ]
+    files = [os.path.join(DIRECTORY, file.lstrip("/")) for file in input.get("files")]
     if not files:
         return JSONResponse(status_code=400, content={"error": "No files provided."})
-    content = CODEBASE.get_file_contents()
-    content = [f"{k}:\n{v}" for k, v in content.items() if k in files]
-    if not content:
-        return JSONResponse(status_code=400, content={"error": "No files found."})
-    additional_system_prompt_files = "\n\n".join(content)
-    AGENT.memory_manager.system_file_contents = additional_system_prompt_files
-    AGENT.memory_manager.set_system()
+    AGENT.files_in_prompt = files
+    AGENT.set_files_in_prompt()
     return JSONResponse(status_code=200, content={})
 
 

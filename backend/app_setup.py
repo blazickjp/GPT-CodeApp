@@ -10,7 +10,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List, Any, Callable
 from pydantic import BaseModel
-from agent.agent_functions import CommandPlan, FileChange
+from agent.agent_functions.changes import Changes
+from agent.agent_functions.shell_commands import CommandPlan
 
 load_dotenv()
 CODEAPP_DB_NAME = os.getenv("CODEAPP_DB_NAME")
@@ -69,8 +70,8 @@ class FunctionCall(BaseModel):
 DB_CONNECTION = create_database_connection()
 
 
-def setup_memory_manager(tree: Optional[str]) -> MemoryManager:
-    memory_manager = MemoryManager(db_connection=DB_CONNECTION, tree=tree)
+def setup_memory_manager(**kwargs) -> MemoryManager:
+    memory_manager = MemoryManager(db_connection=DB_CONNECTION, **kwargs)
     return memory_manager
 
 
@@ -82,5 +83,16 @@ def setup_codebase() -> MyCodebase:
 def setup_app() -> CodingAgent:
     codebase = setup_codebase()
     memory = setup_memory_manager(tree=codebase.tree())
-    agent = CodingAgent(memory_manager=memory, callables=[CommandPlan, FileChange])
+    agent = CodingAgent(
+        memory_manager=memory, callables=[CommandPlan, Changes], codebase=codebase
+    )
+    return agent, codebase
+
+
+def setup_app_testing() -> CodingAgent:
+    codebase = setup_codebase()
+    memory = setup_memory_manager(tree=codebase.tree(), table_name="test")
+    agent = CodingAgent(
+        memory_manager=memory, callables=[CommandPlan, Changes], codebase=codebase
+    )
     return agent, codebase
