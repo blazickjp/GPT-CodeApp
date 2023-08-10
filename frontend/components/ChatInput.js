@@ -5,7 +5,7 @@ import { Hint } from 'react-autocomplete-hint';
 
 const ChatInput = ({ onSubmit }) => {
     const [input, setInput] = useState('');
-    const commands = ['/CommandPlan', '/FileChange'];
+    const commands = ['/CommandPlan', '/Changes'];
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -15,9 +15,9 @@ const ChatInput = ({ onSubmit }) => {
             setInput('');
             return;
         }
-        if (input.startsWith('/FileChange')) {
-            console.log('FileChange');
-            onSubmit(input, 'FileChange');
+        if (input.startsWith('Changes')) {
+            console.log('Changes');
+            onSubmit(input, 'Changes');
             setInput('');
             return;
         }
