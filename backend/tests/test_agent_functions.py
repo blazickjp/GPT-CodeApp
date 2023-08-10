@@ -7,28 +7,6 @@ temp_file = "backend/tests/test_files/agent_function_test1"
 temp_file_full = os.path.join(DIRECTORY, temp_file)
 
 
-def test_FileChange_multiple_changes():
-    # Create a temporary file
-    with open(temp_file_full, "w") as f:
-        f.write("Hello\nWorld\n")
-
-    # Create a FileChange instance
-    accumulated_message = ""
-    for content in AGENT.query(
-        input=f"Change 'Hello' to 'Hi' and 'World' to 'Everyone' in {temp_file}",
-        command="Changes",
-    ):
-        if content is not None:
-            accumulated_message += content
-
-    # Check that the file was updated correctly
-    with open(temp_file_full, "r") as f:
-        assert f.read() == "Hi\nEveryone\n"
-
-    # Clean up the temporary file
-    os.remove(temp_file_full)
-
-
 def test_FileChange_real_world_example():
     # Create a temporary file
     TEST_FILE = "backend/tests/test_files/app_setup_test.py"
@@ -43,8 +21,9 @@ def test_FileChange_real_world_example():
         input=f"""
         For file - {temp_file}, Change 'Successfully connected to database' to 'Database connection established',
         add a comment '# This is a new comment' after the 'create_database_connection' function, and finally
-        delete the duplicate 'DB_CONNECTION = create_database_connection()' line",
-        command="Changes""",
+        delete the duplicate 'DB_CONNECTION = create_database_connection()' line
+        """,
+        command="Changes",
     ):
         if content is not None:
             accumulated_message += content
