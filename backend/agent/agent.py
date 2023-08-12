@@ -1,5 +1,5 @@
 # import os
-import keyword
+import re
 import openai
 import json
 import os
@@ -67,7 +67,6 @@ class CodingAgent:
                 func.__name__: func for func in callables if func is not None
             }
         self.files_in_prompt: List[str] = []
-        print(f"Function Map: {self.function_map}")
 
     def query(self, input: str, command: Optional[str] = None) -> List[str]:
         """
@@ -107,11 +106,11 @@ class CodingAgent:
             keyword_args["function_call"] = {"name": command}
 
             if command == "Changes":
-                self.memory_manager.identity = (
-                    self.memory_manager.identity
-                    + "\nLine numbers have been added to the Current File to aid in your response. They are not part of the actual file."
-                )
-                self.set_files_in_prompt(include_line_numbers=True)
+                # self.memory_manager.identity = (
+                #     self.memory_manager.identity
+                #     + "\nLine numbers have been added to the Current File to aid in your response. They are not part of the actual file."
+                # )
+                # self.set_files_in_prompt(include_line_numbers=True)
                 keyword_args["model"] = "gpt-4"
 
         for chunk in openai.ChatCompletion.create(**keyword_args):
@@ -126,7 +125,7 @@ class CodingAgent:
                 print(
                     f"\n\nFunc Call: {function_to_call.name}\n\n{function_to_call.arguments}"
                 )
-                args = json.loads(function_to_call.arguments)
+                args = self.process_json(function_to_call.arguments)
                 function_response = self.function_map[function_to_call.name](**args)
                 print(f"Func Response: {json.dumps(function_response.to_dict())}")
                 if function_to_call.name == "Changes":
@@ -191,3 +190,21 @@ class CodingAgent:
         for i in range(len(lines)):
             lines[i] = f"{i+1} {lines[i]}"
         return "\n".join(lines)
+
+    def process_json(self, args):
+        try:
+            response = json.loads(args)
+            return response
+        except json.decoder.JSONDecodeError:
+            # Find all occurrences of triple-quoted strings
+            triple_quoted_strings = re.findall(r"\"\"\"(.*?)\"\"\"", args, re.DOTALL)
+
+            # For each occurrence, replace newlines and triple quotes
+            for tqs in triple_quoted_strings:
+                fixed_string = tqs.replace("\n", "\\n").replace('"', '\\"')
+                response_str = args.replace(tqs, fixed_string)
+
+            # Now replace the triple quotes with single quotes
+            response_str = args.replace('"""', '"')
+
+            return response_str
