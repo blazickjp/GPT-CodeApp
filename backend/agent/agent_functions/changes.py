@@ -4,8 +4,9 @@ import difflib as dl
 
 from dotenv import load_dotenv
 from typing import List
-from pydantic import Field
+from pydantic import Field, field_validator
 from openai_function_call import OpenAISchema
+import re
 
 load_dotenv()
 DIRECTORY = os.getenv("PROJECT_DIRECTORY")
@@ -13,38 +14,47 @@ DIRECTORY = os.getenv("PROJECT_DIRECTORY")
 
 class Change(OpenAISchema):
     """
-    The correct changes to make to a file. Use the line numbers from the given context
+    The correct changes to make to a file.
+    Be mindful of formatting and include the proper newline characters.
 
     Args:
-        starting_line (int): The first line number of the change.
-        old_string (str): The full and correct code block to be replaced; formatted as a string.
-        new_string (str): Correct new code to insert; formatted as a string.
+        original (str): The full code block to be replaced; formatted as a string.
+        updated (str): Correct new code to insert; formatted as a string.
     """
 
-    starting_line: int = Field(..., description="The first line number of the change.")
-    old_string: str = Field(..., description="The old string.")
-    new_string: str = Field(..., description="The new string.")
+    original: str = Field(..., description="Code to be replaced.")
+    updated: str = Field(..., description="New code.")
 
-    def __lt__(self, other):
-        return self.starting_line < other.starting_line
+    @field_validator("original")
+    def original_must_not_be_blank(cls, v):
+        if v == "":
+            raise ValueError("Original cannot be blank.")
+        return v
 
     def to_dict(self) -> dict:
         return {
-            "line": self.starting_line,
-            "old_string": self.old_string,
-            "new_string": self.new_string,
+            "original": self.original,
+            "updated": self.updated,
         }
 
 
 class Changes(OpenAISchema):
     """
     A list of changes to make to a file.
-    Make sure the old_string matches the current content.
-    Think step by step and ensure the changes cover all requests.
+    Think step by step and ensure the changes cover all requests. Changes will be processed similar to a diff
+    of the format:
+    >>>>>> ORIGINAL
+    old code
+    =========
+    new code
+    <<<<<< UPDATED
 
+    All you need to provide is the old code and new code. The system will handle the rest.
+    The original field must not be blank. The updated field can be blank if you want to delete the old code.
+    Always use the relative path from the root of the codebase.
 
     Args:
-        file_name (str): The name of the file to be changed.
+        file_name (str): The name of the file to be changed. This needs to be the relative path from the root of the codebase.
         thought (str): A description of your thought process.
         changes (List[Change]): A list of Change Objects that represent all the changes you want to make to this file.
     """
@@ -56,80 +66,40 @@ class Changes(OpenAISchema):
     def to_dict(self) -> dict:
         return [change.to_dict() for change in self.changes]
 
-    def apply_changes(self, changes):
-        # Normalize tabs to spaces (assuming 4 spaces for a tab)
-        # This can be adjusted based on the file's style
-        relative_path = self.file_name.lstrip("/")
-        file_path = os.path.join(DIRECTORY, relative_path)
-        with open(file_path, "r") as f:
-            lines = f.readlines()
-
-        for change in sorted(changes):
-            # Check for line number mismatch
-            if change.starting_line > len(lines):
-                # Append changes to file
-                lines.append(change.new_string + "\n")
-                return "".join(lines)
-
-            lines = [line.replace("\t", "    ") for line in lines]
-
-            # Attempt to apply changes with the original line number
-            lines, success = self.apply_changes_with_line_number(
-                lines, change.starting_line, change.new_string, change.old_string
+    def apply_changes(self, changes, content):
+        for change in changes:
+            # Use regex to find and replace the old string
+            if content:
+                print("Content exists!!!!!!!!")
+                print(f"Type: {type(content)}")
+            new_content = self.replace_part_with_missing_leading_whitespace(
+                whole_lines=content.split("\n"),
+                part_lines=change.original.splitlines(),
+                replace_lines=change.updated.splitlines(),
             )
+            if not new_content:
+                print(f"Failed on change: {change.to_dict()}")
+                raise Exception("Failed to apply changes.")
 
-            if not success:
-                # Retry with an offset of +1
-                lines, success = self.apply_changes_with_line_number(
-                    lines,
-                    change.starting_line + 1,
-                    change.new_string,
-                    change.old_string,
-                )
-
-            if not success:
-                # Retry with an offset of -1
-                lines, success = self.apply_changes_with_line_number(
-                    lines,
-                    change.starting_line - 1,
-                    change.new_string,
-                    change.old_string,
-                )
-
-            if not success:
-                # Handle the case where all retries failed
-                # You can raise an exception or log an error message here
+            if new_content == content:
+                print("Warning: Expected content not found. No changes made.")
+                print(f"Expected: {change.original}")
+                print(f"Actual: {content}")
                 return None
+            else:
+                content = new_content
+        return content
 
-        # Write the modified content back to the file
-        return "".join(lines)
+    def fuzzy_replace(target_text, old_string, new_string):
+        # Normalize the old_string by converting all whitespace to spaces
+        normalized_old_string = re.sub(r"\s", " ", old_string)
 
-    def apply_changes_with_line_number(
-        self, lines, starting_line, new_string, old_string
-    ):
-        # Check for a match to the old string
-        if lines[starting_line - 1].strip() != old_string.strip():
-            print(f"Found Text: {lines[starting_line - 1]}")
-            print(f"Expected Text: {old_string}")
-            return lines, False
+        # Create a search pattern that treats spaces, tabs, and newlines interchangeably
+        search_pattern = re.sub(r" +", r"\\s+", normalized_old_string)
+        # Replace using the flexible pattern
+        result_text = re.sub(search_pattern, new_string, target_text)
 
-        # Adjust the line numbering based on the code block length
-        spaces = self.count_spaces(lines[starting_line - 1])
-        old_code_block_lines = len(old_string.strip().split("\n"))
-
-        # remove the old code block
-        del lines[starting_line - 1 : starting_line - 1 + old_code_block_lines]
-
-        # Insert the new code block
-        lines = (
-            lines[: starting_line - 1]
-            + [" " * spaces + new_string.lstrip() + "\n"]
-            + lines[starting_line - 1 :]
-        )
-
-        # Check if the changes were successfully applied
-        # You can add your own logic here based on your requirements
-        return lines, True
+        return result_text
 
     def count_spaces(self, line):
         spaces = 0
@@ -148,12 +118,25 @@ class Changes(OpenAISchema):
         try:
             with open(file_path, "r") as f:
                 current_contents = f.read()
+                current_contents_with_line_numbers = "\n".join(
+                    [
+                        f"{i+1} {line}"
+                        for i, line in enumerate(current_contents.splitlines())
+                    ]
+                )
         except FileNotFoundError:
             print(
                 f"Error: File {self.file_name} not found at file_path: {file_path}\nDirectory: {DIRECTORY}"
             )
             return "Invalid File Name. Files should be named relative to the root of the codebase and already exist."
+        except Exception as e:
+            print(e)
+            return "Error: File could not be read. Please try again."
 
+        new_text = self.apply_changes(self.changes, current_contents)
+        # if not new_text:
+        # raise
+        # print("\n\n*****   First attempt failed... retrying! *****\n\n")
         # prompt = f"""
         # Line numbers have been added to the Current File to aid in your response. They are not part of the actual file.
         # File Name:
@@ -194,8 +177,8 @@ class Changes(OpenAISchema):
         #     return "Error: OpenAI API Error. Please try again."
 
         # changes = Changes.from_response(completion).changes
-        print([change.to_dict() for change in self.changes])
-        new_text = self.apply_changes(self.changes)
+        # print([change.to_dict() for change in changes])
+        # new_text = self.apply_changes(changes)
 
         # Return the diff back to the UI
         diff = dl.unified_diff(
@@ -212,3 +195,34 @@ class Changes(OpenAISchema):
     def save(self, new_text, file_path) -> None:
         with open(file_path, "w") as f:
             f.write(new_text)
+
+    def replace_part_with_missing_leading_whitespace(
+        self, whole_lines, part_lines, replace_lines
+    ):
+        start, end, spaces = self.match_partial(whole_lines, part_lines)
+        if start is None:
+            print("No match found, not making changes")
+            return "\n".join(whole_lines)
+
+        # remove old lines
+        del whole_lines[start:end]
+        # add new lines and adjust indentation
+        for i, line in enumerate(replace_lines):
+            whole_lines.insert(start + i, spaces * " " + line)
+
+        return "\n".join(whole_lines)
+
+    def match_partial(self, original_lines, partial_lines):
+        for i, line in enumerate(original_lines):
+            if line.lstrip() == partial_lines[0].lstrip():
+                spaces = self.count_spaces(line) - self.count_spaces(partial_lines[0])
+                start = i
+                break
+        if not start:
+            return (None, None, None)
+        end = start + len(partial_lines)
+        # verify the rest of the lines match before returning
+        for i, line in enumerate(original_lines[start:end]):
+            if line.lstrip() != partial_lines[i].lstrip():
+                return (None, None, None)
+        return (start, end, spaces)

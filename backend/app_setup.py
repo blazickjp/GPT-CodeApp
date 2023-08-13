@@ -67,9 +67,6 @@ class FunctionCall(BaseModel):
         return self.callable(self.arguments)
 
 
-DB_CONNECTION = create_database_connection()
-
-
 def setup_memory_manager(**kwargs) -> MemoryManager:
     memory_manager = MemoryManager(db_connection=DB_CONNECTION, **kwargs)
     return memory_manager
@@ -92,6 +89,8 @@ def setup_app() -> CodingAgent:
 def setup_app_testing() -> CodingAgent:
     codebase = setup_codebase()
     memory = setup_memory_manager(tree=codebase.tree(), table_name="test")
+    memory.cur.execute("TRUNCATE test_memory;")
+    memory.cur.execute("TRUNCATE test_system_prompt;")
     agent = CodingAgent(
         memory_manager=memory, callables=[CommandPlan, Changes], codebase=codebase
     )

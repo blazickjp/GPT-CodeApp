@@ -147,30 +147,30 @@ class MemoryManager:
         """Set the system message."""
 
         "Update the system prompt manually"
-        if len(input.keys()) != 0:
+        if input.get("system"):
             self.system = input.get("system")
-            return True
+        else:
+            self.system = (
+                self.identity
+                + "\n\n"
+                + "********* Contextual Information *********\n\n"
+            )
+            self.system += (
+                "The project directory is setup as follows:\n" + self.tree + "\n\n"
+                if self.tree
+                else ""
+            )
 
-        system = (
-            self.identity + "\n\n" + "********* Contextual Information *********\n\n"
-        )
-        system += (
-            "The project directory is setup as follows:\n" + self.tree + "\n\n"
-            if self.tree
-            else ""
-        )
-
-        system += (
-            "Summaries of Relted Files:\n" + self.system_file_summaries + "\n\n"
-            if self.system_file_summaries
-            else ""
-        )
-        system += (
-            "Related File Contents:\n" + self.system_file_contents + "\n\n"
-            if self.system_file_contents
-            else ""
-        )
-        self.system = system
+            self.system += (
+                "Summaries of Relted Files:\n" + self.system_file_summaries + "\n\n"
+                if self.system_file_summaries
+                else ""
+            )
+            self.system += (
+                "Related File Contents:\n" + self.system_file_contents + "\n\n"
+                if self.system_file_contents
+                else ""
+            )
 
         self.cur.execute(
             f"""

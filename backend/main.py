@@ -131,9 +131,10 @@ async def set_summary_files_in_prompt(input: dict):
 
 @app.post("/set_files_in_prompt")
 async def set_files_in_prompt(input: dict):
-    files = [os.path.join(DIRECTORY, file.lstrip("/")) for file in input.get("files")]
+    files = [file for file in input.get("files")]
     if not files:
         return JSONResponse(status_code=400, content={"error": "No files provided."})
+    print(files)
     AGENT.files_in_prompt = files
     AGENT.set_files_in_prompt()
     return JSONResponse(status_code=200, content={})

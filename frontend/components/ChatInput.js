@@ -10,13 +10,11 @@ const ChatInput = ({ onSubmit }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (input.startsWith('/CommandPlan')) {
-            console.log('CommandPlan');
             onSubmit(input, 'CommandPlan');
             setInput('');
             return;
         }
-        if (input.startsWith('Changes')) {
-            console.log('Changes');
+        if (input.startsWith('/Changes')) {
             onSubmit(input, 'Changes');
             setInput('');
             return;
