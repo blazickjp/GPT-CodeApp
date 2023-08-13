@@ -133,23 +133,6 @@ class CodingAgent:
                     diff = function_response.execute()
                     # Show the diff back to the user
                     yield diff
-
-                function_message = {
-                    "role": "function",
-                    "name": function_to_call.name,
-                    "content": diff,
-                }
-
-                message_history.append(function_message)
-                for chunk in openai.ChatCompletion.create(
-                    model=self.GPT_MODEL,
-                    messages=message_history,
-                    max_tokens=MAX_TOKENS,
-                    temperature=TEMPERATURE,
-                    stream=True,
-                ):
-                    content = chunk["choices"][0].get("delta", {}).get("content")
-                    yield content
             else:
                 yield delta.get("content")
 
