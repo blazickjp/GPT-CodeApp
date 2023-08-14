@@ -240,3 +240,9 @@ def test_replace_part_with_missing_leading_whitespace():
         )
         == "    a\n    b"
     )
+    assert (
+        changes.replace_part_with_missing_leading_whitespace(
+            ["        a", "        b"], ["    a", "     b"], ["    c", "        d"]
+        )
+        == "        c\n            d"
+    )
