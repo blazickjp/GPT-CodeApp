@@ -100,7 +100,7 @@ Call Agent Function - changes.py needs to be loaded into context
 /Changes add docstring to the match_partial function
 ```
 
-Function Call shown in UI
+Function Call response are streamed back into the UI
 
 ```json
 {
