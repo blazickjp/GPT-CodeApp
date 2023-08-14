@@ -114,15 +114,20 @@ class CodingAgent:
                 # self.set_files_in_prompt(include_line_numbers=True)
                 keyword_args["model"] = "gpt-4"
 
-        for chunk in openai.ChatCompletion.create(**keyword_args):
+        for i, chunk in enumerate(openai.ChatCompletion.create(**keyword_args)):
             delta = chunk["choices"][0].get("delta", {})
             if "function_call" in delta:
                 if "name" in delta.function_call:
                     function_to_call.name = delta.function_call["name"]
                 if "arguments" in delta.function_call:
-                    function_to_call.arguments += delta.function_call["arguments"]
-                    yield delta.function_call["arguments"]
+                    if function_to_call.name == "Changes" and i == 0:
+                        yield "\n```json\n" + delta.function_call["arguments"]
+                    else:
+                        function_to_call.arguments += delta.function_call["arguments"]
+                        yield delta.function_call["arguments"]
             if chunk.choices[0].finish_reason == "stop" and function_to_call.name:
+                if function_to_call.name == "Changes":
+                    yield "```\n\n"
                 print(
                     f"\n\nFunc Call: {function_to_call.name}\n\n{function_to_call.arguments}"
                 )

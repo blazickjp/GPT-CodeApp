@@ -3,7 +3,7 @@ import openai
 import difflib as dl
 
 from dotenv import load_dotenv
-from typing import List
+from typing import List, Optional, Tuple
 from pydantic import Field, field_validator
 from openai_function_call import OpenAISchema
 import re
@@ -32,6 +32,9 @@ class Change(OpenAISchema):
         return v
 
     def to_dict(self) -> dict:
+        """
+        Converts the Change object to a dictionary.
+        """
         return {
             "original": self.original,
             "updated": self.updated,
@@ -50,7 +53,9 @@ class Changes(OpenAISchema):
     <<<<<< UPDATED
 
     All you need to provide is the old code and new code. The system will handle the rest.
-    The original field must not be blank. The updated field can be blank if you want to delete the old code.
+    The 'original' field cannot be an empty string.
+    When adding new code, include original code to determine where to put the new code.
+    The 'updated' field can be blank if you want to delete the old code.
     Always use the relative path from the root of the codebase.
 
     Args:
@@ -66,7 +71,10 @@ class Changes(OpenAISchema):
     def to_dict(self) -> dict:
         return [change.to_dict() for change in self.changes]
 
-    def apply_changes(self, changes, content):
+    def apply_changes(self, changes: List[Change], content: str) -> str:
+        """
+        Applies the given changes to the content.
+        """
         for change in changes:
             # Use regex to find and replace the old string
             if content:
@@ -85,23 +93,15 @@ class Changes(OpenAISchema):
                 print("Warning: Expected content not found. No changes made.")
                 print(f"Expected: {change.original}")
                 print(f"Actual: {content}")
-                return None
+                continue
             else:
                 content = new_content
         return content
 
-    def fuzzy_replace(target_text, old_string, new_string):
-        # Normalize the old_string by converting all whitespace to spaces
-        normalized_old_string = re.sub(r"\s", " ", old_string)
-
-        # Create a search pattern that treats spaces, tabs, and newlines interchangeably
-        search_pattern = re.sub(r" +", r"\\s+", normalized_old_string)
-        # Replace using the flexible pattern
-        result_text = re.sub(search_pattern, new_string, target_text)
-
-        return result_text
-
-    def count_spaces(self, line):
+    def count_spaces(self, line: str) -> int:
+        """
+        Counts the leading spaces in a line of code.
+        """
         spaces = 0
         for char in line:
             if char == " ":
@@ -110,7 +110,10 @@ class Changes(OpenAISchema):
                 break
         return spaces
 
-    def execute(self) -> None:
+    def execute(self) -> str:
+        """
+        Executes the changes on the file and returns a diff.
+        """
         relative_path = self.file_name.lstrip("/")
         file_path = os.path.join(DIRECTORY, relative_path)
         print(f"Directory: {DIRECTORY}")
@@ -134,51 +137,9 @@ class Changes(OpenAISchema):
             return "Error: File could not be read. Please try again."
 
         new_text = self.apply_changes(self.changes, current_contents)
+
         # if not new_text:
-        # raise
-        # print("\n\n*****   First attempt failed... retrying! *****\n\n")
-        # prompt = f"""
-        # Line numbers have been added to the Current File to aid in your response. They are not part of the actual file.
-        # File Name:
-        # {self.file_name}
-        # Current File:
-        # {current_contents_with_line_numbers}
-        # Changes Requested:
-        # {self.changes}
-        # """
-
-        # messages = [
-        #     {
-        #         "role": "system",
-        #         "content": prompt,
-        #     },
-        #     {
-        #         "role": "user",
-        #         "content": """
-        #         Reply with the correct changes. Make sure you include any and all new imports.
-        #         There should be one Change Object for each block of code you are changing.
-        #         Adhere to standard formatting conventions and avoid putting all new code at the
-        #         end of the file.
-        #         """,
-        #     },
-        # ]
-        # try:
-        #     completion = openai.ChatCompletion.create(
-        #         model="gpt-4",
-        #         temperature=0,
-        #         functions=[Changes.openai_schema],
-        #         function_call={"name": Changes.openai_schema["name"]},
-        #         messages=messages,
-        #         max_tokens=1000,
-        #     )
-        # except openai.error.OpenAIError as e:
-        #     print(e)
-        #     print(e.response)
-        #     return "Error: OpenAI API Error. Please try again."
-
-        # changes = Changes.from_response(completion).changes
-        # print([change.to_dict() for change in changes])
-        # new_text = self.apply_changes(changes)
+        # TODO: This could be a point to retry.
 
         # Return the diff back to the UI
         diff = dl.unified_diff(
@@ -190,15 +151,31 @@ class Changes(OpenAISchema):
         )
 
         self.save(new_text, file_path)
-        return "\n```diff\n" + "\n".join(str(d) for d in diff) + "\n```\n\n"
+        return "\n\n```diff\n" + "\n".join(str(d) for d in diff) + "\n```\n\n"
 
-    def save(self, new_text, file_path) -> None:
+    def save(self, new_text: str, file_path: str) -> None:
+        """
+        Saves the new text to the file at the given path.
+        """
         with open(file_path, "w") as f:
             f.write(new_text)
 
     def replace_part_with_missing_leading_whitespace(
         self, whole_lines, part_lines, replace_lines
     ):
+        """
+        This function replaces a part of the original code with new code, while preserving the leading whitespace.
+        It first matches the part of the original code that needs to be replaced, then removes the old lines and inserts the new lines with adjusted indentation.
+        If no match is found for the part to be replaced, no changes are made.
+
+        Args:
+            whole_lines (List[str]): The original lines of code.
+            part_lines (List[str]): The lines of code that need to be replaced.
+            replace_lines (List[str]): The new lines of code that will replace the old ones.
+
+        Returns:
+            str: The updated code with the replaced part.
+        """
         start, end, spaces = self.match_partial(whole_lines, part_lines)
         if start is None:
             print("No match found, not making changes")
@@ -212,13 +189,26 @@ class Changes(OpenAISchema):
 
         return "\n".join(whole_lines)
 
-    def match_partial(self, original_lines, partial_lines):
+    def match_partial(
+        self, original_lines: List[str], partial_lines: List[str]
+    ) -> Tuple[Optional[int], Optional[int], Optional[int]]:
+        """
+        This function matches a part of the original code with a given part.
+
+        Args:
+            original_lines (List[str]): The original lines of code.
+            partial_lines (List[str]): The lines of code that need to be matched.
+
+        Returns:
+            Tuple[Optional[int], Optional[int], Optional[int]]: The start and end indices of the match in the original code and the number of leading spaces in the matched part.
+        """
+        start = None
         for i, line in enumerate(original_lines):
             if line.lstrip() == partial_lines[0].lstrip():
                 spaces = self.count_spaces(line) - self.count_spaces(partial_lines[0])
                 start = i
                 break
-        if not start:
+        if start is None:
             return (None, None, None)
         end = start + len(partial_lines)
         # verify the rest of the lines match before returning
