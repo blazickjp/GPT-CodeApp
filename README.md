@@ -82,13 +82,15 @@ uvicorn main:app --reload
 
 ### On-Demand Agent Function
 
-On-Demand Agent functions can be called from the UI with the command prepended by a "/".
+On-Demand Agent functions are special functions that can be called on demand from the user interface differing from typical OpenAI functions in that we're forcing the function call instead of relying on the LLM to recognize when to call the function. They are designed to perform specific tasks based on user input and can greatly enhance the functionality and interactivity of the application. To call an On-Demand Agent function, you simply prepend the command with a "/".
 
 Current On-Demand Agent Functions
 
  - Changes
    - Edits a file from the repository given a set of instructions. The memory of the conversation is included so you do not need
    to be overly specific in your instructions. See example below.
+- CommandPlanner
+   - Allows the agent to run a sequence of bash operations in a plan and execute paradigm.
 
 #### Example
 
