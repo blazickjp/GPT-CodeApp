@@ -80,6 +80,66 @@ cd /backend
 uvicorn main:app --reload
 ```
 
+### On-Demand Agent Function
+
+On-Demand Agent functions can be called from the UI with the command prepended by a "/".
+
+Current On-Demand Agent Functions
+
+ - Changes
+   - Edits a file from the repository given a set of instructions. The memory of the conversation is included so you do not need
+   to be overly specific in your instructions. See example below.
+
+#### Example
+
+Call Agent Function - changes.py needs to be loaded into context
+
+```
+/Changes add docstring to the match_partial function
+```
+
+Function Call shown in UI
+
+```json
+{
+  "file_name": "backend/agent/agent_functions/changes.py",
+  "thought": "The user wants to add a docstring to the match_partial function. Docstrings are important for code readability and maintainability, as they explain the purpose of a function, its arguments, and its return value.",
+  "changes": [
+    {
+      "original": "def match_partial(\n        self, original_lines: List[str], partial_lines: List[str]\n    ) -> Tuple[Optional[int], Optional[int], Optional[int]]:",
+      "updated": "def match_partial(\n        self, original_lines: List[str], partial_lines: List[str]\n    ) -> Tuple[Optional[int], Optional[int], Optional[int]]:\n    \"\"\"\n    This function matches a part of the original code with a given part.\n\n    Args:\n        original_lines (List[str]): The original lines of code.\n        partial_lines (List[str]): The lines of code that need to be matched.\n\n    Returns:\n        Tuple[Optional[int], Optional[int], Optional[int]]: The start and end indices of the match in the original code and the number of leading spaces in the matched part.\n    \"\"\""
+    }
+  ]
+}
+```
+
+Then the Agent also responds in the UI with the final diff of changes that were made
+
+```diff
+--- a
+
++++ b
+
+@@ -236,2 +236,12 @@
+
+-        self, original_lines: List[str], partial_lines: List[str]
+-    ) -> Tuple[Optional[int], Optional[int], Optional[int]]:
++            self, original_lines: List[str], partial_lines: List[str]
++        ) -> Tuple[Optional[int], Optional[int], Optional[int]]:
++        """
++        This function matches a part of the original code with a given part.
++    
++        Args:
++            original_lines (List[str]): The original lines of code.
++            partial_lines (List[str]): The lines of code that need to be matched.
++    
++        Returns:
++            Tuple[Optional[int], Optional[int], Optional[int]]: The start and end indices of the match in the original code and the number of leading spaces in the matched part.
++        """
+```
+
+The changes were automatically saved and can always be un-done with `cntrl + z`
+
 ## Contributing
 
 Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated.
