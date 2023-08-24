@@ -1,12 +1,10 @@
 import os
-import openai
 import difflib as dl
 
 from dotenv import load_dotenv
 from typing import List, Optional, Tuple
 from pydantic import Field, field_validator
 from openai_function_call import OpenAISchema
-import re
 
 load_dotenv()
 DIRECTORY = os.getenv("PROJECT_DIRECTORY")
@@ -16,6 +14,7 @@ class Change(OpenAISchema):
     """
     The correct changes to make to a file.
     Be mindful of formatting and include the proper newline characters.
+    Spaces and indentation in the new code should be relative to the old code.
 
     Args:
         original (str): The full code block to be replaced; formatted as a string.
@@ -43,23 +42,23 @@ class Change(OpenAISchema):
 
 class Changes(OpenAISchema):
     """
-    A list of changes to make to a file.
-    Think step by step and ensure the changes cover all requests. Changes will be processed similar to a diff
-    of the format:
+    A list of changes similar to the format:
+
     >>>>>> ORIGINAL
     old code
     =========
     new code
     <<<<<< UPDATED
 
-    All you need to provide is the old code and new code. The system will handle the rest.
-    The 'original' field cannot be an empty string.
-    When adding new code, include original code to determine where to put the new code.
-    The 'updated' field can be blank if you want to delete the old code.
-    Always use the relative path from the root of the codebase.
+    Please provide the old code exactly as you read it and the correct new replacement code.
+    Be mindful of formatting, number of spaces, and newline characters.
+    Your code is always valid, correct, and addresses the requests of the human.
+    When adding new code, include original code to determine where to put the new code (The original field should never be an empty string)
+    The 'updated' field can be blank when you need to delete the old code.
+    The file_name is always the relative path from the root of the codebase.
 
     Args:
-        file_name (str): The name of the file to be changed. This needs to be the relative path from the root of the codebase.
+        file_name (str): The relative path from the root of the codebase.
         thought (str): A description of your thought process.
         changes (List[Change]): A list of Change Objects that represent all the changes you want to make to this file.
     """
@@ -76,10 +75,6 @@ class Changes(OpenAISchema):
         Applies the given changes to the content.
         """
         for change in changes:
-            # Use regex to find and replace the old string
-            if content:
-                print("Content exists!!!!!!!!")
-                print(f"Type: {type(content)}")
             new_content = self.replace_part_with_missing_leading_whitespace(
                 whole_lines=content.split("\n"),
                 part_lines=change.original.splitlines(),
@@ -87,7 +82,9 @@ class Changes(OpenAISchema):
             )
             if not new_content:
                 print(f"Failed on change: {change.to_dict()}")
-                raise Exception("Failed to apply changes.")
+                raise Exception(
+                    f"Failed to apply changes. Original: {change.original}, Updated: {change.updated}"
+                )
 
             if new_content == content:
                 print("Warning: Expected content not found. No changes made.")
@@ -121,12 +118,17 @@ class Changes(OpenAISchema):
         try:
             with open(file_path, "r") as f:
                 current_contents = f.read()
-                current_contents_with_line_numbers = "\n".join(
-                    [
-                        f"{i+1} {line}"
-                        for i, line in enumerate(current_contents.splitlines())
-                    ]
-                )
+                # current_contents_with_line_numbers = "\n".join(
+                #     [
+                #         f"{i+1} {line}"
+                #         for i, line in enumerate(current_contents.splitlines())
+                #     ]
+                # )
+        except PermissionError:
+            print(
+                f"Error: Permission denied for file {self.file_name} at file_path: {file_path}\nDirectory: {DIRECTORY}"
+            )
+            return "Permission denied. Please check the file permissions."
         except FileNotFoundError:
             print(
                 f"Error: File {self.file_name} not found at file_path: {file_path}\nDirectory: {DIRECTORY}"
@@ -136,7 +138,11 @@ class Changes(OpenAISchema):
             print(e)
             return "Error: File could not be read. Please try again."
 
-        new_text = self.apply_changes(self.changes, current_contents)
+        try:
+            new_text = self.apply_changes(self.changes, current_contents)
+        except Exception as e:
+            print(e)
+            return f"Error: Changes could not be applied. Error: {e}."
 
         # if not new_text:
         # TODO: This could be a point to retry.
@@ -149,8 +155,16 @@ class Changes(OpenAISchema):
             tofile="b",
             n=0,
         )
+        try:
+            self.save(new_text, file_path)
+        except PermissionError:
+            print(
+                f"Error: Permission denied for file {self.file_name} at file_path: {file_path}\nDirectory: {DIRECTORY}"
+            )
+            return (
+                "Permission denied when saving file. Please check the file permissions."
+            )
 
-        self.save(new_text, file_path)
         return "\n\n```diff\n" + "\n".join(str(d) for d in diff) + "\n```\n\n"
 
     def save(self, new_text: str, file_path: str) -> None:

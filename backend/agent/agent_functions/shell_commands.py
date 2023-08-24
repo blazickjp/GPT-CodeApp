@@ -1,5 +1,4 @@
 import os
-import openai
 import pexpect
 
 from dotenv import load_dotenv
@@ -7,8 +6,6 @@ from enum import Enum
 from typing import Optional, List, Generator
 from pydantic import Field, field_validator
 from openai_function_call import OpenAISchema
-from agent.agent_functions.changes import Changes
-from agent.agent_functions.new_file import NewFile
 
 load_dotenv()
 DIRECTORY = os.getenv("PROJECT_DIRECTORY")
@@ -16,8 +13,6 @@ DIRECTORY = os.getenv("PROJECT_DIRECTORY")
 
 class CommandType(Enum):
     BASH_COMMAND = "bash"
-    FILE_CHANGE = "file_change"
-    NEW_FILE = "new_file"
 
 
 class CommandResult(OpenAISchema):
@@ -30,6 +25,11 @@ class CommandResults(OpenAISchema):
 
 
 class Command(OpenAISchema):
+    """
+    A command to be executed by the agent. Available command types are:
+    - Bash Command: Execute a bash command in the shell.
+    """
+
     id: int = Field(..., description="Unique id of the command")
     command_type: CommandType = Field(..., description="Type of the command")
     dependent_commands: List[int] = Field(
@@ -37,34 +37,6 @@ class Command(OpenAISchema):
         description="List of the IDs of commands that need to be completed before this command can be executed.",
     )
     command_line: Optional[str] = Field(None, description="Command to execute")
-    file_change: Optional[Changes] = Field(
-        None, description="File name and changes you would like to request"
-    )
-    new_file: Optional[NewFile] = Field(
-        None,
-        description="""File name (path from root directory), description, and reference
-        files (path from root directory) which provide additional context to the AI.""",
-    )
-
-    @field_validator("file_change")
-    def check_file_change(cls, v, values):
-        if (
-            "command_type" in values
-            and values["command_type"] == CommandType.FILE_CHANGE
-            and v is None
-        ):
-            raise ValueError("file_change is required when command_type is FILE_CHANGE")
-        return v
-
-    @field_validator("new_file")
-    def check_new_file(cls, v, values):
-        if (
-            "command_type" in values
-            and values["command_type"] == CommandType.NEW_FILE
-            and v is None
-        ):
-            raise ValueError("new_file is required when command_type is FILE_CHANGE")
-        return v
 
     @field_validator("command_line")
     def check_command(cls, v, values):
@@ -77,11 +49,6 @@ class Command(OpenAISchema):
         return v
 
     def execute(self, with_results: CommandResults) -> CommandResult:
-        # If a program is set for this command and the command type is PROGRAM, execute the program
-        if self.command_type == CommandType.FILE_CHANGE:
-            self.file_change.save()
-            output = "changes complete"
-
         if self.command_type == CommandType.NEW_FILE:
             self.new_file.save()
             output = "file created"

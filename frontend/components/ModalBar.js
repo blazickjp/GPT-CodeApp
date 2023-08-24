@@ -21,7 +21,7 @@ const ModalBar = () => {
     const messageTokens = useSelector(state => state.messageHistory.messageTokens);
 
     const fetchSystemPromptAndOpenModal = (modal = true) => {
-        fetch('http://127.0.0.1:8000/system_prompt')
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/system_prompt`)
             .then(response => response.json())
             .then(data => {
                 dispatch(setEditablePrompt(data.system_prompt));
@@ -36,7 +36,7 @@ const ModalBar = () => {
     };
 
     const fetchFunctionsAndOpenModal = (modal = true) => {
-        fetch('http://127.0.0.1:8000/get_functions')
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_functions`)
             .then(response => response.json())
             .then(data => {
                 console.log(data)
@@ -63,7 +63,7 @@ const ModalBar = () => {
 
     const fetchMessagesAndOpenModal = (modal = true) => {
         dispatch(setMessageHistory([]));
-        fetch('http://127.0.0.1:8000/get_messages')
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_messages`)
             .then(response => response.json())
             .then(data => {
                 dispatch(setMessageHistory(data.messages));

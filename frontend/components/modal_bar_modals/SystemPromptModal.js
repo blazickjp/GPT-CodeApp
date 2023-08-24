@@ -13,7 +13,7 @@ const SystemPromptModal = () => {
 
     const updateSystemPrompt = (e) => {
         e.preventDefault();
-        fetch('http://127.0.0.1:8000/update_system', {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/update_system`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ system_prompt: editablePrompt }),
