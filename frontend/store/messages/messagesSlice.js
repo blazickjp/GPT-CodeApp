@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
 export const fetchMessages = createAsyncThunk('messages/fetchMessages', async () => {
-    const response = await fetch('http://127.0.0.1:8000/get_messages?chatbox=true');
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_messages?chatbox=true`);
     const historicalMessages = await response.json();
     const formattedMessages = historicalMessages.messages.map(message => ({
         text: message.full_content,

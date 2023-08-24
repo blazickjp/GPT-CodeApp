@@ -27,9 +27,17 @@ const CodeBlock = React.memo(({ node, inline, className, children }) => {
             </SyntaxHighlighter>
         </div>
     ) : (
-        <code className={className}>{children}</code>
+        <code className=" text-amber-500 ">{children}</code>
     );
 });
+
+
+function CustomListItem({ node, ...props }) {
+    return (
+        <ol {...props} className=' whitespace-normal'/>
+    );
+}
+
 
 const Chatbox = ({ messages }) => {
     const chatboxRef = useRef(null);
@@ -41,8 +49,8 @@ const Chatbox = ({ messages }) => {
 
         return (
             <div className={message.user === 'human' ? "bg-gray-700 text-white p-5" : "bg-gray-600 p-5 text-white"}>
-                <div className='flex flex-row w-1/2 mx-auto'>
-                    <ReactMarkdown children={message.text} className='flex-grow overflow-x-auto' components={{ code: CodeBlock }} />
+                <div className='flex flex-row w-1/2 mx-auto whitespace-pre-wrap'>
+                    <ReactMarkdown children={message.text} className='flex-grow overflow-x-auto' components={{ code: CodeBlock, ol: CustomListItem }} />
                 </div>
             </div>
         );

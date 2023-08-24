@@ -14,7 +14,7 @@ const EditFilesModal = ({ isOpen, handleClose, children, code, file, lang }) => 
     const createProgram = async (input, code, save, fileList) => {
         setStatus('loading');
         try {
-            const response = await fetch(`http://127.0.0.1:8000/edit_files`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/edit_files`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

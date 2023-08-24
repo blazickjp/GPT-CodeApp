@@ -43,7 +43,7 @@ const Chat = () => {
       body = JSON.stringify({ input: input })
     };
 
-    const response = await fetch('http://127.0.0.1:8000/message_streaming', {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/message_streaming`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -62,8 +62,8 @@ const Chat = () => {
         break;
       }
       buffer += value;
-      while (buffer.includes('\n')) {
-        const endOfJsonObject = buffer.indexOf('\n');
+      while (buffer.includes('@@')) {
+        const endOfJsonObject = buffer.indexOf('@@');
         const jsonObjectStr = buffer.slice(0, endOfJsonObject);
 
         try {
@@ -80,15 +80,16 @@ const Chat = () => {
           console.error('Failed to parse JSON object:', jsonObjectStr);
           throw e;  // Rethrow the error, because it's a programming error.
         }
-        buffer = buffer.slice(endOfJsonObject + 1);
+        buffer = buffer.slice(endOfJsonObject + 2); // Accounts for the length of the delimiter.
       }
     }
   };
 
   useEffect(() => {
     const fetchHistoricalMessages = async () => {
+      console.log(`${process.env.NEXT_PUBLIC_API_URL}`)
       try {
-        const response = await fetch('http://127.0.0.1:8000/get_messages?chatbox=true');
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_messages?chatbox=true`);
         const historicalMessages = await response.json();
         const formattedMessages = historicalMessages.messages.map(message => ({
           text: message.full_content,
