@@ -1,6 +1,5 @@
 import os
 import datetime
-import subprocess
 from dotenv import load_dotenv
 import openai
 import numpy as np
@@ -22,26 +21,14 @@ ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 SUMMARY_MODEL = "gpt-3.5-turbo"
 README_MODEL = "gpt-4"
 SUMMARY_PROMPT = """
-Please summarise the following what the following code is doing.
+Please summarise, in bullet points, what the following code is doing.
 Please be consise and include all the important informastion.\n\n
 CODE:{}
 SUMMARY:
 """
 
 
-def get_git_root(path: str = ".") -> Union[str, None]:
-    try:
-        root = (
-            subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=path)
-            .decode("utf-8")
-            .strip()
-        )
-        return root
-    except Exception as e:
-        print(e)
-        return None
-
-
+# new comment
 class MyCodebase:
     load_dotenv()
     IGNORE_DIRS = os.getenv("IGNORE_DIRS")
@@ -234,7 +221,7 @@ class MyCodebase:
         ]
 
         # Insert each file into the tree structure
-        for file_path in file_paths:
+        for file_path in sorted(file_paths):
             parts = file_path.split(os.path.sep)
             # Find the start_from directory in the path and trim up to it
             if start_from in parts:
@@ -263,7 +250,7 @@ class MyCodebase:
         self.cur.execute("SELECT file_path FROM files")
         file_paths = [result[0] for result in self.cur.fetchall()]
         for file_path in file_paths:
-            if not os.path.exists(file_path) and file_path in self.file_dict.keys():
+            if not os.path.exists(file_path):
                 self.cur.execute(
                     sql.SQL(
                         """
@@ -292,4 +279,4 @@ class MyCodebase:
             not file_name.startswith(".")
             and not file_name.startswith("_")
             and any(file_name.endswith(ext) for ext in MyCodebase.FILE_EXTENSIONS)
-        )
+        ) or file_name == "Dockerfile"

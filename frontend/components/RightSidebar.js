@@ -27,7 +27,7 @@ const RightSidebar = ({ isSidebarOpen }) => {
 
     const fetchSummaries = () => {
         setSummaries([]);
-        fetch('http://127.0.0.1:8000/get_summaries')
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_summaries`)
             .then(response => response.json())
             .then(data => {
                 const maxTokensFound = Math.max(...data.map(file => file.file_token_count));

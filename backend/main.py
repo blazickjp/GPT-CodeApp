@@ -5,8 +5,7 @@ from uuid import uuid4
 import tiktoken
 from fastapi import Request
 from fastapi.responses import JSONResponse, StreamingResponse
-from database.my_codebase import get_git_root
-from app_setup import setup_app, app, DIRECTORY
+from app_setup import setup_app, app
 
 
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
@@ -23,7 +22,7 @@ async def message_streaming(request: Request) -> StreamingResponse:
         for content in AGENT.query(**data):
             if content is not None:
                 accumulated_messages[id] += content
-                yield json.dumps({"id": id, "content": content}) + "\n"
+                yield json.dumps({"id": id, "content": content}) + "@@"
 
         AGENT.memory_manager.add_message("assistant", accumulated_messages[id])
 
@@ -92,7 +91,7 @@ async def get_summaries(reset: bool | None = None):
     cur = CODEBASE.conn.cursor()
     cur.execute("SELECT DISTINCT file_path, summary, token_count FROM files")
     results = cur.fetchall()
-    root_path = get_git_root(CODEBASE.directory)
+    root_path = CODEBASE.directory
     result = [
         {
             "file_path": os.path.relpath(file_path, root_path),
@@ -117,10 +116,7 @@ async def set_summary_files_in_prompt(input: dict):
     if "files" not in input:
         return JSONResponse(status_code=400, content={"error": "missing files"})
 
-    files = [
-        os.path.join(get_git_root(CODEBASE.directory), file)
-        for file in input.get("files")
-    ]
+    files = [os.path.join(CODEBASE.directory, file) for file in input.get("files")]
     summaries = CODEBASE.get_summaries()
     summaries = [f"{k}:\n{v}" for k, v in summaries.items() if k in files]
     additional_system_prompt_summaries = "\n\n".join(summaries)

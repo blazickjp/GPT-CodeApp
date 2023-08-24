@@ -42,7 +42,7 @@ const SearchBar = ({ addFileToContext }) => {
 
     const sendFiles = () => {
         console.log(options);
-        fetch('http://127.0.0.1:8000/set_files_in_prompt', {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/set_files_in_prompt`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -69,7 +69,7 @@ const SearchBar = ({ addFileToContext }) => {
     const fetchSearchData = () => {
         setOptions([]);
         setRefreshStatus('loading');
-        fetch('http://127.0.0.1:8000/get_summaries?reset=true')
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_summaries?reset=true`)
             .then(response => response.json())
             .then(data => {
                 data.forEach(file => {

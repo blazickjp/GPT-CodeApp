@@ -3,7 +3,7 @@ import re
 import openai
 import json
 import os
-from typing import Any, List, Optional, Callable
+from typing import List, Optional, Callable
 from pydantic import BaseModel
 from database.my_codebase import MyCodebase
 
@@ -180,20 +180,33 @@ class CodingAgent:
             lines[i] = f"{i+1} {lines[i]}"
         return "\n".join(lines)
 
-    def process_json(self, args):
+    def process_json(self, args: str) -> str:
+        """
+        Process a JSON string, handling any triple-quoted strings within it.
+
+        Args:
+            args (str): The JSON string to process.
+
+        Returns:
+            str: The processed JSON string.
+        """
         try:
+            # Attempt to load the JSON string
             response = json.loads(args)
             return response
         except json.decoder.JSONDecodeError:
+            # If there's a JSONDecodeError, it may be due to triple-quoted strings
             # Find all occurrences of triple-quoted strings
             triple_quoted_strings = re.findall(r"\"\"\"(.*?)\"\"\"", args, re.DOTALL)
 
             # For each occurrence, replace newlines and triple quotes
             for tqs in triple_quoted_strings:
+                # Replace newlines and double quotes within the triple-quoted string
                 fixed_string = tqs.replace("\n", "\\n").replace('"', '\\"')
+                # Replace the original triple-quoted string with the fixed string
                 response_str = args.replace(tqs, fixed_string)
 
             # Now replace the triple quotes with single quotes
             response_str = args.replace('"""', '"')
 
-            return response_str
+            return json.loads(response_str)

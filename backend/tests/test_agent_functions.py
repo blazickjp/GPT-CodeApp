@@ -3,8 +3,11 @@ import re
 import json
 import os
 import openai
-from app_setup import DIRECTORY
 from agent.agent_functions.changes import Changes
+from dotenv import load_dotenv
+
+load_dotenv()
+DIRECTORY = os.getenv("PROJECT_DIRECTORY")
 
 temp_file = "backend/tests/test_files/agent_function_test1.py"
 TEST_FILE = "backend/tests/test_files/app_setup_test.py"
