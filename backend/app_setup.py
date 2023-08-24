@@ -8,7 +8,7 @@ from database.my_codebase import MyCodebase
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional, List, Any, Callable
+from typing import Any, Callable
 from pydantic import BaseModel
 from agent.agent_functions.changes import Changes
 from agent.agent_functions.shell_commands import CommandPlan
@@ -19,6 +19,7 @@ CODEAPP_DB_USER = os.getenv("CODEAPP_DB_USER")
 CODEAPP_DB_PW = os.getenv("CODEAPP_DB_PW")
 CODEAPP_DB_HOST = os.getenv("CODEAPP_DB_HOST")
 DIRECTORY = os.getenv("PROJECT_DIRECTORY")
+IDENTITY = "You are an AI Pair Programmer and a world class python developer. Your role is to assist the Human in developing, debugging, and optimizing their project. Feel free to ask for more details if something isn't clear."
 
 
 def create_database_connection() -> connection:
@@ -78,19 +79,9 @@ def setup_codebase() -> MyCodebase:
 
 
 def setup_app() -> CodingAgent:
+    print("Setting up app")
     codebase = setup_codebase()
-    memory = setup_memory_manager(tree=codebase.tree())
-    agent = CodingAgent(
-        memory_manager=memory, callables=[CommandPlan, Changes], codebase=codebase
-    )
-    return agent, codebase
-
-
-def setup_app_testing() -> CodingAgent:
-    codebase = setup_codebase()
-    memory = setup_memory_manager(tree=codebase.tree(), table_name="test")
-    memory.cur.execute("TRUNCATE test_memory;")
-    memory.cur.execute("TRUNCATE test_system_prompt;")
+    memory = setup_memory_manager(tree=codebase.tree(), identity=IDENTITY)
     agent = CodingAgent(
         memory_manager=memory, callables=[CommandPlan, Changes], codebase=codebase
     )
