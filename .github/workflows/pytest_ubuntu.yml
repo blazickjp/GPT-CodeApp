@@ -25,3 +25,5 @@ jobs:
 
     - name: Run pytest
       run: cd backend && python -m pytest
+      env:
+        PROJECT_DIRECTORY: ${{ github.workspace }}
