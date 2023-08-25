@@ -1,8 +1,6 @@
 import shutil
-import re
 import json
 import os
-import openai
 from agent.agent_functions.changes import Changes
 from dotenv import load_dotenv
 
@@ -10,133 +8,7 @@ load_dotenv()
 DIRECTORY = os.getenv("PROJECT_DIRECTORY")
 
 temp_file = "backend/tests/test_files/agent_function_test1.py"
-TEST_FILE = "backend/tests/test_files/app_setup_test.py"
-FULL_PATH = os.path.join(DIRECTORY, TEST_FILE)
 temp_file_full = os.path.join(DIRECTORY, temp_file)
-with open(FULL_PATH, "r") as f:
-    CONTENT = f.read()
-
-system_prompt = f""""
-You are an AI Pair Programmer and a world class python developer helping the Human work on a project.
-
-The project directory is setup as follows:
-+--GPT-CodeApp
-    +--frontend
-        +--tailwind.config.js
-        +--next.config.js
-        +--postcss.config.js
-        +--store
-            +--sidebar
-                +--sidebarSlice.js
-            +--index.js
-            +--messages
-                +--messagesSlice.js
-            +--modal_bar_modals
-                +--messageHistorySlice.js
-                +--systemPromptSlice.js
-                +--functionsSlice.js
-        +--styles
-            +--globals.css
-        +--components
-            +--ModelSelector.js
-            +--RightSidebar.js
-            +--ChatInput.js
-            +--EditFilesModal.js
-            +--LeftSidebar.js
-            +--SearchBar.js
-            +--modal_bar_modals
-                +--MessageHistoryModal.js
-                +--SystemPromptModal.js
-                +--FunctionsModal.js
-            +--ChatBox.js
-            +--ModalBar.js
-        +--pages
-            +--index.js
-    +--README.md
-    +--CONTRIBUTING.md
-    +--backend
-        +--agent
-            +--openai_function_call.py
-            +--agent_functions
-                +--changes.py
-                +--shell_commands.py
-                +--new_file.py
-            +--agent_functions.py
-            +--memory_manager.py
-            +--agent.py
-        +--database
-            +--my_codebase.py
-            +--UpdateHandler.py
-        +--tests
-            +--test_codebase.py
-            +--test_files
-                +--app_setup_test.py
-                +--agent_function_test1.py
-            +--conftest.py
-            +--test_agent_functions.py
-            +--test_memory_manager.py
-        +--main.py
-        +--app_setup.py
-    +--CODE_OF_CONDUCT.md
-    +--.pytest_cache
-        +--README.md
-
-Related File Contents:
-File: backend/tests/test_files/agent_function_test1.py
-Content:
-{CONTENT}
-"""
-
-
-def preprocess_response(response_str):
-    # Find all occurrences of triple-quoted strings
-    triple_quoted_strings = re.findall(r"\"\"\"(.*?)\"\"\"", response_str, re.DOTALL)
-
-    # For each occurrence, replace newlines and triple quotes
-    for tqs in triple_quoted_strings:
-        fixed_string = tqs.replace("\n", "\\n").replace('"', '\\"')
-        response_str = response_str.replace(tqs, fixed_string)
-
-    # Now replace the triple quotes with single quotes
-    response_str = response_str.replace('"""', '"')
-
-    return response_str
-
-
-def test_FileChange_real_world_example2():
-    # Create a temporary file
-    message_history = [
-        {
-            "role": "system",
-            "content": system_prompt,
-        },
-        {
-            "role": "user",
-            "content": f"For file the file {temp_file}, re-write the Exception message to be informative. Respond with proper json",
-        },
-    ]
-
-    keyword_args = {
-        "model": "gpt-4-0613",
-        "messages": message_history,
-        "max_tokens": 1000,
-        "temperature": 0.1,
-        "functions": [Changes.openai_schema],
-        "function_call": {"name": Changes.openai_schema["name"]},
-    }
-
-    # Create a FileChange instance
-    response = openai.ChatCompletion.create(**keyword_args)
-    processed_response = preprocess_response(
-        response["choices"][0].message.function_call.arguments
-    )
-    print(repr(processed_response))
-
-    args = json.loads(processed_response)
-    print("File Name: ", temp_file)
-    print("File Name: ", args.get("file_name"))
-    print(f"Args: {args}")
-    assert args.get("file_name") == temp_file
 
 
 def test_FileChange_real_world_example3():
