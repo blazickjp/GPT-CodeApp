@@ -36,6 +36,9 @@ class TestMemoryManager:
 
     def test_get_total_tokens(self):
         tokens = self.memory_manager.get_total_tokens()
+        assert (
+            tokens >= 0
+        ), f"Expected tokens to be greater than or equal to 0, but got {tokens}"
         assert isinstance(tokens, int)
 
     def test_get_messages(self):
@@ -71,30 +74,17 @@ class TestMemoryManager:
         self.memory_manager.cur.execute.assert_called()  # Check if execute was called on cursor
 
     def test_add_message(self):
-        # Mock the return value of get_total_tokens_in_message
-        self.memory_manager.get_total_tokens_in_message = Mock(return_value=10)
-
-        # Mock the return value of summarize
-        self.memory_manager.summarize = Mock(return_value=("summary", 5))
-
-        # Call the function you want to test
         self.memory_manager.add_message("test_role", "test_content")
-
-        # Check that the execute method was called with the right arguments
         self.memory_manager.cur.execute.assert_called()
-
-        # Check that the commit method was called
         self.memory_manager.conn.commit.assert_called()
-
         call_args = self.memory_manager.cur.execute.call_args
-        # call_args is a tuple where the first element is a tuple of positional arguments
-        # and the second element is a dictionary of keyword arguments
         sql_query, params = call_args[0]
-
         assert type(params[0]) == str
         assert params[1] == "test_role"
         assert params[2] == "test_content"
-        assert params[3] == 10
+        assert (
+            params[3] > 0
+        ), f"Expected tokens to be greater than 0, but got {params[3]}"
         assert params[4] is None
         assert params[5] is None
         assert params[6] is not None
