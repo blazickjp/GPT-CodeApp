@@ -79,7 +79,7 @@ const RightSidebar = ({ isSidebarOpen }) => {
                     <details>
                         <summary className="flex font-semibold hover:text-white cursor-pointer py-1">
                             {summary.file_path} &nbsp;
-                            <span style={colorStyle} className='flex items-center'>{summary.file_token_count}&nbsp;T</span>
+                            <span style={colorStyle} className='flex items-center'>{summary.file_token_count}</span>
                         </summary>
                         <br />
                         {/* <p className="pl-2 text-sm">{summary.summary}</p> */}

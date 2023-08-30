@@ -29,13 +29,11 @@ const SearchBar = ({ addFileToContext }) => {
     };
     // Modify the option labels
     const formatOptionLabel = ({ value, label }) => (
-
-        < div className="flex items-center" >
+        <div className="flex items-center" title={value}>
             {fileIcon(value.split('.').pop())} <span className="ml-2">{label}</span>
-        </div >
-
+        </div>
     );
-
+    
     const handleChange = option => {
         setSelectedOptions(option);
     };
