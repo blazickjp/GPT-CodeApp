@@ -37,11 +37,11 @@ To install necessary dependencies, run the following commands:
 
 ### Install PostgresSQL
 1. Install PostgreSQL: 
-   - For macOS: `brew install postgresql`
+   - For macOS: `brew install postgresql@14`
    - For Ubuntu: `sudo apt-get install postgresql`
 
 2. Start the PostgreSQL service:
-   - For macOS: `brew services start postgresql`
+   - For macOS: `brew services start postgresql@14`
    - For Ubuntu: `sudo service postgresql start`
 
 3. Create a new database:
