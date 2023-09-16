@@ -4,7 +4,7 @@ import pexpect
 from dotenv import load_dotenv
 from enum import Enum
 from typing import Optional, List, Generator
-from pydantic import Field, field_validator
+from pydantic import Field
 from openai_function_call import OpenAISchema
 
 load_dotenv()
@@ -38,15 +38,15 @@ class Command(OpenAISchema):
     )
     command_line: Optional[str] = Field(None, description="Command to execute")
 
-    @field_validator("command_line")
-    def check_command(cls, v, values):
-        if (
-            "command_type" in values
-            and values["command_type"] == CommandType.BASH_COMMAND
-            and v is None
-        ):
-            raise ValueError("Command is required when command_type is BASH_COMMAND")
-        return v
+    # @field_validator("command_line")
+    # def check_command(cls, v, values):
+    #     if (
+    #         "command_type" in values
+    #         and values["command_type"] == CommandType.BASH_COMMAND
+    #         and v is None
+    #     ):
+    #         raise ValueError("Command is required when command_type is BASH_COMMAND")
+    #     return v
 
     def execute(self, with_results: CommandResults) -> CommandResult:
         if self.command_type == CommandType.NEW_FILE:

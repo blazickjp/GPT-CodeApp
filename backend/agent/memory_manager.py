@@ -129,8 +129,8 @@ class MemoryManager:
         else:
             self.system = (
                 self.identity
-                + "\n\n"
-                + "********* Contextual Information *********\n\n"
+                + "\n\n"  # noqa 503
+                + "********* Contextual Information *********\n\n"  # noqa 503
             )
             self.system += (
                 "The project directory is setup as follows:\n" + self.tree + "\n\n"
