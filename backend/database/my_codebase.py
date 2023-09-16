@@ -33,6 +33,7 @@ class MyCodebase:
     load_dotenv()
     IGNORE_DIRS = os.getenv("IGNORE_DIRS")
     FILE_EXTENSIONS = os.getenv("FILE_EXTENSIONS")
+    UPDATE_FULL = os.getenv("AUTO_UPDATE_EMBEDDINGS", False)
 
     def __init__(
         self, directory: str = ".", db_connection: Optional[connection] = None
@@ -78,9 +79,37 @@ class MyCodebase:
                 else:
                     print(f"Updating file {file_path}")
 
-        embedding = list(self.encode(text))
         token_count = len(ENCODER.encode(text))
+
+        # The dict's key is the file path, and value is a dict containing the text and embedding
+        self.cur.execute(
+            sql.SQL(
+                """
+                INSERT INTO files (file_path, text, token_count, last_updated)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (file_path)
+                DO UPDATE SET text = %s, token_count = %s, last_updated = %s
+                """,
+            ),
+            (
+                file_path,
+                text,
+                token_count,
+                last_modified,
+                text,
+                token_count,
+                last_modified,
+            ),
+        )
+        self.conn.commit()
+
+        if self.UPDATE_FULL:
+            self.update_embed_and_summary(file_path, text)
+
+    def update_embed_and_summary(self, file_path: str, text: str):
+        embedding = list(self.encode(text))
         embedding = np.array(embedding).tobytes()
+
         response = openai.ChatCompletion.create(
             model=SUMMARY_MODEL,
             messages=[
@@ -98,25 +127,13 @@ class MyCodebase:
         self.cur.execute(
             sql.SQL(
                 """
-                INSERT INTO files (file_path, text, embedding, token_count, summary, last_updated)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (file_path)
-                DO UPDATE SET text = %s, embedding = %s, token_count = %s, summary = %s, last_updated = %s
-                """,
+                    INSERT INTO files (file_path, embedding, summary)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (file_path)
+                    DO UPDATE SET embedding = %s, summary = %s
+                    """,
             ),
-            (
-                file_path,
-                text,
-                embedding,
-                token_count,
-                file_summary,
-                last_modified,
-                text,
-                embedding,
-                token_count,
-                file_summary,
-                last_modified,
-            ),
+            (file_path, embedding, file_summary, embedding, file_summary),
         )
         self.conn.commit()
 
@@ -277,6 +294,8 @@ class MyCodebase:
     def _is_valid_file(file_name):
         return (
             not file_name.startswith(".")
-            and not file_name.startswith("_")
-            and any(file_name.endswith(ext) for ext in MyCodebase.FILE_EXTENSIONS)
+            and not file_name.startswith("_")  # noqa 503
+            and any(  # noqa 503
+                file_name.endswith(ext) for ext in MyCodebase.FILE_EXTENSIONS
+            )
         ) or file_name == "Dockerfile"
