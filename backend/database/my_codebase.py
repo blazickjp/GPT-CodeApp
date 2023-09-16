@@ -62,18 +62,57 @@ class MyCodebase:
         token_count = len(ENCODER.encode(text))
         # The dict's key is the file path, and value is a dict containing the text and embedding
         self.cur.execute(
-            """
-            INSERT INTO files (file_path, text, token_count, last_updated)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(file_path) 
-            DO UPDATE SET text = excluded.text, token_count = excluded.token_count, last_updated = excluded.last_updated;
-            """,
+            sql.SQL(
+                """
+                INSERT INTO files (file_path, text, token_count, last_updated)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (file_path)
+                DO UPDATE SET text = %s, token_count = %s, last_updated = %s
+                """,
+            ),
             (
                 file_path,
                 text,
                 token_count,
-                last_modified
-            )
+                last_modified,
+                text,
+                token_count,
+                last_modified,
+            ),
+        )
+        self.conn.commit()
+
+        if self.UPDATE_FULL:
+            self.update_embed_and_summary(file_path, text)
+
+    def update_embed_and_summary(self, file_path: str, text: str):
+        embedding = list(self.encode(text))
+        embedding = np.array(embedding).tobytes()
+
+        response = openai.ChatCompletion.create(
+            model=SUMMARY_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": SUMMARY_PROMPT.format(text),
+                },
+            ],
+            max_tokens=250,
+            temperature=0.4,
+        )
+        file_summary = response["choices"][0]["message"]["content"].strip()
+
+        # The dict's key is the file path, and value is a dict containing the text and embedding
+        self.cur.execute(
+            sql.SQL(
+                """
+                    INSERT INTO files (file_path, embedding, summary)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (file_path)
+                    DO UPDATE SET embedding = %s, summary = %s
+                    """,
+            ),
+            (file_path, embedding, file_summary, embedding, file_summary),
         )
 
     def create_tables(self) -> None:
