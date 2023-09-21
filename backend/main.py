@@ -5,11 +5,10 @@ import tiktoken
 from fastapi import Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from app_setup import setup_app, app
+import openai
 
-# import openai
-
-# openai.api_base = "http://127.0.0.1:5001/v1"
-
+# openai.api_base = "http://localhost:1234/v1"
+# openai.api_key = "test"
 
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 AGENT, CODEBASE = setup_app()
