@@ -78,9 +78,9 @@ class MyCodebase:
                 else:
                     print(f"Updating file {file_path}")
 
-        embedding = list(self.encode(text))
+        # embedding = list(self.encode(text))
         token_count = len(ENCODER.encode(text))
-        embedding = np.array(embedding).tobytes()
+        # embedding = np.array(embedding).tobytes()
         response = openai.ChatCompletion.create(
             model=SUMMARY_MODEL,
             messages=[
@@ -107,12 +107,14 @@ class MyCodebase:
             (
                 file_path,
                 text,
-                embedding,
+                # embedding,
+                None,
                 token_count,
                 file_summary,
                 last_modified,
                 text,
-                embedding,
+                # embedding,
+                None,
                 token_count,
                 file_summary,
                 last_modified,
