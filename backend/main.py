@@ -8,7 +8,6 @@ from app_setup import setup_app, app
 import openai
 
 
-
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 AGENT, CODEBASE = setup_app()
 
