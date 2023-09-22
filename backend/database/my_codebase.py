@@ -72,22 +72,7 @@ class MyCodebase:
                 else:
                     print(f"Updating file {file_path}")
 
-        # embedding = list(self.encode(text))
         token_count = len(ENCODER.encode(text))
-        # embedding = np.array(embedding).tobytes()
-        response = openai.ChatCompletion.create(
-            model=SUMMARY_MODEL,
-            messages=[
-                {
-                    "role": "user",
-                    "content": SUMMARY_PROMPT.format(text),
-                },
-            ],
-            max_tokens=250,
-            temperature=0.4,
-        )
-        file_summary = response["choices"][0]["message"]["content"].strip()
-
         # The dict's key is the file path, and value is a dict containing the text and embedding
         self.cur.execute(
             sql.SQL(
