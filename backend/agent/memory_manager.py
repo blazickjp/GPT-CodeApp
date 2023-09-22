@@ -1,4 +1,3 @@
-import openai
 import os
 import tiktoken
 
@@ -84,7 +83,7 @@ class MemoryManager:
         timestamp = datetime.now().isoformat()  # Current timestamp in milliseconds
         message_tokens = self.get_total_tokens_in_message(content)
         summary, summary_tokens = (
-            self.summarize(content) if message_tokens > 500 else (None, None)
+            self.summarize(content) if message_tokens > float('inf') else (None, None)
         )
         try:
             self.cur.execute(
@@ -107,26 +106,6 @@ class MemoryManager:
         except Exception as e:
             print("Failed to insert data: ", str(e))
         return
-
-    def summarize(self, message: str) -> str:
-        prompt = """Please summarize the following message. Reply only with the summary and do not
-        include any other text in your response.
-        MESSAGE: {}
-        SUMMARY:
-        """.format(
-            message
-        )
-        response = openai.ChatCompletion.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": "You are a helpful AI assistant."},
-                {"role": "user", "content": prompt},
-            ],
-            max_tokens=250,  # You can adjust this value
-        )
-        summary = response["choices"][0]["message"]["content"].strip()
-        tokens = self.get_total_tokens_in_message(summary)
-        return summary, tokens
 
     def get_total_tokens_in_message(self, message: str) -> int:
         """Returns the number of tokens in a message."""

@@ -1,8 +1,11 @@
 # import os
+import io
 import re
 import openai
 import json
 import os
+import boto3
+
 from typing import List, Optional, Callable
 from pydantic import BaseModel
 from database.my_codebase import MyCodebase
@@ -10,7 +13,8 @@ from database.my_codebase import MyCodebase
 # from agent.agent_functions import Program, File
 
 # GPT_MODEL = "gpt-3.5-turbo-0613"  # or any other chat model you want to use
-GPT_MODEL = "gpt-4"  # or any other chat model you want to use
+# GPT_MODEL = "gpt-4"  # or any other chat model you want to use
+GPT_MODEL = "code-llama"  # or any other chat model you want to use
 MAX_TOKENS = 1000  # or any other number of tokens you want to use
 TEMPERATURE = 0.2  # or any other temperature you want to use
 
@@ -63,6 +67,8 @@ class CodingAgent:
         self.callables = callables
         self.GPT_MODEL = GPT_MODEL
         self.codebase = codebase
+        self.buff = io.BytesIO()
+        self.read_pos = 0
         if callables:
             self.function_map = {
                 func.__name__: func for func in callables if func is not None
@@ -114,7 +120,7 @@ class CodingAgent:
                 # self.set_files_in_prompt(include_line_numbers=True)
                 keyword_args["model"] = "gpt-4"
 
-        for i, chunk in enumerate(openai.ChatCompletion.create(**keyword_args)):
+        for i, chunk in enumerate(self.call_model_streaming(**keyword_args)):
             delta = chunk["choices"][0].get("delta", {})
             if "function_call" in delta:
                 if "name" in delta.function_call:
@@ -125,7 +131,7 @@ class CodingAgent:
                     else:
                         function_to_call.arguments += delta.function_call["arguments"]
                         yield delta.function_call["arguments"]
-            if chunk.choices[0].finish_reason == "stop" and function_to_call.name:
+            if chunk["choices"][0]["finish_reason"] == "stop" and function_to_call.name:
                 if function_to_call.name == "Changes":
                     yield "```\n\n"
                 print(
@@ -210,3 +216,60 @@ class CodingAgent:
             response_str = args.replace('"""', '"')
 
             return json.loads(response_str)
+        
+    def generate_llama_prompt(self) -> str:
+        """
+        Generates a prompt for the Code Llama model.
+
+        Args:
+            input (str): The input text to be processed by the GPT-3 model.
+
+        Returns:
+            str: The generated prompt.
+        """
+        prompt = f"{self.memory_manager.system}\n"
+        for message in self.memory_manager.get_messages():
+            if message["role"].lower() == "user":
+                prompt += f"USER: {message['content']}\n"
+            if message["role"].lower() == "assistant":
+                prompt += f"ASSISTANT: {message['content']}\n"
+        
+        return prompt + "\nASSISTANT:"
+        
+    def call_model_streaming(self, **kwargs):
+        print(kwargs)
+        self.read_pos = 0
+        if self.GPT_MODEL == "gpt-4" or self.GPT_MODEL == "gpt-3.5-turbo":
+            return openai.ChatCompletion.create(**kwargs)
+        if self.GPT_MODEL == "code-llama":
+            try:
+                sm_client = boto3.client("sagemaker-runtime")
+                endpoint = os.getenv("CODELLAMA_ENDPOINT")
+                if not endpoint:
+                    raise ValueError("CODELLAMA_ENDPOINT environment variable not set")
+                
+                resp = sm_client.invoke_endpoint_with_response_stream(
+                    EndpointName=endpoint,
+                    Body=json.dumps({
+                        "inputs": self.generate_llama_prompt(),
+                        "parameters": {
+                            "max_new_tokens": kwargs["max_tokens"],
+                        }
+                    }),
+                    ContentType="application/json",
+                )
+            except Exception as e:
+                print(f"Error calling Code Llama: {e}")
+                yield {"choices": [{"finish_reason": "stop", "delta": {"content": "Error: " + str(e)}}]}
+
+            while True:
+                try:
+                    chunk = next(iter((resp['Body'])))
+                    bytes_to_send = chunk["PayloadPart"]["Bytes"]
+                    decoded_str = bytes_to_send.decode("utf-8")
+                    cleaned_str = decoded_str.replace('{\"generated_text\": \"', '').replace('\"}', '')
+                    cleaned_str = cleaned_str.encode().decode('unicode_escape')
+
+                    yield {"choices": [{"finish_reason": "stop", "delta": {"content": cleaned_str}}]}
+                except StopIteration:
+                    break

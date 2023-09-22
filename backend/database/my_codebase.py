@@ -1,19 +1,13 @@
 import os
 import datetime
 from dotenv import load_dotenv
-import openai
 import numpy as np
 import tiktoken
 
 from sklearn.metrics.pairwise import cosine_similarity
-from tenacity import (
-    retry,
-    wait_random_exponential,
-    stop_after_attempt,
-)
 from psycopg2 import sql
 from psycopg2.extensions import connection
-from typing import List, Optional, Union, Dict
+from typing import List, Optional, Dict
 
 
 EMBEDDING_MODEL = "text-embedding-ada-002"
@@ -78,45 +72,24 @@ class MyCodebase:
                 else:
                     print(f"Updating file {file_path}")
 
-        # embedding = list(self.encode(text))
         token_count = len(ENCODER.encode(text))
-        # embedding = np.array(embedding).tobytes()
-        response = openai.ChatCompletion.create(
-            model=SUMMARY_MODEL,
-            messages=[
-                {
-                    "role": "user",
-                    "content": SUMMARY_PROMPT.format(text),
-                },
-            ],
-            max_tokens=250,
-            temperature=0.4,
-        )
-        file_summary = response["choices"][0]["message"]["content"].strip()
-
         # The dict's key is the file path, and value is a dict containing the text and embedding
         self.cur.execute(
             sql.SQL(
                 """
-                INSERT INTO files (file_path, text, embedding, token_count, summary, last_updated)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO files (file_path, text, token_count, last_updated)
+                VALUES (%s, %s, %s, %s)
                 ON CONFLICT (file_path)
-                DO UPDATE SET text = %s, embedding = %s, token_count = %s, summary = %s, last_updated = %s
+                DO UPDATE SET text = %s, token_count = %s, last_updated = %s
                 """,
             ),
             (
                 file_path,
                 text,
-                # embedding,
-                None,
                 token_count,
-                file_summary,
                 last_modified,
                 text,
-                # embedding,
-                None,
                 token_count,
-                file_summary,
                 last_modified,
             ),
         )
@@ -136,63 +109,6 @@ class MyCodebase:
         """
         )
         self.conn.commit()
-
-    @retry(
-        wait=wait_random_exponential(min=1, max=20),
-        stop=stop_after_attempt(6),
-    )
-    def encode(
-        self, text_or_tokens: Union[str, List[str]], model: str = EMBEDDING_MODEL
-    ) -> List[float]:
-        result = openai.Embedding.create(input=text_or_tokens, model=model)
-        return result["data"][0]["embedding"]
-
-    def search(self, query: str, k: int = 2) -> str:
-        """
-        Search for files that match the query.
-        """
-        self.cur.execute(
-            """
-            SELECT embedding, file_path FROM files
-            """
-        )
-        file_embeddings = [
-            (file[1], np.frombuffer(file[0])) for file in self.cur.fetchall()
-        ]
-        embeddings = np.array([file[1] for file in file_embeddings])
-        file_list = [file[0] for file in file_embeddings]
-        query_embedding = self.encode(query)
-        query_embedding = np.array(query_embedding).reshape(1, -1)
-        print(f"Query embedding shape: {query_embedding.shape}")
-        print(f"Embeddings shape: {embeddings.shape}")
-        similarities = cosine_similarity(query_embedding, embeddings)[0]
-        print(f"Similarities shape: {similarities.shape}")
-
-        # Ensure k is not greater than the total number of files
-        k = min(k, len(file_list))
-
-        # Sort by similarity
-        sorted_indices = np.argsort(similarities)[::-1][:k]
-        out_files = [file_list[i] for i in sorted_indices]
-        print(out_files)
-
-        # Return sorted file paths and content
-        # results = []
-        out = ""
-        for file_name in out_files:
-            self.cur.execute(
-                sql.SQL(
-                    """
-                    SELECT text FROM files WHERE file_path = %s
-                    """
-                ),
-                (file_name,),
-            )
-            content = self.cur.fetchall()[0][0]
-            print(f"Search Result: {file_name}")
-            out += f"File: {file_name}\nContent:\n{content}\n"
-
-        return out
 
     def get_summaries(self) -> Dict[str, str]:
         self.cur.execute("SELECT file_path, summary FROM files")

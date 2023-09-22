@@ -99,8 +99,8 @@ async def get_summaries(reset: bool | None = None):
         {
             "file_path": os.path.relpath(file_path, root_path),
             "file_token_count": token_count,
-            "summary": summary,
-            "summary_token_count": len(ENCODER.encode(summary)),
+            "summary": None,
+            "summary_token_count": 0,
         }
         for file_path, summary, token_count in results
         if file_path.startswith(root_path)
@@ -112,20 +112,6 @@ async def get_summaries(reset: bool | None = None):
 @app.get("/generate_readme")
 async def generate_readme():
     return {"readme": "Deprecated"}
-
-
-@app.post("/set_summary_files_in_prompt")
-async def set_summary_files_in_prompt(input: dict):
-    if "files" not in input:
-        return JSONResponse(status_code=400, content={"error": "missing files"})
-
-    files = [os.path.join(CODEBASE.directory, file) for file in input.get("files")]
-    summaries = CODEBASE.get_summaries()
-    summaries = [f"{k}:\n{v}" for k, v in summaries.items() if k in files]
-    additional_system_prompt_summaries = "\n\n".join(summaries)
-    AGENT.memory_manager.system_file_summaries = additional_system_prompt_summaries
-    AGENT.memory_manager.set_system()
-    return JSONResponse(status_code=200, content={})
 
 
 @app.post("/set_files_in_prompt")
