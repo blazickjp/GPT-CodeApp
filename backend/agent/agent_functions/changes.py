@@ -3,7 +3,7 @@ import difflib as dl
 
 from dotenv import load_dotenv
 from typing import List, Optional, Tuple
-from pydantic import Field, field_validator
+from pydantic import Field
 from openai_function_call import OpenAISchema
 
 load_dotenv()
@@ -24,11 +24,11 @@ class Change(OpenAISchema):
     original: str = Field(..., description="Code to be replaced.")
     updated: str = Field(..., description="New code.")
 
-    @field_validator("original")
-    def original_must_not_be_blank(cls, v):
-        if v == "":
-            raise ValueError("Original cannot be blank.")
-        return v
+    # @field_validator("original")
+    # def original_must_not_be_blank(cls, v):
+    #     if v == "":
+    #         raise ValueError("Original cannot be blank.")
+    #     return v
 
     def to_dict(self) -> dict:
         """
@@ -50,16 +50,16 @@ class Changes(OpenAISchema):
     new code
     <<<<<< UPDATED
 
-    Please provide the old code exactly as you read it and the correct new replacement code.
-    Be mindful of formatting, number of spaces, and newline characters.
-    Your code is always valid, correct, and addresses the requests of the human.
-    When adding new code, include original code to determine where to put the new code (The original field should never be an empty string)
-    The 'updated' field can be blank when you need to delete the old code.
-    The file_name is always the relative path from the root of the codebase.
+    You always follow the below instructions:
+     - Please provide the old code exactly as you read it.
+     - Be mindful of formatting, number of spaces, and newline characters.
+     - Your code is always valid, correct, and addresses the requests of the human.
+     - The original field should never be an empty string.
+     - The 'updated' field can be blank when you need to delete old code.
+     - The file_name is always the relative path from the root of the codebase.
 
     Args:
         file_name (str): The relative path from the root of the codebase.
-        thought (str): A description of your thought process.
         changes (List[Change]): A list of Change Objects that represent all the changes you want to make to this file.
     """
 

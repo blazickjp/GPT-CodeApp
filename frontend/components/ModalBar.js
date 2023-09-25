@@ -91,7 +91,7 @@ const ModalBar = () => {
                 <button onClick={fetchSystemPromptAndOpenModal}>
                     System Prompt:
                     <span className="ml-2 inline-block bg-green-500 text-white text-xs px-2 rounded-full uppercase font-semibold tracking-wide">
-                        {systemTokens} tokens
+                        {systemTokens}
                     </span>
                 </button>
                 <SystemPromptModal />
@@ -100,7 +100,7 @@ const ModalBar = () => {
                 < button onClick={fetchFunctionsAndOpenModal} >
                     Functions:
                     <span className="ml-2 inline-block bg-green-500 text-white text-xs px-2 rounded-full uppercase font-semibold tracking-wide">
-                        {functionTokens} tokens
+                        {functionTokens}
                     </span>
                 </button >
                 <FunctionsModal />
@@ -109,7 +109,7 @@ const ModalBar = () => {
                 <button onClick={fetchMessagesAndOpenModal}>
                     Message History:
                     <span className="ml-2 inline-block bg-green-500 text-white text-xs px-2 rounded-full uppercase font-semibold tracking-wide">
-                        {messageTokens} tokens
+                        {messageTokens}
                     </span>
                 </button>
                 <MessageHistoryModal />

@@ -109,13 +109,13 @@ const Chat = () => {
   return (
     <div className="flex flex-col bg-gray-800 h-screen">
       <div className="flex flex-row p-2 h-1/8 mx-auto">
-        {/* <button onClick={toggleLeftSidebar} className="float-left">
+        <button onClick={toggleLeftSidebar} className="float-left">
           <FiMenu className="ml-2" />
         </button>
         <h1 className="text-4xl font-bold text-center text-dark-secondary px-5">CodeGPT</h1>
         <button onClick={() => dispatch(toggleSidebar())} className="float-right">
           <FiMenu className="mr-2" />
-        </button> */}
+        </button>
       </div>
       <div className="flex flex-col items-center border-b border-slate-500">
         <SearchBar />
