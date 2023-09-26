@@ -17,6 +17,9 @@ from database.my_codebase import MyCodebase
 GPT_MODEL = "code-llama"  # or any other chat model you want to use
 MAX_TOKENS = 1000  # or any other number of tokens you want to use
 TEMPERATURE = 0.2  # or any other temperature you want to use
+SYS_START = "<s>[INST]<<SYS>>"
+SYS_END = "<</SYS>>"
+
 
 
 class FunctionCall(BaseModel):
@@ -235,6 +238,29 @@ class CodingAgent:
                 prompt += f"ASSISTANT: {message['content']}\n"
         
         return prompt + "\nASSISTANT:"
+    
+    def generate_gaive_prompt(self) -> str:
+        """
+        Generates a prompt for the Gaive model.
+
+        Args:
+            input (str): The input text to be processed by the GPT-3 model.
+
+        Returns:
+            str: The generated prompt.
+        """
+        prompt = f"<s>[INST]<<SYS>>{self.memory_manager.system}<</SYS>>\n"
+        user_messages = 0
+        for message in self.memory_manager.get_messages():
+            if message["role"].lower() == "user":
+                if user_messages == 0:
+                    prompt += f"USER: {message['content']} [/INST] \n"
+                else:
+                    prompt += f"<s>[INST]USER: {message['content']}[/INST] \n"
+            if message["role"].lower() == "assistant":
+                prompt += f"ASSISTANT: {message['content']}</s>\n"
+        
+        return prompt + "\nASSISTANT:"
         
     def call_model_streaming(self, **kwargs):
         print(kwargs)
@@ -251,7 +277,7 @@ class CodingAgent:
                 resp = sm_client.invoke_endpoint_with_response_stream(
                     EndpointName=endpoint,
                     Body=json.dumps({
-                        "inputs": self.generate_llama_prompt(),
+                        "inputs": self.generate_gaive_prompt(),
                         "parameters": {
                             "max_new_tokens": kwargs["max_tokens"],
                         }
