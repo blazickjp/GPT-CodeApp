@@ -75,15 +75,18 @@ class MyCodebase:
         token_count = len(ENCODER.encode(text))
         # The dict's key is the file path, and value is a dict containing the text and embedding
         self.cur.execute(
-            sql.SQL(
-                """
-                    INSERT INTO files (file_path, embedding, summary)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (file_path)
-                    DO UPDATE SET embedding = %s, summary = %s
-                    """,
-            ),
-            (file_path, file_summary, file_summary),
+            """
+            INSERT INTO files (file_path, text, token_count, last_updated)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(file_path) 
+            DO UPDATE SET text = excluded.text, token_count = excluded.token_count, last_updated = excluded.last_updated;
+            """,
+            (
+                file_path,
+                text,
+                token_count,
+                last_modified
+            )
         )
 
     def create_tables(self) -> None:
