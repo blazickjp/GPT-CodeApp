@@ -1,6 +1,6 @@
 # app_setup.py
 import os
-import psycopg2
+import sqlite3
 from psycopg2.extensions import connection
 from agent.agent import CodingAgent
 from agent.memory_manager import MemoryManager
@@ -24,13 +24,7 @@ IDENTITY = "You are an AI Pair Programmer and a world class python developer. Yo
 
 def create_database_connection() -> connection:
     try:
-        auth = {
-            "dbname": CODEAPP_DB_NAME,
-            "user": CODEAPP_DB_USER,
-            "password": CODEAPP_DB_PW,
-            "host": CODEAPP_DB_HOST,
-        }
-        conn = psycopg2.connect(**auth)
+        conn = sqlite3.connect("database.db", check_same_thread=False)
         print("Successfully connected to database")
         return conn
     except Exception as e:

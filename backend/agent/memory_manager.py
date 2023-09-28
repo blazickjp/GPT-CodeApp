@@ -1,10 +1,10 @@
 import os
 import tiktoken
+import sqlite3
 
 from typing import Optional, List
 from datetime import datetime
 from dotenv import load_dotenv
-from psycopg2.extensions import connection
 
 
 class MemoryManager:
@@ -15,7 +15,7 @@ class MemoryManager:
         tree: str = None,
         max_tokens: int = 1000,
         table_name: str = "default",
-        db_connection: connection = None,
+        db_connection = None,
     ) -> None:
         load_dotenv()
         self.project_directory = os.getenv("PROJECT_DIRECTORY")
@@ -37,7 +37,6 @@ class MemoryManager:
         self.cur = self.conn.cursor()
 
         self.create_tables()
-        self.conn.commit()
         self.set_system()
 
     def get_messages(self, chat_box: Optional[bool] = None) -> List[dict]:
@@ -59,12 +58,12 @@ class MemoryManager:
                     COALESCE(summarized_message_tokens, content_tokens) as tokens,
                     sum(COALESCE(summarized_message_tokens, content_tokens)) OVER (ORDER BY interaction_index DESC) as token_cum_sum
                 FROM {self.memory_table_name}
-                WHERE project_directory = %s
+                WHERE project_directory = ?
                 ORDER BY interaction_index desc
             )
             select role, full_content, content, tokens
             from t1
-            WHERE token_cum_sum <= %s
+            WHERE token_cum_sum <= ?
             """,
             (
                 self.project_directory,
@@ -90,7 +89,7 @@ class MemoryManager:
                 f"""
                 INSERT INTO {self.memory_table_name}
                 (interaction_index, role, content, content_tokens, summarized_message, summarized_message_tokens, project_directory)
-                VALUES (%s, %s, %s, %s, %s, %s, %s);
+                VALUES (?, ?, ?, ?, ?, ?, ?);
                 """,
                 (
                     timestamp,
@@ -102,7 +101,6 @@ class MemoryManager:
                     self.project_directory,
                 ),
             )
-            self.conn.commit()
         except Exception as e:
             print("Failed to insert data: ", str(e))
         return
@@ -151,19 +149,11 @@ class MemoryManager:
                 else ""
             )
 
+        self.cur.execute(f"DELETE FROM {self.system_table_name}")
         self.cur.execute(
-            f"""
-            TRUNCATE TABLE {self.system_table_name};
-            INSERT INTO {self.system_table_name}
-            (role, content)
-            VALUES (%s, %s);
-            """,
-            (
-                "system",
-                self.system,
-            ),
+            f"INSERT INTO {self.system_table_name} (role, content) VALUES (?, ?)",
+            ("system", self.system),
         )
-        self.conn.commit()
         return True
 
     def create_tables(self) -> None:

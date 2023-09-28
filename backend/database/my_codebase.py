@@ -51,14 +51,11 @@ class MyCodebase:
 
     def update_file(self, file_path: str) -> None:
         self.cur.execute(
-            sql.SQL(
-                """
-                SELECT last_updated FROM files WHERE file_path = %s
-                """
-            ),
+            """
+            SELECT last_updated FROM files WHERE file_path = ?
+            """,
             (file_path,),
         )
-        self.conn.commit()
         result = self.cur.fetchall()
         with open(file_path, "r") as file:
             text = file.read()
@@ -67,7 +64,9 @@ class MyCodebase:
             ).replace(microsecond=0)
 
             if len(result) > 0:
-                if result[0][0] >= last_modified:
+                db_time = datetime.datetime.strptime(result[0][0], '%Y-%m-%d %H:%M:%S')
+
+                if db_time >= last_modified:
                     return
                 else:
                     print(f"Updating file {file_path}")
@@ -75,25 +74,19 @@ class MyCodebase:
         token_count = len(ENCODER.encode(text))
         # The dict's key is the file path, and value is a dict containing the text and embedding
         self.cur.execute(
-            sql.SQL(
-                """
-                INSERT INTO files (file_path, text, token_count, last_updated)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (file_path)
-                DO UPDATE SET text = %s, token_count = %s, last_updated = %s
-                """,
-            ),
+            """
+            INSERT INTO files (file_path, text, token_count, last_updated)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(file_path) 
+            DO UPDATE SET text = excluded.text, token_count = excluded.token_count, last_updated = excluded.last_updated;
+            """,
             (
                 file_path,
                 text,
                 token_count,
-                last_modified,
-                text,
-                token_count,
-                last_modified,
-            ),
+                last_modified
+            )
         )
-        self.conn.commit()
 
     def create_tables(self) -> None:
         self.cur.execute(
@@ -108,10 +101,9 @@ class MyCodebase:
             );
         """
         )
-        self.conn.commit()
 
     def get_summaries(self) -> Dict[str, str]:
-        self.cur.execute("SELECT file_path, summary FROM files")
+        self.cur.execute("SELECT file_path, summary FROM files;")
         results = self.cur.fetchall()
         out = {}
         for file_name, summary in results:

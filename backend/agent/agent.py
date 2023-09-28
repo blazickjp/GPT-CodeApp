@@ -4,6 +4,7 @@ import re
 import openai
 import json
 import os
+import time
 import boto3
 
 from typing import List, Optional, Callable
@@ -14,11 +15,10 @@ from database.my_codebase import MyCodebase
 
 # GPT_MODEL = "gpt-3.5-turbo-0613"  # or any other chat model you want to use
 # GPT_MODEL = "gpt-4"  # or any other chat model you want to use
-GPT_MODEL = "code-llama"  # or any other chat model you want to use
+GPT_MODEL = "anthropic"  # or any other chat model you want to use
 MAX_TOKENS = 1000  # or any other number of tokens you want to use
 TEMPERATURE = 0.2  # or any other temperature you want to use
-SYS_START = "<s>[INST]<<SYS>>"
-SYS_END = "<</SYS>>"
+
 
 
 
@@ -230,16 +230,16 @@ class CodingAgent:
         Returns:
             str: The generated prompt.
         """
-        prompt = f"{self.memory_manager.system}\n"
+        prompt = f"### System Prompt\n{self.memory_manager.system}\n\n"
         for message in self.memory_manager.get_messages():
             if message["role"].lower() == "user":
-                prompt += f"USER: {message['content']}\n"
+                prompt += f"### User Message\n{message['content']}\n\n"
             if message["role"].lower() == "assistant":
-                prompt += f"ASSISTANT: {message['content']}\n"
+                prompt += f"### Assistant\n{message['content']}\n\n"
         
-        return prompt + "\nASSISTANT:"
+        return prompt + "### Assistant"
     
-    def generate_gaive_prompt(self) -> str:
+    def generate_anthropic_prompt(self) -> str:
         """
         Generates a prompt for the Gaive model.
 
@@ -249,18 +249,18 @@ class CodingAgent:
         Returns:
             str: The generated prompt.
         """
-        prompt = f"<s>[INST]<<SYS>>{self.memory_manager.system}<</SYS>>\n"
+        prompt = f"Human: {self.memory_manager.system}\n\n"
         user_messages = 0
         for message in self.memory_manager.get_messages():
             if message["role"].lower() == "user":
                 if user_messages == 0:
-                    prompt += f"USER: {message['content']} [/INST] \n"
+                    prompt += f"{message['content']}\n\n"
                 else:
-                    prompt += f"<s>[INST]USER: {message['content']}[/INST] \n"
+                    prompt += f"Human: {message['content']}\n\n"
             if message["role"].lower() == "assistant":
-                prompt += f"ASSISTANT: {message['content']}</s>\n"
+                prompt += f"Assistant: {message['content']}\n\n"
         
-        return prompt + "\nASSISTANT:"
+        return prompt + "Assistant:"
         
     def call_model_streaming(self, **kwargs):
         print(kwargs)
@@ -273,11 +273,10 @@ class CodingAgent:
                 endpoint = os.getenv("CODELLAMA_ENDPOINT")
                 if not endpoint:
                     raise ValueError("CODELLAMA_ENDPOINT environment variable not set")
-                
                 resp = sm_client.invoke_endpoint_with_response_stream(
                     EndpointName=endpoint,
                     Body=json.dumps({
-                        "inputs": self.generate_gaive_prompt(),
+                        "inputs": self.generate_llama_prompt(),
                         "parameters": {
                             "max_new_tokens": kwargs["max_tokens"],
                         }
@@ -298,4 +297,50 @@ class CodingAgent:
 
                     yield {"choices": [{"finish_reason": "stop", "delta": {"content": cleaned_str}}]}
                 except StopIteration:
+                    break
+
+                except UnboundLocalError:
+                    print("UnboundLocalError")
+                    break
+        if self.GPT_MODEL == "anthropic":
+            print("Calling anthropic")
+            print(self.generate_anthropic_prompt())
+            try:
+                sm_client = boto3.client("bedrock-runtime")
+                endpoint = os.getenv("CODELLAMA_ENDPOINT")
+                if not endpoint:
+                    raise ValueError("CODELLAMA_ENDPOINT environment variable not set")
+                resp = sm_client.invoke_model_with_response_stream(
+                    accept="*/*",
+                    contentType="application/json",
+                    modelId="anthropic.claude-v2",
+                    body=json.dumps({
+                        "prompt": self.generate_anthropic_prompt(),
+                        "max_tokens_to_sample": min(kwargs["max_tokens"], 2000),
+                        "temperature": kwargs["temperature"],
+                        "stop_sequences": ["\\n\\nHuman:"]
+                    }),
+                )
+            except Exception as e:
+                print(f"Error calling Code Llama: {e}")
+                yield {"choices": [{"finish_reason": "stop", "delta": {"content": "Error: " + str(e)}}]}
+
+            while True:
+                try:
+                    chunk = next(iter((resp['body'])))
+                    bytes_to_send = chunk["chunk"]["bytes"]
+                    decoded_str = json.loads(bytes_to_send.decode("utf-8"))
+                    content = decoded_str['completion']
+                    stop_reason = decoded_str['stop_reason']
+                    if stop_reason == "stop_sequence":
+                        yield {"choices": [{"finish_reason": "stop", "delta": {"content": content}}]}
+                        break
+                    else:
+                        yield {"choices": [{"finish_reason": None, "delta": {"content": content}}]}
+
+                except StopIteration:
+                    break
+
+                except UnboundLocalError:
+                    print("UnboundLocalError")
                     break
