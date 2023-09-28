@@ -65,12 +65,16 @@ class MyCodebase:
             """
             INSERT INTO files (file_path, text, token_count, last_updated)
             VALUES (?, ?, ?, ?)
-            ON CONFLICT(file_path)
+            ON CONFLICT(file_path) 
             DO UPDATE SET text = excluded.text, token_count = excluded.token_count, last_updated = excluded.last_updated;
             """,
-            (file_path, text, token_count, last_modified),
+            (
+                file_path,
+                text,
+                token_count,
+                last_modified
+            )
         )
-        self.conn.commit()
 
     def create_tables(self) -> None:
         self.cur.execute(
