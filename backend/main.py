@@ -36,7 +36,7 @@ async def get_system_prompt():
 
 @app.post("/update_system")
 async def update_system_prompt(input: dict):
-    AGENT.memory_manager.set_system(input.get("system_prompt"))
+    AGENT.memory_manager.set_system(input)
     return JSONResponse(status_code=200, content={})
 
 
@@ -76,10 +76,7 @@ async def get_functions():
 
 @app.get("/get_messages")
 async def get_messages(chatbox: bool | None = None):
-    if len(AGENT.memory_manager.messages) == 1:
-        return {"messages": []}
-    else:
-        return {"messages": AGENT.memory_manager.get_messages(chat_box=chatbox)[1:]}
+    return {"messages": AGENT.memory_manager.get_messages(chat_box=chatbox)[1:]}
 
 
 @app.get("/get_summaries")

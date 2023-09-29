@@ -249,12 +249,13 @@ class CodingAgent:
         Returns:
             str: The generated prompt.
         """
-        prompt = f"Human: {self.memory_manager.system}\n\n"
+        prompt = f"\n\nHuman: {self.memory_manager.system}\n\n"
         user_messages = 0
         for message in self.memory_manager.get_messages():
             if message["role"].lower() == "user":
                 if user_messages == 0:
                     prompt += f"{message['content']}\n\n"
+                    user_messages += 1
                 else:
                     prompt += f"Human: {message['content']}\n\n"
             if message["role"].lower() == "assistant":
@@ -307,9 +308,6 @@ class CodingAgent:
             print(self.generate_anthropic_prompt())
             try:
                 sm_client = boto3.client("bedrock-runtime")
-                endpoint = os.getenv("CODELLAMA_ENDPOINT")
-                if not endpoint:
-                    raise ValueError("CODELLAMA_ENDPOINT environment variable not set")
                 resp = sm_client.invoke_model_with_response_stream(
                     accept="*/*",
                     contentType="application/json",
@@ -318,11 +316,11 @@ class CodingAgent:
                         "prompt": self.generate_anthropic_prompt(),
                         "max_tokens_to_sample": min(kwargs["max_tokens"], 2000),
                         "temperature": kwargs["temperature"],
-                        "stop_sequences": ["\\n\\nHuman:"]
+                        # "stop_sequences": ["Human:"]
                     }),
                 )
             except Exception as e:
-                print(f"Error calling Code Llama: {e}")
+                print(f"Error calling Anthropic Models: {e}")
                 yield {"choices": [{"finish_reason": "stop", "delta": {"content": "Error: " + str(e)}}]}
 
             while True:

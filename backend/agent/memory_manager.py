@@ -30,7 +30,6 @@ class MemoryManager:
         self.tree = tree
         self.system_file_summaries = None
         self.system_file_contents = None
-        self.messages = []
         self.memory_table_name = f"{table_name}_memory"
         self.system_table_name = f"{table_name}_system_prompt"
         self.conn = db_connection
@@ -111,21 +110,15 @@ class MemoryManager:
         num_tokens = len(encoding.encode(message))
         return num_tokens
 
-    def get_total_tokens(self) -> int:
-        """Returns the number of tokens in a text string."""
-        total_tokens = 0
-        for item in self.messages:
-            encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
-            num_tokens = len(encoding.encode(item["content"]))
-            total_tokens += num_tokens
-        return total_tokens
-
     def set_system(self, input: dict = {}) -> None:
         """Set the system message."""
 
         "Update the system prompt manually"
-        if input.get("system"):
-            self.system = input.get("system")
+        # print(input)
+        print(input.keys())
+        if input.get("system_prompt") is not None:
+            print("Updating system prompt")
+            self.system = input.get("system_prompt")
         else:
             self.system = (
                 self.identity
