@@ -1,6 +1,5 @@
 import os
 import tiktoken
-import sqlite3
 
 from typing import Optional, List
 from datetime import datetime

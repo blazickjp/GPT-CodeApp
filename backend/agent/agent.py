@@ -4,8 +4,9 @@ import re
 import openai
 import json
 import os
-import time
-import boto3
+
+# import time
+# import boto3
 
 from typing import List, Optional, Callable
 from pydantic import BaseModel
@@ -215,7 +216,7 @@ class CodingAgent:
             response_str = args.replace('"""', '"')
 
             return json.loads(response_str)
-        
+
     def generate_llama_prompt(self) -> str:
         """
         Generates a prompt for the Code Llama model.

@@ -5,7 +5,6 @@ import tiktoken
 from fastapi import Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from app_setup import setup_app, app
-import openai
 
 
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
@@ -123,12 +122,10 @@ async def set_model(input: dict):
     return JSONResponse(status_code=200, content={})
 
 
-@app.post("/save_sytem_prompt")
+@app.post("/save_prompt")
 async def save_prompt(input: dict):
     prompt = input.get("prompt")
     prompt_name = input.get("prompt_name")
-    print(prompt_name)
-    print(prompt)
     # Create or update prompt
     if AGENT.memory_manager.prompt_handler.read_prompt(prompt_name):
         AGENT.memory_manager.prompt_handler.update_prompt(prompt_name, prompt)

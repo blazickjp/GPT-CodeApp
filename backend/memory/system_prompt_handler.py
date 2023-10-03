@@ -23,11 +23,10 @@ class SystemPromptHandler:
 
     def create_prompt(self, prompt_id, prompt):
         """Create a new system prompt."""
-        print(prompt_id, prompt)
         try:
             self.cur.execute(
-            """
-            INSERT INTO system_prompts (id, prompt) VALUES (?, ?)
+                """
+                INSERT INTO system_prompts (id, prompt) VALUES (?, ?)
             """,
                 (prompt_id, prompt),
             )
@@ -58,11 +57,9 @@ class SystemPromptHandler:
             (new_prompt, prompt_id),
         )
         self.conn.commit()
-        return
 
     def delete_prompt(self, prompt_id):
         """Delete a system prompt by ID."""
-        print(prompt_id)
         self.cur.execute(
             """
             DELETE FROM system_prompts WHERE id = ?
@@ -78,9 +75,4 @@ class SystemPromptHandler:
             SELECT * FROM system_prompts
         """
         )
-        output = []
-        for prompt in self.cur.fetchall():
-            output.append({"name": prompt[0], "prompt": prompt[1]})
-
-        print(self.cur.fetchall())
-        return output
+        return self.cur.fetchall()
