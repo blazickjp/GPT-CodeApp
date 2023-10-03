@@ -5,7 +5,6 @@ import tiktoken
 from fastapi import Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from app_setup import setup_app, app
-import openai
 
 
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
@@ -123,4 +122,29 @@ async def set_files_in_prompt(input: dict):
 async def set_model(input: dict):
     model = input.get("model")
     AGENT.GPT_MODEL = model
+    return JSONResponse(status_code=200, content={})
+
+
+@app.post("/save_prompt")
+async def save_prompt(input: dict):
+    prompt = input.get("prompt")
+    prompt_name = input.get("prompt_name")
+    # Create or update prompt
+    if AGENT.memory_manager.prompt_handler.read_prompt(prompt_name):
+        AGENT.memory_manager.prompt_handler.update_prompt(prompt_name, prompt)
+    else:
+        AGENT.memory_manager.prompt_handler.create_prompt(prompt_name, prompt)
+    return JSONResponse(status_code=200, content={})
+
+
+@app.post("/list_prompts")
+async def list_prompts():
+    prompts = AGENT.memory_manager.prompt_handler.list_prompts()
+    return {"prompts": prompts}
+
+
+@app.post("/delete_prompt")
+async def delete_prompt(input: dict):
+    prompt_id = input.get("prompt_id")
+    AGENT.memory_manager.prompt_handler.delete_prompt(prompt_id)
     return JSONResponse(status_code=200, content={})

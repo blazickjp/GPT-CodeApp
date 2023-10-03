@@ -1,13 +1,8 @@
 import os
 import datetime
 from dotenv import load_dotenv
-import numpy as np
 import tiktoken
-
-from sklearn.metrics.pairwise import cosine_similarity
-from psycopg2 import sql
-from psycopg2.extensions import connection
-from typing import List, Optional, Dict
+from typing import Dict
 
 
 EMBEDDING_MODEL = "text-embedding-ada-002"
@@ -29,21 +24,13 @@ class MyCodebase:
     FILE_EXTENSIONS = os.getenv("FILE_EXTENSIONS")
     UPDATE_FULL = os.getenv("AUTO_UPDATE_EMBEDDINGS", False)
 
-    def __init__(
-        self, directory: str = ".", db_connection: Optional[connection] = None
-    ):
-        self.files = []
-        self.embeddings = []
-        self.file_dict = {}
+    def __init__(self, directory: str = ".", db_connection=None):
         self.directory = os.path.abspath(directory)
         self.conn = db_connection
         self.cur = self.conn.cursor()
         self.create_tables()
         self._update_files_and_embeddings()
         self.remove_old_files()
-        self.embeddings = np.array(
-            [file["embedding"] for file in self.file_dict.values()]
-        )
 
     def set_directory(self, directory: str) -> None:
         self.directory = os.path.abspath(directory)
@@ -65,7 +52,7 @@ class MyCodebase:
             ).replace(microsecond=0)
 
             if len(result) > 0:
-                db_time = datetime.datetime.strptime(result[0][0], '%Y-%m-%d %H:%M:%S')
+                db_time = datetime.datetime.strptime(result[0][0], "%Y-%m-%d %H:%M:%S")
 
                 if db_time >= last_modified:
                     return
@@ -78,16 +65,12 @@ class MyCodebase:
             """
             INSERT INTO files (file_path, text, token_count, last_updated)
             VALUES (?, ?, ?, ?)
-            ON CONFLICT(file_path) 
+            ON CONFLICT(file_path)
             DO UPDATE SET text = excluded.text, token_count = excluded.token_count, last_updated = excluded.last_updated;
             """,
-            (
-                file_path,
-                text,
-                token_count,
-                last_modified
-            )
+            (file_path, text, token_count, last_modified),
         )
+        self.conn.commit()
 
     def create_tables(self) -> None:
         self.cur.execute(
@@ -102,14 +85,6 @@ class MyCodebase:
             );
         """
         )
-
-    def get_summaries(self) -> Dict[str, str]:
-        self.cur.execute("SELECT file_path, summary FROM files;")
-        results = self.cur.fetchall()
-        out = {}
-        for file_name, summary in results:
-            out.update({file_name: summary})
-        return out
 
     def get_file_contents(self) -> Dict[str, str]:
         self.cur.execute("SELECT file_path, text FROM files")
@@ -163,11 +138,9 @@ class MyCodebase:
         for file_path in file_paths:
             if not os.path.exists(file_path):
                 self.cur.execute(
-                    sql.SQL(
-                        """
-                        DELETE FROM files WHERE file_path = %s
-                        """
-                    ),
+                    """
+                    DELETE FROM files WHERE file_path = ?
+                    """,
                     (file_path,),
                 )
                 self.conn.commit()
@@ -175,7 +148,7 @@ class MyCodebase:
 
     def _update_files_and_embeddings(self) -> None:
         for root, dirs, files in os.walk(self.directory):
-            dirs[:] = [d for d in dirs if d not in self.IGNORE_DIRS]
+            dirs[:] = [d for d in dirs if self._is_valid_directory(d)]
             for file_name in files:
                 if self._is_valid_file(file_name):
                     file_path = os.path.join(root, file_name)
@@ -193,3 +166,11 @@ class MyCodebase:
                 file_name.endswith(ext) for ext in MyCodebase.FILE_EXTENSIONS
             )
         ) or file_name == "Dockerfile"
+
+    @staticmethod
+    def _is_valid_directory(directory: str) -> bool:
+        return (
+            not directory.startswith(".")
+            and not directory.startswith("_")  # noqa 503
+            and directory not in MyCodebase.IGNORE_DIRS  # noqa 503
+        )

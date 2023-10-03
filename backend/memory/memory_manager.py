@@ -1,10 +1,10 @@
 import os
 import tiktoken
-import sqlite3
 
 from typing import Optional, List
 from datetime import datetime
 from dotenv import load_dotenv
+from memory.system_prompt_handler import SystemPromptHandler
 
 
 class MemoryManager:
@@ -15,7 +15,7 @@ class MemoryManager:
         tree: str = None,
         max_tokens: int = 1000,
         table_name: str = "default",
-        db_connection = None,
+        db_connection=None,
     ) -> None:
         load_dotenv()
         self.project_directory = os.getenv("PROJECT_DIRECTORY")
@@ -34,6 +34,7 @@ class MemoryManager:
         self.system_table_name = f"{table_name}_system_prompt"
         self.conn = db_connection
         self.cur = self.conn.cursor()
+        self.prompt_handler = SystemPromptHandler(db_connection=self.conn)
 
         self.create_tables()
         self.set_system()
@@ -47,28 +48,66 @@ class MemoryManager:
         )
         results = self.cur.fetchall()
         messages = [{"role": result[0], "content": result[1]} for result in results]
+
         max_tokens = 10000 if chat_box else self.max_tokens
-        self.cur.execute(
-            f"""
-            with t1 as (
-                SELECT role,
-                    content as full_content,
-                    COALESCE(summarized_message, content) as content,
-                    COALESCE(summarized_message_tokens, content_tokens) as tokens,
-                    sum(COALESCE(summarized_message_tokens, content_tokens)) OVER (ORDER BY interaction_index DESC) as token_cum_sum
-                FROM {self.memory_table_name}
-                WHERE project_directory = ?
-                ORDER BY interaction_index desc
+        if chat_box:
+            self.cur.execute(
+                f"""
+                with t1 as (
+                    SELECT role,
+                        content as full_content,
+                        COALESCE(summarized_message, content) as content,
+                        COALESCE(summarized_message_tokens, content_tokens) as tokens,
+                        sum(COALESCE(summarized_message_tokens, content_tokens)) OVER (ORDER BY interaction_index DESC) as token_cum_sum
+                    FROM {self.memory_table_name}
+                    WHERE project_directory = ?
+                    ORDER BY interaction_index desc
+                )
+                select role, full_content, content, tokens
+                from t1
+                WHERE token_cum_sum <= ?
+                """,
+                (
+                    self.project_directory,
+                    max_tokens,
+                ),
             )
-            select role, full_content, content, tokens
-            from t1
-            WHERE token_cum_sum <= ?
-            """,
-            (
-                self.project_directory,
-                max_tokens,
-            ),
-        )
+        else:
+            self.cur.execute(
+                f"""
+                WITH Exclude AS (
+                    SELECT interaction_index, last_idx
+                    FROM (
+                        select lag(interaction_index,1) over (order by interaction_index desc) as last_idx, * 
+                        from {self.memory_table_name}
+                        )
+                    WHERE (content LIKE '/%' AND role = 'user')
+                ),
+                Filtered AS (
+                    SELECT *
+                    FROM {self.memory_table_name}
+                    WHERE interaction_index NOT IN (SELECT interaction_index FROM Exclude)
+                    and interaction_index NOT IN (SELECT last_idx FROM Exclude)
+                ),
+                t1 AS (
+                    SELECT role,
+                        content as full_content,
+                        COALESCE(summarized_message, content) as content,
+                        COALESCE(summarized_message_tokens, content_tokens) as tokens,
+                        SUM(COALESCE(summarized_message_tokens, content_tokens)) OVER (ORDER BY interaction_index DESC) as token_cum_sum
+                    FROM Filtered
+                    WHERE project_directory = ?
+                    ORDER BY interaction_index DESC
+                )
+                SELECT role, full_content, content, tokens
+                FROM t1
+                WHERE token_cum_sum <= ?;
+                """,
+                (
+                    self.project_directory,
+                    max_tokens,
+                ),
+            )
         results = self.cur.fetchall()
         for result in results[::-1]:
             messages.append(
@@ -77,11 +116,24 @@ class MemoryManager:
 
         return messages
 
+        # messsages = []
+        # SPECIAL = "/"
+        # for result in results:
+        #     # Skip command messages and responses
+        #     if result[0] == "user" and result[1].startswith(SPECIAL):
+        #         continue
+        #     if messsages[-1]["role"] == "user" and messages[-1]["content"].startswith(
+        #         SPECIAL
+        #     ):
+        #         continue
+
+        #     messsages.append({"role": result[0], "content": result[1]})
+
     def add_message(self, role: str, content: str) -> None:
         timestamp = datetime.now().isoformat()  # Current timestamp in milliseconds
         message_tokens = self.get_total_tokens_in_message(content)
         summary, summary_tokens = (
-            self.summarize(content) if message_tokens > float('inf') else (None, None)
+            self.summarize(content) if message_tokens > float("inf") else (None, None)
         )
         try:
             self.cur.execute(
@@ -100,6 +152,8 @@ class MemoryManager:
                     self.project_directory,
                 ),
             )
+            self.conn.commit()
+
         except Exception as e:
             print("Failed to insert data: ", str(e))
         return

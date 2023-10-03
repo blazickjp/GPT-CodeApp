@@ -4,8 +4,9 @@ import re
 import openai
 import json
 import os
-import time
-import boto3
+
+# import time
+# import boto3
 
 from typing import List, Optional, Callable
 from pydantic import BaseModel
@@ -14,12 +15,10 @@ from database.my_codebase import MyCodebase
 # from agent.agent_functions import Program, File
 
 # GPT_MODEL = "gpt-3.5-turbo-0613"  # or any other chat model you want to use
-# GPT_MODEL = "gpt-4"  # or any other chat model you want to use
-GPT_MODEL = "anthropic"  # or any other chat model you want to use
+GPT_MODEL = "gpt-4"  # or any other chat model you want to use
+# GPT_MODEL = "anthropic"  # or any other chat model you want to use
 MAX_TOKENS = 1000  # or any other number of tokens you want to use
 TEMPERATURE = 0.2  # or any other temperature you want to use
-
-
 
 
 class FunctionCall(BaseModel):
@@ -219,7 +218,7 @@ class CodingAgent:
             response_str = args.replace('"""', '"')
 
             return json.loads(response_str)
-        
+
     def generate_llama_prompt(self) -> str:
         """
         Generates a prompt for the Code Llama model.
@@ -236,9 +235,9 @@ class CodingAgent:
                 prompt += f"### User Message\n{message['content']}\n\n"
             if message["role"].lower() == "assistant":
                 prompt += f"### Assistant\n{message['content']}\n\n"
-        
+
         return prompt + "### Assistant"
-    
+
     def generate_anthropic_prompt(self) -> str:
         """
         Generates a prompt for the Gaive model.
@@ -260,14 +259,14 @@ class CodingAgent:
                     prompt += f"Human: {message['content']}\n\n"
             if message["role"].lower() == "assistant":
                 prompt += f"Assistant: {message['content']}\n\n"
-        
+
         return prompt + "Assistant:"
-        
+
     def call_model_streaming(self, **kwargs):
-        print(kwargs)
         self.read_pos = 0
         if self.GPT_MODEL == "gpt-4" or self.GPT_MODEL == "gpt-3.5-turbo":
-            return openai.ChatCompletion.create(**kwargs)
+            for chunk in openai.ChatCompletion.create(**kwargs):
+                yield chunk
         if self.GPT_MODEL == "code-llama":
             try:
                 sm_client = boto3.client("sagemaker-runtime")
@@ -276,27 +275,42 @@ class CodingAgent:
                     raise ValueError("CODELLAMA_ENDPOINT environment variable not set")
                 resp = sm_client.invoke_endpoint_with_response_stream(
                     EndpointName=endpoint,
-                    Body=json.dumps({
-                        "inputs": self.generate_llama_prompt(),
-                        "parameters": {
-                            "max_new_tokens": kwargs["max_tokens"],
+                    Body=json.dumps(
+                        {
+                            "inputs": self.generate_llama_prompt(),
+                            "parameters": {
+                                "max_new_tokens": kwargs["max_tokens"],
+                            },
                         }
-                    }),
+                    ),
                     ContentType="application/json",
                 )
             except Exception as e:
                 print(f"Error calling Code Llama: {e}")
-                yield {"choices": [{"finish_reason": "stop", "delta": {"content": "Error: " + str(e)}}]}
+                yield {
+                    "choices": [
+                        {
+                            "finish_reason": "stop",
+                            "delta": {"content": "Error: " + str(e)},
+                        }
+                    ]
+                }
 
             while True:
                 try:
-                    chunk = next(iter((resp['Body'])))
+                    chunk = next(iter((resp["Body"])))
                     bytes_to_send = chunk["PayloadPart"]["Bytes"]
                     decoded_str = bytes_to_send.decode("utf-8")
-                    cleaned_str = decoded_str.replace('{\"generated_text\": \"', '').replace('\"}', '')
-                    cleaned_str = cleaned_str.encode().decode('unicode_escape')
+                    cleaned_str = decoded_str.replace(
+                        '{"generated_text": "', ""
+                    ).replace('"}', "")
+                    cleaned_str = cleaned_str.encode().decode("unicode_escape")
 
-                    yield {"choices": [{"finish_reason": "stop", "delta": {"content": cleaned_str}}]}
+                    yield {
+                        "choices": [
+                            {"finish_reason": "stop", "delta": {"content": cleaned_str}}
+                        ]
+                    }
                 except StopIteration:
                     break
 
@@ -305,36 +319,52 @@ class CodingAgent:
                     break
         if self.GPT_MODEL == "anthropic":
             print("Calling anthropic")
-            print(self.generate_anthropic_prompt())
             try:
                 sm_client = boto3.client("bedrock-runtime")
                 resp = sm_client.invoke_model_with_response_stream(
                     accept="*/*",
                     contentType="application/json",
                     modelId="anthropic.claude-v2",
-                    body=json.dumps({
-                        "prompt": self.generate_anthropic_prompt(),
-                        "max_tokens_to_sample": min(kwargs["max_tokens"], 2000),
-                        "temperature": kwargs["temperature"],
-                        # "stop_sequences": ["Human:"]
-                    }),
+                    body=json.dumps(
+                        {
+                            "prompt": self.generate_anthropic_prompt(),
+                            "max_tokens_to_sample": min(kwargs["max_tokens"], 2000),
+                            "temperature": kwargs["temperature"],
+                            # "stop_sequences": ["Human:"]
+                        }
+                    ),
                 )
             except Exception as e:
                 print(f"Error calling Anthropic Models: {e}")
-                yield {"choices": [{"finish_reason": "stop", "delta": {"content": "Error: " + str(e)}}]}
+                yield {
+                    "choices": [
+                        {
+                            "finish_reason": "stop",
+                            "delta": {"content": "Error: " + str(e)},
+                        }
+                    ]
+                }
 
             while True:
                 try:
-                    chunk = next(iter((resp['body'])))
+                    chunk = next(iter((resp["body"])))
                     bytes_to_send = chunk["chunk"]["bytes"]
                     decoded_str = json.loads(bytes_to_send.decode("utf-8"))
-                    content = decoded_str['completion']
-                    stop_reason = decoded_str['stop_reason']
+                    content = decoded_str["completion"]
+                    stop_reason = decoded_str["stop_reason"]
                     if stop_reason == "stop_sequence":
-                        yield {"choices": [{"finish_reason": "stop", "delta": {"content": content}}]}
+                        yield {
+                            "choices": [
+                                {"finish_reason": "stop", "delta": {"content": content}}
+                            ]
+                        }
                         break
                     else:
-                        yield {"choices": [{"finish_reason": None, "delta": {"content": content}}]}
+                        yield {
+                            "choices": [
+                                {"finish_reason": None, "delta": {"content": content}}
+                            ]
+                        }
 
                 except StopIteration:
                     break
