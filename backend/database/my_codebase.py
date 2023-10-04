@@ -91,7 +91,8 @@ class MyCodebase:
         results = self.cur.fetchall()
         out = {}
         for file_name, text in results:
-            out.update({file_name: text})
+            out.update({os.path.relpath(file_name, self.directory): text})
+        print(f"\n\nGet File Contents: {out.keys()}")
         return out
 
     def tree(self) -> str:
@@ -105,7 +106,6 @@ class MyCodebase:
             for result in self.cur.fetchall()
             if result[0].startswith(self.directory)
         ]
-
         # Insert each file into the tree structure
         for file_path in sorted(file_paths):
             parts = file_path.split(os.path.sep)

@@ -109,10 +109,7 @@ async def generate_readme():
 
 @app.post("/set_files_in_prompt")
 async def set_files_in_prompt(input: dict):
-    files = [file for file in input.get("files")]
-    if not files:
-        return JSONResponse(status_code=400, content={"error": "No files provided."})
-    print(files)
+    files = [file for file in input.get("files", None)]
     AGENT.files_in_prompt = files
     AGENT.set_files_in_prompt()
     return JSONResponse(status_code=200, content={})
@@ -125,7 +122,7 @@ async def set_model(input: dict):
     return JSONResponse(status_code=200, content={})
 
 
-@app.post("/save_prompt")
+@app.post("/save_sytem_prompt")
 async def save_prompt(input: dict):
     prompt = input.get("prompt")
     prompt_name = input.get("prompt_name")
@@ -137,7 +134,7 @@ async def save_prompt(input: dict):
     return JSONResponse(status_code=200, content={})
 
 
-@app.post("/list_prompts")
+@app.get("/list_prompts")
 async def list_prompts():
     prompts = AGENT.memory_manager.prompt_handler.list_prompts()
     return {"prompts": prompts}
@@ -145,6 +142,12 @@ async def list_prompts():
 
 @app.post("/delete_prompt")
 async def delete_prompt(input: dict):
+    print(input)
     prompt_id = input.get("prompt_id")
-    AGENT.memory_manager.prompt_handler.delete_prompt(prompt_id)
+    print(prompt_id)
+    try:
+        AGENT.memory_manager.prompt_handler.delete_prompt(prompt_id)
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
     return JSONResponse(status_code=200, content={})

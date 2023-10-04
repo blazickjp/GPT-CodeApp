@@ -6,7 +6,7 @@ import json
 import os
 
 # import time
-# import boto3
+import boto3
 
 from typing import List, Optional, Callable
 from pydantic import BaseModel
@@ -155,18 +155,16 @@ class CodingAgent:
 
         Args:
             files (List[File]): A list of files to be set in the prompt.
+            include_line_numbers (Optional[bool]): Whether to include line numbers in the prompt.
         """
         file_contents = self.codebase.get_file_contents()
-        files = [
-            os.path.join(self.codebase.directory, f.lstrip("/"))
-            for f in self.files_in_prompt
-        ]
         content = ""
         for k, v in file_contents.items():
-            if k in files and include_line_numbers:
+            print(k in self.files_in_prompt)
+            if k in self.files_in_prompt and include_line_numbers:
                 v = self.add_line_numbers_to_content(v)
                 content += f"{k}:\n{v}\n\n"
-            elif k in files:
+            elif k in self.files_in_prompt:
                 content += f"{k}:\n{v}\n\n"
 
         self.memory_manager.system_file_contents = content

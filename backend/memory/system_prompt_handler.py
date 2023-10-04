@@ -12,7 +12,7 @@ class SystemPromptHandler:
         self.cur.execute(
             """
             CREATE TABLE IF NOT EXISTS system_prompts (
-                id INTEGER PRIMARY KEY,
+                id TEXT PRIMARY KEY,
                 prompt TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -33,6 +33,7 @@ class SystemPromptHandler:
             self.conn.commit()
         except sqlite3.IntegrityError:
             print(f"Prompt '{prompt}' with ID '{prompt_id}' already exists.")
+        return
 
     def read_prompt(self, prompt_id):
         """Read a system prompt by ID."""
@@ -55,9 +56,11 @@ class SystemPromptHandler:
             (new_prompt, prompt_id),
         )
         self.conn.commit()
+        return
 
     def delete_prompt(self, prompt_id):
         """Delete a system prompt by ID."""
+        print(prompt_id)
         self.cur.execute(
             """
             DELETE FROM system_prompts WHERE id = ?
@@ -73,4 +76,9 @@ class SystemPromptHandler:
             SELECT * FROM system_prompts
         """
         )
-        return self.cur.fetchall()
+        output = []
+        for prompt in self.cur.fetchall():
+            output.append({"name": prompt[0], "prompt": prompt[1]})
+
+        print(self.cur.fetchall())
+        return output
