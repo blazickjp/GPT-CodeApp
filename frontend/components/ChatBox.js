@@ -34,13 +34,13 @@ const CodeBlock = React.memo(({ node, inline, className, children }) => {
 
 function CustomListItem({ node, ...props }) {
     return (
-        <ul {...props} className=' whitespace-normal list-disc list-inside'/>
+        <ul {...props} className=' whitespace-normal list-disc list-inside' />
     )
 }
 
 function CustomOrderedList({ node, ...props }) {
     return (
-        <ol {...props} className=' whitespace-normal'/>
+        <ol {...props} className=' whitespace-normal' />
     )
 }
 

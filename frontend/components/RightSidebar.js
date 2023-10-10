@@ -4,7 +4,6 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { AiOutlineMinus } from "react-icons/ai";
-import { BiCoin } from "react-icons/bi";
 
 const CodeBlock = ({ node, inline, className, children }) => {
     const match = /language-(\w+)/.exec(className || '')

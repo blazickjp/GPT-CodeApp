@@ -23,9 +23,12 @@ const systemPromptSlice = createSlice({
         setEditablePrompt: (state, action) => {
             state.editablePrompt = action.payload;
         },
+        setPromptName: (state, action) => {
+            state.promptName = action.payload;
+        }
     },
 });
 
-export const { setSystemPrompt, setSystemTokens, setIsModalOpen, setEditablePrompt } = systemPromptSlice.actions;
+export const { setSystemPrompt, setSystemTokens, setIsModalOpen, setEditablePrompt, setPromptName } = systemPromptSlice.actions;
 
 export default systemPromptSlice.reducer;

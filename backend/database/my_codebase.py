@@ -1,19 +1,8 @@
 import os
 import datetime
 from dotenv import load_dotenv
-import openai
-import numpy as np
 import tiktoken
-
-from sklearn.metrics.pairwise import cosine_similarity
-from tenacity import (
-    retry,
-    wait_random_exponential,
-    stop_after_attempt,
-)
-from psycopg2 import sql
-from psycopg2.extensions import connection
-from typing import List, Optional, Union, Dict
+from typing import Dict
 
 
 EMBEDDING_MODEL = "text-embedding-ada-002"
@@ -35,21 +24,13 @@ class MyCodebase:
     FILE_EXTENSIONS = os.getenv("FILE_EXTENSIONS")
     UPDATE_FULL = os.getenv("AUTO_UPDATE_EMBEDDINGS", False)
 
-    def __init__(
-        self, directory: str = ".", db_connection: Optional[connection] = None
-    ):
-        self.files = []
-        self.embeddings = []
-        self.file_dict = {}
+    def __init__(self, directory: str = ".", db_connection=None):
         self.directory = os.path.abspath(directory)
         self.conn = db_connection
         self.cur = self.conn.cursor()
         self.create_tables()
         self._update_files_and_embeddings()
         self.remove_old_files()
-        self.embeddings = np.array(
-            [file["embedding"] for file in self.file_dict.values()]
-        )
 
     def set_directory(self, directory: str) -> None:
         self.directory = os.path.abspath(directory)
@@ -58,14 +39,11 @@ class MyCodebase:
 
     def update_file(self, file_path: str) -> None:
         self.cur.execute(
-            sql.SQL(
-                """
-                SELECT last_updated FROM files WHERE file_path = %s
-                """
-            ),
+            """
+            SELECT last_updated FROM files WHERE file_path = ?
+            """,
             (file_path,),
         )
-        self.conn.commit()
         result = self.cur.fetchall()
         with open(file_path, "r") as file:
             text = file.read()
@@ -74,66 +52,23 @@ class MyCodebase:
             ).replace(microsecond=0)
 
             if len(result) > 0:
-                if result[0][0] >= last_modified:
+                db_time = datetime.datetime.strptime(result[0][0], "%Y-%m-%d %H:%M:%S")
+
+                if db_time >= last_modified:
                     return
                 else:
                     print(f"Updating file {file_path}")
 
         token_count = len(ENCODER.encode(text))
-
         # The dict's key is the file path, and value is a dict containing the text and embedding
         self.cur.execute(
-            sql.SQL(
-                """
-                INSERT INTO files (file_path, text, token_count, last_updated)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (file_path)
-                DO UPDATE SET text = %s, token_count = %s, last_updated = %s
-                """,
-            ),
-            (
-                file_path,
-                text,
-                token_count,
-                last_modified,
-                text,
-                token_count,
-                last_modified,
-            ),
-        )
-        self.conn.commit()
-
-        if self.UPDATE_FULL:
-            self.update_embed_and_summary(file_path, text)
-
-    def update_embed_and_summary(self, file_path: str, text: str):
-        embedding = list(self.encode(text))
-        embedding = np.array(embedding).tobytes()
-
-        response = openai.ChatCompletion.create(
-            model=SUMMARY_MODEL,
-            messages=[
-                {
-                    "role": "user",
-                    "content": SUMMARY_PROMPT.format(text),
-                },
-            ],
-            max_tokens=250,
-            temperature=0.4,
-        )
-        file_summary = response["choices"][0]["message"]["content"].strip()
-
-        # The dict's key is the file path, and value is a dict containing the text and embedding
-        self.cur.execute(
-            sql.SQL(
-                """
-                    INSERT INTO files (file_path, embedding, summary)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (file_path)
-                    DO UPDATE SET embedding = %s, summary = %s
-                    """,
-            ),
-            (file_path, embedding, file_summary, embedding, file_summary),
+            """
+            INSERT INTO files (file_path, text, token_count, last_updated)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(file_path)
+            DO UPDATE SET text = excluded.text, token_count = excluded.token_count, last_updated = excluded.last_updated;
+            """,
+            (file_path, text, token_count, last_modified),
         )
         self.conn.commit()
 
@@ -150,79 +85,14 @@ class MyCodebase:
             );
         """
         )
-        self.conn.commit()
-
-    @retry(
-        wait=wait_random_exponential(min=1, max=20),
-        stop=stop_after_attempt(6),
-    )
-    def encode(
-        self, text_or_tokens: Union[str, List[str]], model: str = EMBEDDING_MODEL
-    ) -> List[float]:
-        result = openai.Embedding.create(input=text_or_tokens, model=model)
-        return result["data"][0]["embedding"]
-
-    def search(self, query: str, k: int = 2) -> str:
-        """
-        Search for files that match the query.
-        """
-        self.cur.execute(
-            """
-            SELECT embedding, file_path FROM files
-            """
-        )
-        file_embeddings = [
-            (file[1], np.frombuffer(file[0])) for file in self.cur.fetchall()
-        ]
-        embeddings = np.array([file[1] for file in file_embeddings])
-        file_list = [file[0] for file in file_embeddings]
-        query_embedding = self.encode(query)
-        query_embedding = np.array(query_embedding).reshape(1, -1)
-        print(f"Query embedding shape: {query_embedding.shape}")
-        print(f"Embeddings shape: {embeddings.shape}")
-        similarities = cosine_similarity(query_embedding, embeddings)[0]
-        print(f"Similarities shape: {similarities.shape}")
-
-        # Ensure k is not greater than the total number of files
-        k = min(k, len(file_list))
-
-        # Sort by similarity
-        sorted_indices = np.argsort(similarities)[::-1][:k]
-        out_files = [file_list[i] for i in sorted_indices]
-        print(out_files)
-
-        # Return sorted file paths and content
-        # results = []
-        out = ""
-        for file_name in out_files:
-            self.cur.execute(
-                sql.SQL(
-                    """
-                    SELECT text FROM files WHERE file_path = %s
-                    """
-                ),
-                (file_name,),
-            )
-            content = self.cur.fetchall()[0][0]
-            print(f"Search Result: {file_name}")
-            out += f"File: {file_name}\nContent:\n{content}\n"
-
-        return out
-
-    def get_summaries(self) -> Dict[str, str]:
-        self.cur.execute("SELECT file_path, summary FROM files")
-        results = self.cur.fetchall()
-        out = {}
-        for file_name, summary in results:
-            out.update({file_name: summary})
-        return out
 
     def get_file_contents(self) -> Dict[str, str]:
         self.cur.execute("SELECT file_path, text FROM files")
         results = self.cur.fetchall()
         out = {}
         for file_name, text in results:
-            out.update({file_name: text})
+            out.update({os.path.relpath(file_name, self.directory): text})
+        print(f"\n\nGet File Contents: {out.keys()}")
         return out
 
     def tree(self) -> str:
@@ -236,7 +106,6 @@ class MyCodebase:
             for result in self.cur.fetchall()
             if result[0].startswith(self.directory)
         ]
-
         # Insert each file into the tree structure
         for file_path in sorted(file_paths):
             parts = file_path.split(os.path.sep)
@@ -269,11 +138,9 @@ class MyCodebase:
         for file_path in file_paths:
             if not os.path.exists(file_path):
                 self.cur.execute(
-                    sql.SQL(
-                        """
-                        DELETE FROM files WHERE file_path = %s
-                        """
-                    ),
+                    """
+                    DELETE FROM files WHERE file_path = ?
+                    """,
                     (file_path,),
                 )
                 self.conn.commit()
@@ -281,7 +148,7 @@ class MyCodebase:
 
     def _update_files_and_embeddings(self) -> None:
         for root, dirs, files in os.walk(self.directory):
-            dirs[:] = [d for d in dirs if d not in self.IGNORE_DIRS]
+            dirs[:] = [d for d in dirs if self._is_valid_directory(d)]
             for file_name in files:
                 if self._is_valid_file(file_name):
                     file_path = os.path.join(root, file_name)
@@ -299,3 +166,11 @@ class MyCodebase:
                 file_name.endswith(ext) for ext in MyCodebase.FILE_EXTENSIONS
             )
         ) or file_name == "Dockerfile"
+
+    @staticmethod
+    def _is_valid_directory(directory: str) -> bool:
+        return (
+            not directory.startswith(".")
+            and not directory.startswith("_")  # noqa 503
+            and directory not in MyCodebase.IGNORE_DIRS  # noqa 503
+        )

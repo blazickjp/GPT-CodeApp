@@ -39,7 +39,7 @@ async def get_system_prompt():
 
 @app.post("/update_system")
 async def update_system_prompt(input: dict):
-    AGENT.memory_manager.set_system(input.get("system_prompt"))
+    AGENT.memory_manager.set_system(input)
     return JSONResponse(status_code=200, content={})
 
 
@@ -79,10 +79,7 @@ async def get_functions():
 
 @app.get("/get_messages")
 async def get_messages(chatbox: bool | None = None):
-    if len(AGENT.memory_manager.messages) == 1:
-        return {"messages": []}
-    else:
-        return {"messages": AGENT.memory_manager.get_messages(chat_box=chatbox)[1:]}
+    return {"messages": AGENT.memory_manager.get_messages(chat_box=chatbox)[1:]}
 
 
 @app.get("/get_summaries")
@@ -99,8 +96,8 @@ async def get_summaries(reset: bool | None = None):
         {
             "file_path": os.path.relpath(file_path, root_path),
             "file_token_count": token_count,
-            "summary": summary,
-            "summary_token_count": len(ENCODER.encode(summary)),
+            "summary": None,
+            "summary_token_count": 0,
         }
         for file_path, summary, token_count in results
         if file_path.startswith(root_path)
@@ -114,26 +111,9 @@ async def generate_readme():
     return {"readme": "Deprecated"}
 
 
-@app.post("/set_summary_files_in_prompt")
-async def set_summary_files_in_prompt(input: dict):
-    if "files" not in input:
-        return JSONResponse(status_code=400, content={"error": "missing files"})
-
-    files = [os.path.join(CODEBASE.directory, file) for file in input.get("files")]
-    summaries = CODEBASE.get_summaries()
-    summaries = [f"{k}:\n{v}" for k, v in summaries.items() if k in files]
-    additional_system_prompt_summaries = "\n\n".join(summaries)
-    AGENT.memory_manager.system_file_summaries = additional_system_prompt_summaries
-    AGENT.memory_manager.set_system()
-    return JSONResponse(status_code=200, content={})
-
-
 @app.post("/set_files_in_prompt")
 async def set_files_in_prompt(input: dict):
-    files = [file for file in input.get("files")]
-    if not files:
-        return JSONResponse(status_code=400, content={"error": "No files provided."})
-    print(files)
+    files = [file for file in input.get("files", None)]
     AGENT.files_in_prompt = files
     AGENT.set_files_in_prompt()
     return JSONResponse(status_code=200, content={})
@@ -143,4 +123,45 @@ async def set_files_in_prompt(input: dict):
 async def set_model(input: dict):
     model = input.get("model")
     AGENT.GPT_MODEL = model
+    return JSONResponse(status_code=200, content={})
+
+
+@app.post("/save_prompt")
+async def save_prompt(input: dict):
+    prompt = input.get("prompt")
+    prompt_name = input.get("prompt_name")
+    # Create or update prompt
+    if AGENT.memory_manager.prompt_handler.read_prompt(prompt_name):
+        AGENT.memory_manager.prompt_handler.update_prompt(prompt_name, prompt)
+    else:
+        AGENT.memory_manager.prompt_handler.create_prompt(prompt_name, prompt)
+    return JSONResponse(status_code=200, content={})
+
+
+@app.get("/list_prompts")
+async def list_prompts():
+    prompts = AGENT.memory_manager.prompt_handler.list_prompts()
+    return {"prompts": prompts}
+
+
+@app.post("/delete_prompt")
+async def delete_prompt(input: dict):
+    print(input)
+    prompt_id = input.get("prompt_id")
+    print(prompt_id)
+    try:
+        AGENT.memory_manager.prompt_handler.delete_prompt(prompt_id)
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
+    return JSONResponse(status_code=200, content={})
+
+@app.post("/set_prompt")
+async def set_prompt(input: dict):
+    prompt_id = input.get("prompt_id")
+    prompt = input.get("prompt")
+    print(prompt_id)
+    print(prompt)
+    AGENT.memory_manager.prompt_handler.update_prompt(prompt_id, prompt)
+    AGENT.memory_manager.set_system({"system_prompt": prompt})
     return JSONResponse(status_code=200, content={})
