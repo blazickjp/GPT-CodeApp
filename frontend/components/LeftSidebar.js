@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { setEditablePrompt, setIsModalOpen } from '../store/modal_bar_modals/systemPromptSlice';
 import { FaTrash } from 'react-icons/fa';
+import { HiOutlineCheckCircle } from 'react-icons/hi';
 
 
 
@@ -45,6 +46,24 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
             console.error('Error deleting prompt', error);
         }
     };
+    const setPrompt = async (id, prompt) => {
+        try {
+            fetch(`${process.env.NEXT_PUBLIC_API_URL}/set_prompt`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ "prompt_id": id, "prompt": prompt }),
+            });
+            // if (!response.ok) {
+            //     throw new Error('Error deleting prompt');
+            // }
+            // After deleting, fetch the prompts again to update the list
+            fetchPrompts();
+        } catch (error) {
+            console.error('Error deleting prompt', error);
+        }
+    }
 
     useEffect(() => {
         fetchPrompts();
@@ -76,12 +95,16 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
                 <details key={prompt.id} className="bg-gray-700 rounded p-2 mb-2">
                     <summary className="text-gray-300 cursor-pointer flex justify-between items-center" onClick={() => handlePromptClick(prompt)}>
                         <span>{prompt.name}</span>
-                        <button onClick={() => handleDeletePrompt(prompt.name)}>
-                            <FaTrash className=' text-red-400' />
-                        </button>
+                        <div className="flex flex-row items-end space-x-4">
+                            <button onClick={() => setPrompt(prompt.name, prompt.prompt)}>
+                                <HiOutlineCheckCircle className=' text-green-400' />
+                            </button>
+                            <button onClick={() => handleDeletePrompt(prompt.name)}>
+                                <FaTrash className=' text-red-400' />
+                            </button>
+                        </div>
                     </summary>
                     <p className="text-gray-400 pl-4">{prompt.prompt.substring(0, 200)}</p>
-                    <button onClick={() => handleDeletePrompt(prompt.name)}>Delete</button>
                 </details>
             ))}
         </div>

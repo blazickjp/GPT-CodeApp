@@ -13,7 +13,7 @@ class MemoryManager:
         model: str = "gpt-3.5-turbo",
         identity: str = None,
         tree: str = None,
-        max_tokens: int = 1000,
+        max_tokens: int = 5000,
         table_name: str = "default",
         db_connection=None,
     ) -> None:

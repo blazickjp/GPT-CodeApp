@@ -126,6 +126,8 @@ async def set_model(input: dict):
 async def save_prompt(input: dict):
     prompt = input.get("prompt")
     prompt_name = input.get("prompt_name")
+    print(prompt_name)
+    print(prompt)
     # Create or update prompt
     if AGENT.memory_manager.prompt_handler.read_prompt(prompt_name):
         AGENT.memory_manager.prompt_handler.update_prompt(prompt_name, prompt)
@@ -150,4 +152,14 @@ async def delete_prompt(input: dict):
     except Exception as e:
         return JSONResponse(status_code=400, content={"error": str(e)})
 
+    return JSONResponse(status_code=200, content={})
+
+@app.post("/set_prompt")
+async def set_prompt(input: dict):
+    prompt_id = input.get("prompt_id")
+    prompt = input.get("prompt")
+    print(prompt_id)
+    print(prompt)
+    AGENT.memory_manager.prompt_handler.update_prompt(prompt_id, prompt)
+    AGENT.memory_manager.set_system({"system_prompt": prompt})
     return JSONResponse(status_code=200, content={})

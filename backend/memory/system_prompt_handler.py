@@ -23,15 +23,17 @@ class SystemPromptHandler:
 
     def create_prompt(self, prompt_id, prompt):
         """Create a new system prompt."""
+        print(prompt_id, prompt)
         try:
             self.cur.execute(
-                """
-                INSERT INTO system_prompts (id, prompt) VALUES (?, ?)
+            """
+            INSERT INTO system_prompts (id, prompt) VALUES (?, ?)
             """,
                 (prompt_id, prompt),
             )
             self.conn.commit()
-        except sqlite3.IntegrityError:
+        except Exception as e:
+            print(e)
             print(f"Prompt '{prompt}' with ID '{prompt_id}' already exists.")
         return
 
