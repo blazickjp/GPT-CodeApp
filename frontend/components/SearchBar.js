@@ -45,7 +45,9 @@ const SearchBar = ({ addFileToContext }) => {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ files: [...selectedOptions.map(option => option.value)] })
+            body: JSON.stringify({
+                files: selectedOptions ? [...selectedOptions.map(option => option.value)] : []
+            })
         }).then(response => {
             if (response.status === 200) {
                 setFileStatus('success');
