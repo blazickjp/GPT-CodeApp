@@ -4,9 +4,9 @@ import re
 import openai
 import json
 import os
+import boto3
 
 # import time
-# import boto3
 
 from typing import List, Optional, Callable
 from pydantic import BaseModel
