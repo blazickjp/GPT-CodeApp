@@ -144,7 +144,7 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
                                 </button>
                             </div>
                         </summary>
-                        <p className="text-gray-400 pl-4">{prompt.prompt.substring(0, 200)}</p>
+                        <p className="text-gray-400 pl-4">{prompt.prompt?.substring(0, 200)}</p>
                     </details>
                 ))
             }
