@@ -41,19 +41,20 @@ class SystemPromptHandler:
         self.cur.execute(
             """
             SELECT * FROM system_prompts WHERE id = ?
-        """,
+            """,
             (prompt_id,),
         )
         return self.cur.fetchone()
 
     def update_prompt(self, prompt_id, new_prompt):
         """Update a system prompt by ID."""
+        print(prompt_id)
         self.cur.execute(
             """
             UPDATE system_prompts
             SET prompt = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-        """,
+            """,
             (new_prompt, prompt_id),
         )
         self.conn.commit()
@@ -64,7 +65,7 @@ class SystemPromptHandler:
         self.cur.execute(
             """
             DELETE FROM system_prompts WHERE id = ?
-        """,
+            """,
             (prompt_id,),
         )
         self.conn.commit()
@@ -74,7 +75,7 @@ class SystemPromptHandler:
         self.cur.execute(
             """
             SELECT * FROM system_prompts
-        """
+            """
         )
         output = []
         for prompt in self.cur.fetchall():
