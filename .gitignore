@@ -2,12 +2,13 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+*.db
+*.db-journal
 # C extensions
 *.so
 *.cfg
 /backend/bin/*
-*.db*
+
 # Distribution / packaging
 .Python
 build/
