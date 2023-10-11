@@ -147,7 +147,7 @@ async def list_prompts():
 @app.post("/delete_prompt")
 async def delete_prompt(input: dict):
     print(input)
-    prompt_id = input.get("prompt_id")
+    prompt_id = input.get("prompt_id", None)
     print(prompt_id)
     try:
         AGENT.memory_manager.prompt_handler.delete_prompt(prompt_id)
@@ -155,6 +155,7 @@ async def delete_prompt(input: dict):
         return JSONResponse(status_code=400, content={"error": str(e)})
 
     return JSONResponse(status_code=200, content={})
+
 
 @app.post("/set_prompt")
 async def set_prompt(input: dict):
@@ -166,14 +167,25 @@ async def set_prompt(input: dict):
     AGENT.memory_manager.set_system({"system_prompt": prompt})
     return JSONResponse(status_code=200, content={})
 
-@app.post("/select_directory")
-async def select_directory(input: dict):
+
+@app.post("/set_directory")
+async def set_directory(input: dict):
     directory = input.get("directory")
     try:
+        print(f"Received directory: {directory}")
         CODEBASE.set_directory(directory)
+        print("OK!")
+        return JSONResponse(status_code=200, content={"message": "Success"})
     except Exception as e:
-        return JSONResponse(status_code=400, content={"error": str(e)})
-    return JSONResponse(status_code=200, content={})
+        print(f"An error occurred: {e}")
+        raise JSONResponse(status_code=400, detail="Could not set directory")
+
+
+@app.get("/get_directory")
+async def get_directory():
+    # Fetch the directory from the database
+    return {"directory": CODEBASE.get_directory()}
+
 
 @app.get("/get_home")
 async def get_home():

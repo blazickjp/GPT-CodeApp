@@ -9,9 +9,7 @@ import DirectorySelectOption from './DirectorySelectOption';
 
 const LeftSidebar = ({ isLeftSidebarOpen }) => {
     const dispatch = useDispatch();
-    const [selectedDirectory, setSelectedDirectory] = useState(null);
     const [prompts, setPrompts] = useState([]);
-    const fileInput = useRef(null);  // Add a reference to the file input
     const promptsRef = useRef([]);
 
     const fetchPrompts = async () => {
@@ -33,9 +31,7 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
 
     const handleDeletePrompt = async (id) => {
         console.log("Deleting prompt: ", id)
-        if (id === null) {
-            return;
-        }
+
         try {
             fetch(`${process.env.NEXT_PUBLIC_API_URL}/delete_prompt`, {
                 method: 'POST',
@@ -52,26 +48,28 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
     };
     const savePrompt = async (id, prompt) => {
         try {
-            fetch(`${process.env.NEXT_PUBLIC_API_URL}/save_prompt`, {
+            await fetch(`${process.env.NEXT_PUBLIC_API_URL}/save_prompt`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ "prompt_id": id, "prompt": prompt }),
+                body: JSON.stringify({ "prompt_name": id, "prompt": prompt }),
             });
-            fetchPrompts();
+            await fetchPrompts();
+            setSidebarKey(prevKey => prevKey + 1);  // Increment the key
         } catch (error) {
-            console.error('Error deleting prompt', error);
+            console.error('Error saving prompt', error);
         }
     }
+
 
     useEffect(() => {
         fetchPrompts();
     }, [isLeftSidebarOpen]);
 
     const handlePromptClick = (prompt) => {
-        dispatch(setEditablePrompt(prompt));
-        dispatch(setIsModalOpen(true));
+        // dispatch(setEditablePrompt(prompt));
+        // dispatch(setIsModalOpen(true));
     };
 
 

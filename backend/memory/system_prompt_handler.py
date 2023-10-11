@@ -25,7 +25,7 @@ class SystemPromptHandler:
         """Create a new system prompt."""
         try:
             self.cur.execute(
-            """
+                """
             INSERT INTO system_prompts (id, prompt) VALUES (?, ?)
             """,
                 (prompt_id, prompt),
@@ -62,12 +62,21 @@ class SystemPromptHandler:
 
     def delete_prompt(self, prompt_id):
         """Delete a system prompt by ID."""
-        self.cur.execute(
-            """
-            DELETE FROM system_prompts WHERE id = ?
-            """,
-            (prompt_id,),
-        )
+        if not prompt_id:
+            self.cur.execute(
+                """
+                DELETE FROM system_prompts
+                WHERE id is null;
+                """
+            )
+        else:
+            self.cur.execute(
+                """
+                DELETE FROM system_prompts WHERE id = ?
+                """,
+                (prompt_id,),
+            )
+
         self.conn.commit()
 
     def list_prompts(self):

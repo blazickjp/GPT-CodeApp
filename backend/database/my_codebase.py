@@ -33,9 +33,30 @@ class MyCodebase:
         self.remove_old_files()
 
     def set_directory(self, directory: str) -> None:
+        print(f"Setting directory to {directory}")
         self.directory = os.path.abspath(directory)
+        self.cur.execute(
+            """
+            INSERT INTO config (field, value, last_updated)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(field)
+            DO UPDATE SET value = excluded.value, last_updated = excluded.last_updated
+            WHERE field = 'directory';
+            """,
+            ("directory", directory),
+        )
+        self.conn.commit()
         self._update_files_and_embeddings()
         self.remove_old_files()
+
+    def get_directory(self) -> str:
+        self.cur.execute(
+            """
+            SELECT value FROM config WHERE field = 'directory';
+            """
+        )
+        result = self.cur.fetchone()
+        return result[0] if result else None
 
     def update_file(self, file_path: str) -> None:
         self.cur.execute(
@@ -73,18 +94,34 @@ class MyCodebase:
         self.conn.commit()
 
     def create_tables(self) -> None:
-        self.cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS files (
-                file_path TEXT PRIMARY KEY,
-                text TEXT,
-                embedding BYTEA,
-                token_count INT,
-                summary TEXT,
-                last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """
-        )
+        try:
+            self.cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS files (
+                    file_path TEXT PRIMARY KEY,
+                    text TEXT,
+                    embedding BLOB,
+                    token_count INT,
+                    summary TEXT,
+                    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                """
+            )
+            self.conn.commit()
+
+            self.cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS config (
+                    field TEXT PRIMARY KEY,
+                    value TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                """
+            )
+            self.conn.commit()
+        except Exception as e:
+            print(f"Failed to create tables: {e}")
 
     def get_file_contents(self) -> Dict[str, str]:
         self.cur.execute("SELECT file_path, text FROM files")

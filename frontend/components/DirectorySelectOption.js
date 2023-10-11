@@ -4,6 +4,8 @@ import { FaArrowRight } from 'react-icons/fa';  // Importing an icon from react-
 const DirectorySelectOption = () => {
     const [directory, setDirectory] = useState('');
     const [placeholder, setPlaceholder] = useState('Loading...');
+    const [homeDirectory, setHomeDirectory] = useState(null);
+    const [savedDirectory, setSavedDirectory] = useState(null);
     const inputRef = useRef(null);
 
 
@@ -13,18 +15,34 @@ const DirectorySelectOption = () => {
                 const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_home`)
                 if (response.ok) {
                     const data = await response.json();
-                    setPlaceholder(data.home_directory);
+                    if (!placeholder) {
+                        setPlaceholder(data.home_directory);
+                    }
+                    setHomeDirectory(data.home_directory);
                 } else {
                     console.error('Error fetching home directory: ', response.statusText);
-                    setPlaceholder('Error loading home directory');
                 }
             } catch (error) {
                 console.error('Error fetching home directory: ', error);
-                setPlaceholder('Error loading home directory');
             }
         };
 
+        const fetchSavedDirectory = async () => {
+            try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_directory`)
+                if (response.ok) {
+                    const data = await response.json();
+                    setSavedDirectory(data.directory);
+                    setPlaceholder(data.directory);
+                } else {
+                    console.error('Error fetching home directory: ', response.statusText);
+                }
+            } catch (error) {
+                console.error('Error fetching home directory: ', error);
+            }
+        };
         fetchHomeDirectory();
+        fetchSavedDirectory();
     }, []);
 
 
@@ -37,7 +55,7 @@ const DirectorySelectOption = () => {
         e.preventDefault();
         console.log("Submitting directory: ", directory);
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/select_directory`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/set_directory`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
