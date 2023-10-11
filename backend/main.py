@@ -15,6 +15,20 @@ ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 AGENT, CODEBASE = setup_app()
 
 
+@app.on_event("startup")
+async def startup_event():
+    config = AGENT.memory_manager.cur.execute(
+        """
+        SELECT field, value FROM config
+        """
+    ).fetchall()
+    config = {field: value for field, value in config}
+    if config.get("directory"):
+        CODEBASE.set_directory(config["directory"])
+    print(config)
+    print("Starting up...")
+
+
 @app.post("/message_streaming")
 async def message_streaming(request: Request) -> StreamingResponse:
     data = await request.json()

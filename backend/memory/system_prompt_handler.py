@@ -1,4 +1,6 @@
-import sqlite3
+"""
+CRUD operations for system prompts.
+"""
 
 
 class SystemPromptHandler:
