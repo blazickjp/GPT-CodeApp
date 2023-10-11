@@ -165,3 +165,18 @@ async def set_prompt(input: dict):
     AGENT.memory_manager.prompt_handler.update_prompt(prompt_id, prompt)
     AGENT.memory_manager.set_system({"system_prompt": prompt})
     return JSONResponse(status_code=200, content={})
+
+@app.post("/select_directory")
+async def select_directory(input: dict):
+    directory = input.get("directory")
+    try:
+        CODEBASE.set_directory(directory)
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
+    return JSONResponse(status_code=200, content={})
+
+@app.get("/get_home")
+async def get_home():
+    home_directory = os.path.expanduser("~")
+    print("home_directory", home_directory)
+    return {"home_directory": home_directory}

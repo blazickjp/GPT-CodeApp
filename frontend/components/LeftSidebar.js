@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import { setEditablePrompt, setIsModalOpen } from '../store/modal_bar_modals/systemPromptSlice';
 import { FaTrash } from 'react-icons/fa';
 import { HiOutlineCheckCircle } from 'react-icons/hi';
-
+import DirectorySelectOption from './DirectorySelectOption';
 
 
 const LeftSidebar = ({ isLeftSidebarOpen }) => {
@@ -124,9 +124,7 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
     return (
         <div className={`fixed h-full w-1/5 left-0 bg-neutral-800 transition-all duration-500 overflow-y-scroll p-6 text-gray-200 transform ${isLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full'} overflow-x-hidden`}>
             <div className="flex flex-row justify-between items-center mb-2">
-                <input type="file" ref={fileInput} onChange={handleFolderSelect} style={{ display: 'none' }} webkitdirectory="" directory="" mozdirectory="" msdirectory="" odirectory="" />
-                {/* <button onClick={handleClick} className="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded ">Select Directory</button> */}
-                {selectedDirectory && <p className="mt-4 text-gray-300">Selected Directory: {selectedDirectory}</p>}
+                <DirectorySelectOption />
             </div>
             <hr className="border-gray-600 my-4" />
             <h2 className="text-xl font-bold mb-4 text-gray-100">System Prompts</h2>
