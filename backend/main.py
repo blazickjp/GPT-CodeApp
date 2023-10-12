@@ -15,6 +15,20 @@ ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 AGENT, CODEBASE = setup_app()
 
 
+@app.on_event("startup")
+async def startup_event():
+    config = AGENT.memory_manager.cur.execute(
+        """
+        SELECT field, value FROM config
+        """
+    ).fetchall()
+    config = {field: value for field, value in config}
+    if config.get("directory"):
+        CODEBASE.set_directory(config["directory"])
+    print(config)
+    print("Starting up...")
+
+
 @app.post("/message_streaming")
 async def message_streaming(request: Request) -> StreamingResponse:
     data = await request.json()
@@ -147,7 +161,7 @@ async def list_prompts():
 @app.post("/delete_prompt")
 async def delete_prompt(input: dict):
     print(input)
-    prompt_id = input.get("prompt_id")
+    prompt_id = input.get("prompt_id", None)
     print(prompt_id)
     try:
         AGENT.memory_manager.prompt_handler.delete_prompt(prompt_id)
@@ -155,6 +169,7 @@ async def delete_prompt(input: dict):
         return JSONResponse(status_code=400, content={"error": str(e)})
 
     return JSONResponse(status_code=200, content={})
+
 
 @app.post("/set_prompt")
 async def set_prompt(input: dict):
@@ -165,3 +180,29 @@ async def set_prompt(input: dict):
     AGENT.memory_manager.prompt_handler.update_prompt(prompt_id, prompt)
     AGENT.memory_manager.set_system({"system_prompt": prompt})
     return JSONResponse(status_code=200, content={})
+
+
+@app.post("/set_directory")
+async def set_directory(input: dict):
+    directory = input.get("directory")
+    try:
+        print(f"Received directory: {directory}")
+        CODEBASE.set_directory(directory)
+        print("OK!")
+        return JSONResponse(status_code=200, content={"message": "Success"})
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        raise JSONResponse(status_code=400, detail="Could not set directory")
+
+
+@app.get("/get_directory")
+async def get_directory():
+    # Fetch the directory from the database
+    return {"directory": CODEBASE.get_directory()}
+
+
+@app.get("/get_home")
+async def get_home():
+    home_directory = os.path.expanduser("~")
+    print("home_directory", home_directory)
+    return {"home_directory": home_directory}

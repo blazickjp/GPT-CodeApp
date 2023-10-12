@@ -14,7 +14,6 @@ from agent.agent_functions.changes import Changes
 from agent.agent_functions.shell_commands import CommandPlan
 
 load_dotenv()
-DIRECTORY = os.getenv("PROJECT_DIRECTORY")
 IDENTITY = "You are an AI Pair Programmer and a world class python developer. Your role is to assist the Human in developing, debugging, and optimizing their project. Feel free to ask for more details if something isn't clear."
 
 
@@ -29,6 +28,7 @@ def create_database_connection() -> connection:
 
 
 DB_CONNECTION = create_database_connection()
+DIRECTORY = os.getenv("PROJECT_DIRECTORY")
 
 app = FastAPI()
 app.add_middleware(

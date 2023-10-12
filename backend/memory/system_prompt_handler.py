@@ -1,4 +1,6 @@
-import sqlite3
+"""
+CRUD operations for system prompts.
+"""
 
 
 class SystemPromptHandler:
@@ -25,7 +27,7 @@ class SystemPromptHandler:
         """Create a new system prompt."""
         try:
             self.cur.execute(
-            """
+                """
             INSERT INTO system_prompts (id, prompt) VALUES (?, ?)
             """,
                 (prompt_id, prompt),
@@ -41,19 +43,20 @@ class SystemPromptHandler:
         self.cur.execute(
             """
             SELECT * FROM system_prompts WHERE id = ?
-        """,
+            """,
             (prompt_id,),
         )
         return self.cur.fetchone()
 
     def update_prompt(self, prompt_id, new_prompt):
         """Update a system prompt by ID."""
+        print(prompt_id)
         self.cur.execute(
             """
             UPDATE system_prompts
             SET prompt = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-        """,
+            """,
             (new_prompt, prompt_id),
         )
         self.conn.commit()
@@ -61,12 +64,21 @@ class SystemPromptHandler:
 
     def delete_prompt(self, prompt_id):
         """Delete a system prompt by ID."""
-        self.cur.execute(
-            """
-            DELETE FROM system_prompts WHERE id = ?
-        """,
-            (prompt_id,),
-        )
+        if not prompt_id:
+            self.cur.execute(
+                """
+                DELETE FROM system_prompts
+                WHERE id is null;
+                """
+            )
+        else:
+            self.cur.execute(
+                """
+                DELETE FROM system_prompts WHERE id = ?
+                """,
+                (prompt_id,),
+            )
+
         self.conn.commit()
 
     def list_prompts(self):
@@ -74,7 +86,7 @@ class SystemPromptHandler:
         self.cur.execute(
             """
             SELECT * FROM system_prompts
-        """
+            """
         )
         output = []
         for prompt in self.cur.fetchall():

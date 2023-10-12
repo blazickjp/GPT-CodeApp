@@ -20,7 +20,7 @@ const Chat = () => {
   const dispatch = useDispatch();
   const messages = useSelector(state => state.messages);
   const isSidebarOpen = useSelector(state => state.sidebar.isOpen);
-  // Add state for the left sidebar
+  const [sidebarKey, setSidebarKey] = useState(0);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
 
   // Add a function to toggle the left sidebar
@@ -125,7 +125,7 @@ const Chat = () => {
         <ChatBox messages={messages} />
       </div>
       <RightSidebar isSidebarOpen={isSidebarOpen} />
-      <LeftSidebar isLeftSidebarOpen={isLeftSidebarOpen} />
+      <LeftSidebar key={sidebarKey} isLeftSidebarOpen={isLeftSidebarOpen} />
 
       <div className="input-area h-1/6 flex bg-gray-800 text-center justify-center items-center w-full text-gray-900 border-t border-slate-500" >
         <div className='w-full'>
