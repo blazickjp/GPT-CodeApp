@@ -216,6 +216,6 @@ async def get_home():
 @app.post("/set_max_message_tokens")
 async def set_max_message_tokens(input: dict):
     max_message_tokens = input.get("max_message_tokens")
-    print(max_message_tokens)
+    print()
     AGENT.memory_manager.max_tokens = max_message_tokens
     return JSONResponse(status_code=200, content={})

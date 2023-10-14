@@ -1,50 +1,95 @@
-# GPT-CodeApp
+# GPT-CodeApp 🚀
 
 ![GitHub stars](https://img.shields.io/github/stars/blazickjp/GPT-CodeApp?style=social) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/blazickjp/GPT-CodeApp) ![GitHub All Releases](https://img.shields.io/github/downloads/blazickjp/GPT-CodeApp/total) [![Run Pytest](https://github.com/blazickjp/GPT-CodeApp/actions/workflows/pytest_ubuntu.yml/badge.svg)](https://github.com/blazickjp/GPT-CodeApp/actions/workflows/pytest_ubuntu.yml) ![GitHub contributors](https://img.shields.io/github/contributors/blazickjp/GPT-CodeApp) ![GitHub](https://img.shields.io/github/license/blazickjp/GPT-CodeApp)
 
-> This project is a clone of Chat-GPT with all the features we wish were available. After getting frustrated by constantly copying and pasting from VS Code into the UI, losing context in the conversation memory, and having little visibility into what's going on under the hood I decided to test the AI's coding ability by making this app. This project started as a tool to better manage the model's conversational memory and context but now we're setting new goals! We're giving the models access to read, write, and edit files but the user has full control! Until these models get better (GPT-5?) we're putting more control in the users hands, but offloading all of the tedious work to the models. This App is very much still a work in progress, but come test it out!
+Welcome to GPT-CodeApp, the coding companion you didn't know you needed! 🎉 This project is a clone of Chat-GPT, but with all the features we wish were available. Tired of constantly copying and pasting from VS Code into the UI? Losing context in the conversation memory? Having little visibility into what's going on under the hood? We've got you covered!
 
-![](images/Snip20230801_3.png)
+GPT-CodeApp started as a tool to better manage the model's conversational memory and context, but we didn't stop there. We're giving the models access to read, write, and edit files, all under your control! We're offloading all the tedious work to the models, so you can focus on what matters. 
 
-## Todo
+We're continuously improving and setting new goals. So, come join us on this exciting journey! 🚀
 
-- [x] Testing
-- [x] Improve quality of conversation memory
-- [x] Edit User Files with LLM
-- [x] Give LLM functions to create files and add boiler plate code
-- [x] Support Multiple Conversations
-- [ ] Support Multiple "Identities" for LLM (debugging, adding feature, refactor, etc...)
-- [ ] Better Interface for Adding / Changing LLM Functions
-- [ ] Comprehensive User Documentation
 
-## Table of Contents
+![](images/Snip20231014_1.png)
 
-- [Installation](#installation)
+## 📚 Table of Contents
+
+- [Installation and Setup](#installation)
 - [Usage](#usage)
 - [Contributing](#contributing)
 - [Tests](#tests)
 - [License](#license)
 - [Questions](#questions)
 
-## Installation
+## 🔥 Recent Updates 🔥
 
-We've recently updated out app to leverage SQLite instaed of PostGres. Much easier setup!
-To install necessary dependencies, run the following commands:
+- **Anthropic Support:** We've added support for Anthropic, allowing you to leverage their AI models in addition to OpenAI's GPT-3. 🧠
+- **Sagemaker Endpoint Support:** We're working on adding support for any Sagemaker endpoint. This will allow you to sause any model hosted on Amazon Sagemaker.
+- **Prompt Management:** We've added backend support for prompt management, giving you more control over the prompts that are sent to the AI models.
+- **SQLite Database:** We've moved from Postgres to SQLite for our database needs. This makes setup easier and reduces the resources required to run the application.
+- **UI-Controlled Project Configuration:** You can now control the project configuration directly from the user interface, making it easier to customize the application to your needs.
 
-## Usage
 
-```bash
-cd /frontend
-npm install
-npm run dev
-```
+## 🛠️ Installation and Setup
 
-```bash
-cd /backend
-uvicorn main:app --reload
-```
+Setting up GPT-CodeApp is as easy as 1, 2, 3! Our application consists of a frontend and a backend, both of which need to be set up separately. Follow the steps below to get started:
 
-### On-Demand Agent Function
+### Backend Setup
+
+The backend is a Python application that uses FastAPI. Here's how to set it up:
+
+
+1. Navigate to the backend directory:
+
+    ```bash
+    cd backend
+    ```
+
+2. Install the necessary Python dependencies. We recommend doing this in a virtual environment:
+
+
+    ```bash
+    python3 -m venv env
+    source env/bin/activate
+    pip install -r requirements.txt
+    ```
+
+3. Start the backend server:
+
+    ```bash
+    uvicorn main:app --reload
+    ```
+
+The backend server will start running at `http://localhost:8000`.
+
+### Frontend Setup
+
+The frontend is a React application that uses Next.js. To set it up, follow these steps:
+
+1. Navigate to the frontend directory:
+
+    ```bash
+    cd frontend
+    ```
+
+2. Install the necessary JavaScript dependencies:
+
+    ```bash
+    npm install
+    ```
+
+3. Start the frontend server:
+
+    ```bash
+    npm run dev
+    ```
+
+## 🎮 Usage
+
+Now that you've set everything up, you're ready to start using GPT-CodeApp! Open `http://localhost:3000` in your web browser and start exploring. 
+
+We've also added some cool features like On-Demand Agent Functions that can be called on demand from the user interface (OpenAI Only). They perform specific tasks based on your input and can greatly enhance the functionality and interactivity of the application. To call an On-Demand Agent function, simply prepend the command with a "/".
+
+### On-Demand Agent Function (OpenAI Only)
 
 On-Demand Agent functions are special functions that can be called on demand from the user interface differing from typical OpenAI functions in that we're forcing the function call instead of relying on the LLM to recognize when to call the function. They are designed to perform specific tasks based on user input and can greatly enhance the functionality and interactivity of the application. To call an On-Demand Agent function, you simply prepend the command with a "/".
 
@@ -106,20 +151,24 @@ Then the Agent also responds in the UI with the final diff of changes that were 
 
 The changes were automatically saved and can always be un-done with `cntrl + z`
 
-## Contributing
+## 🤝 Contributing
 
 Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated.
 
 See [Contributing Guide](CONTRIBUTING.md)
 
-## Tests
+## 🧪 Tests
 
 ```bash
 cd backend
 python3 -m pytest 
 ```
 
-## Questions
+❓ Questions
 
-If you have any questions about the project, please open an issue or contact the project team.
+Got questions? We've got answers! If you have any questions about the project, please open an issue or contact the project team. We're here to help!
+
+📜 License
+
+GPT-CodeApp is licensed under the MIT License.
 
