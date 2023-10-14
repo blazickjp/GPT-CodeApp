@@ -144,11 +144,13 @@ async def set_model(input: dict):
 async def save_prompt(input: dict):
     prompt = input.get("prompt")
     prompt_name = input.get("prompt_name")
+    print(prompt_name)
     # Create or update prompt
     if AGENT.memory_manager.prompt_handler.read_prompt(prompt_name):
         AGENT.memory_manager.prompt_handler.update_prompt(prompt_name, prompt)
     else:
         AGENT.memory_manager.prompt_handler.create_prompt(prompt_name, prompt)
+    AGENT.memory_manager.set_system({"system_prompt": prompt})
     return JSONResponse(status_code=200, content={})
 
 

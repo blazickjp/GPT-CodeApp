@@ -10,6 +10,7 @@ import DirectorySelectOption from './DirectorySelectOption';
 const LeftSidebar = ({ isLeftSidebarOpen }) => {
     const dispatch = useDispatch();
     const [prompts, setPrompts] = useState([]);
+    const [sidebarKey, setSidebarKey] = useState(0);
     const promptsRef = useRef([]);
 
     const fetchPrompts = async () => {
@@ -65,7 +66,7 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
 
     useEffect(() => {
         fetchPrompts();
-    }, [isLeftSidebarOpen]);
+    }, [sidebarKey, isLeftSidebarOpen]);
 
     const handlePromptClick = (prompt) => {
         // dispatch(setEditablePrompt(prompt));
