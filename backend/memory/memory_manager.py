@@ -13,7 +13,7 @@ class MemoryManager:
         model: str = "gpt-3.5-turbo",
         identity: str = None,
         tree: str = None,
-        max_tokens: int = 5000,
+        max_tokens: int = 1_000,
         table_name: str = "default",
         db_connection=None,
     ) -> None:
@@ -49,7 +49,7 @@ class MemoryManager:
         results = self.cur.fetchall()
         messages = [{"role": result[0], "content": result[1]} for result in results]
 
-        max_tokens = 10000 if chat_box else self.max_tokens
+        max_tokens = 10_000 if chat_box else self.max_tokens
         if chat_box:
             self.cur.execute(
                 f"""

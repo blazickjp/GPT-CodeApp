@@ -25,6 +25,8 @@ async def startup_event():
     config = {field: value for field, value in config}
     if config.get("directory"):
         CODEBASE.set_directory(config["directory"])
+        AGENT.memory_manager.tree = CODEBASE.tree()
+        AGENT.memory_manager.set_system()
     print(config)
     print("Starting up...")
 
@@ -130,6 +132,7 @@ async def set_files_in_prompt(input: dict):
     files = [file for file in input.get("files", None)]
     AGENT.files_in_prompt = files
     AGENT.set_files_in_prompt()
+    AGENT.memory_manager.set_system()
     return JSONResponse(status_code=200, content={})
 
 
@@ -208,3 +211,11 @@ async def get_home():
     home_directory = os.path.expanduser("~")
     print("home_directory", home_directory)
     return {"home_directory": home_directory}
+
+
+@app.post("/set_max_message_tokens")
+async def set_max_message_tokens(input: dict):
+    max_message_tokens = input.get("max_message_tokens")
+    print(max_message_tokens)
+    AGENT.memory_manager.max_tokens = max_message_tokens
+    return JSONResponse(status_code=200, content={})
