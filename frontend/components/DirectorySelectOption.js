@@ -117,10 +117,10 @@ const DirectorySelectOption = () => {
 
     return (
         <div>
-            <h3 className='text-lg'>Configurations</h3>
-            <hr className='my-2 text-gray-300' />
+            <h3 className='text-lg'>Config</h3>
+            {/* <hr className='my-2 text-gray-300 mx-2' /> */}
             <form onSubmit={handleSubmit} className="p-2">
-                <div className="flex flex-grow space-x-16 items-center align-middle border rounded-md overflow-hidden">
+                <div className="flex space-x-4 items-center border-b border-gray-400 overflow-hidden text-gray-200">
                     <input
                         ref={inputRef}
                         type="text"
@@ -130,14 +130,14 @@ const DirectorySelectOption = () => {
                         onKeyDown={handleKeyDown}
                         className="flex-grow p-2 text-sm bg-transparent outline-none"
                     />
-                    <button type="submit" className="pr-2 py-2 text-purple-600">
-                        <FaArrowRight />
+                    <button type="submit" className="p-3">
+                        <FaArrowRight className='text-purple-600' />
                     </button>
                 </div>
             </form>
             {/* Input for Max token */}
-            <div className='flex flex-row items-center mb-4 ml-4 mt-2'>
-                <text>Message Tokens</text>
+            <div className='flex flex-row items-center mt-4 ml-4 space-x-4'>
+                <text className=' whitespace-nowrap'>Msg Tokens</text>
                 <form onSubmit={handleSubmitTokens} className='flex items-center'>
                     <input
                         type="text"

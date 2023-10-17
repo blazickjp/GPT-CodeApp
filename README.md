@@ -9,7 +9,7 @@ GPT-CodeApp started as a tool to better manage the model's conversational memory
 We're continuously improving and setting new goals. So, come join us on this exciting journey! 🚀
 
 
-![](images/Snip20231014_1.png)
+![](images/Snip20231015_2.png)
 
 ## 📚 Table of Contents
 
