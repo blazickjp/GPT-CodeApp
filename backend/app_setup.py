@@ -28,7 +28,7 @@ def create_database_connection() -> connection:
 
 
 DB_CONNECTION = create_database_connection()
-DIRECTORY = os.getenv("PROJECT_DIRECTORY")
+DIRECTORY = os.getenv("PROJECT_DIRECTORY", ".")
 
 app = FastAPI()
 app.add_middleware(

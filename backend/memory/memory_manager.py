@@ -18,7 +18,7 @@ class MemoryManager:
         db_connection=None,
     ) -> None:
         load_dotenv()
-        self.project_directory = os.getenv("PROJECT_DIRECTORY")
+        self.project_directory = None
         self.model = model
         self.max_tokens = max_tokens
         self.system = None
@@ -115,19 +115,6 @@ class MemoryManager:
             )
 
         return messages
-
-        # messsages = []
-        # SPECIAL = "/"
-        # for result in results:
-        #     # Skip command messages and responses
-        #     if result[0] == "user" and result[1].startswith(SPECIAL):
-        #         continue
-        #     if messsages[-1]["role"] == "user" and messages[-1]["content"].startswith(
-        #         SPECIAL
-        #     ):
-        #         continue
-
-        #     messsages.append({"role": result[0], "content": result[1]})
 
     def add_message(self, role: str, content: str) -> None:
         timestamp = datetime.now().isoformat()  # Current timestamp in milliseconds

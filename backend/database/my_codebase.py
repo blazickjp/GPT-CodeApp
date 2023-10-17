@@ -25,7 +25,7 @@ class MyCodebase:
     UPDATE_FULL = os.getenv("AUTO_UPDATE_EMBEDDINGS", False)
 
     def __init__(self, directory: str = ".", db_connection=None):
-        self.directory = os.path.abspath(directory)
+        self.directory = directory
         self.conn = db_connection
         self.cur = self.conn.cursor()
         self.create_tables()
@@ -34,7 +34,7 @@ class MyCodebase:
 
     def set_directory(self, directory: str) -> None:
         print(f"Setting directory to {directory}")
-        self.directory = os.path.abspath(directory)
+        self.directory = directory
         self.cur.execute(
             """
             INSERT INTO config (field, value, last_updated)

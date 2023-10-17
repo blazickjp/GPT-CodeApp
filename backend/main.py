@@ -1,5 +1,6 @@
 import json
 import os
+from re import A
 from uuid import uuid4
 import tiktoken
 from fastapi import Request
@@ -24,9 +25,11 @@ async def startup_event():
     ).fetchall()
     config = {field: value for field, value in config}
     if config.get("directory"):
+        print("Dir", config["directory"])
         CODEBASE.set_directory(config["directory"])
         AGENT.memory_manager.tree = CODEBASE.tree()
         AGENT.memory_manager.set_system()
+        AGENT.memory_manager.project_directory = config["directory"]
     print(config)
     print("Starting up...")
 
