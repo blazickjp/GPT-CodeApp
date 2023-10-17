@@ -83,6 +83,42 @@ The frontend is a React application that uses Next.js. To set it up, follow thes
     npm run dev
     ```
 
+## 🗝️ Model Authentication
+
+Before you can use the GPT-CodeApp, you'll need to authenticate with the AI models from Anthropic and OpenAI. Here's how to do it:
+
+### Anthropic Authentication
+
+Anthropic uses standard AWS authentication for boto3 and access to Bedrock models. Follow these steps to set it up:
+
+1. Install the AWS CLI on your machine. You can do this by following the instructions in the [official AWS CLI User Guide](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html).
+
+2. Configure your AWS credentials by running the following command and providing your AWS Access Key ID and Secret Access Key when prompted:
+
+    ```bash
+    aws configure
+    ```
+
+3. Set the `AWS_PROFILE` environment variable to the name of the AWS profile you want to use:
+
+    ```bash
+    export AWS_PROFILE=your-profile-name
+    ```
+
+### OpenAI Authentication
+
+OpenAI uses environment variables for authentication. Follow these steps to set it up:
+
+1. Get your OpenAI API key. You can find this in the [OpenAI Dashboard](https://beta.openai.com/dashboard/).
+
+2. Set the `OPENAI_API_KEY` environment variable to your OpenAI API key:
+
+    ```bash
+    export OPENAI_API_KEY=your-api-key
+    ```
+
+Now you're ready to start using the GPT-CodeApp with Anthropic and OpenAI models!
+
 ## 🎮 Usage
 
 Now that you've set everything up, you're ready to start using GPT-CodeApp! Open `http://localhost:3000` in your web browser and start exploring. 
