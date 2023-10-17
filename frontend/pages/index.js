@@ -12,6 +12,7 @@ import ModelSelector from '../components/ModelSelector';
 import { useDispatch, useSelector } from 'react-redux';
 import { addMessage, addAIPartResponse, fetchMessages } from '../store/messages/messagesSlice';
 import { toggleSidebar } from '../store/sidebar/sidebarSlice';
+import { SiPython } from 'react-icons/si';
 
 const encoding = get_encoding("cl100k_base");
 Modal.setAppElement('#__next');
@@ -112,7 +113,10 @@ const Chat = () => {
         <button onClick={toggleLeftSidebar} className="float-left">
           <FiMenu className="ml-2" />
         </button>
-        <h1 className="text-4xl font-bold text-center text-dark-secondary px-5">CodeGPT</h1>
+        <h1 className="text-4xl font-thin text-gray-100 mx-4">
+          CodeGPT
+          <SiPython className="inline-block animate-spin text-4xl text-blue-500" />
+        </h1>
         <button onClick={() => dispatch(toggleSidebar())} className="float-right">
           <FiMenu className="mr-2" />
         </button>

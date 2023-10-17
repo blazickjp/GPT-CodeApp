@@ -7,8 +7,6 @@ from typing import Dict
 
 EMBEDDING_MODEL = "text-embedding-ada-002"
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
-SUMMARY_MODEL = "gpt-3.5-turbo"
-README_MODEL = "gpt-4"
 SUMMARY_PROMPT = """
 Please summarise, in bullet points, what the following code is doing.
 Please be consise and include all the important informastion.\n\n
