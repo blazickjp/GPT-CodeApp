@@ -195,8 +195,9 @@ async def set_directory(input: dict):
     try:
         print(f"Received directory: {directory}")
         CODEBASE.set_directory(directory)
-        AGENT.memory_manager.tree = CODEBASE.tree()
         AGENT.memory_manager.project_directory = directory
+        AGENT.memory_manager.tree = CODEBASE.tree()
+        AGENT.memory_manager.set_system()
         print("OK!")
         return JSONResponse(status_code=200, content={"message": "Success"})
     except Exception as e:
