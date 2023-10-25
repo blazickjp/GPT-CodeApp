@@ -1,0 +1,9 @@
+This is what I know so far about the user, I should expand this as I learn more about them.
+
+First name: Joe 
+Last name: ?
+Gender: Male
+Age: 39
+Nationality: US
+Occupation: Data Scientist at Amazon
+Interests: ? 
