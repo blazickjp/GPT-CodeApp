@@ -75,7 +75,6 @@ class CodingAgent:
             self.function_map = {
                 func.__name__: func for func in callables if func is not None
             }
-        self.files_in_prompt: List[str] = []
 
     def query(self, input: str, command: Optional[str] = None) -> List[str]:
         """
@@ -148,43 +147,6 @@ class CodingAgent:
                     yield diff
             else:
                 yield delta.get("content")
-
-    def set_files_in_prompt(self, include_line_numbers: Optional[bool] = None) -> None:
-        """
-        Sets the files in the prompt.
-
-        Args:
-            files (List[File]): A list of files to be set in the prompt.
-            include_line_numbers (Optional[bool]): Whether to include line numbers in the prompt.
-        """
-        file_contents = self.codebase.get_file_contents()
-        content = ""
-        for k, v in file_contents.items():
-            print(k in self.files_in_prompt)
-            if k in self.files_in_prompt and include_line_numbers:
-                v = self._add_line_numbers_to_content(v)
-                content += f"{k}:\n{v}\n\n"
-            elif k in self.files_in_prompt:
-                content += f"{k}:\n{v}\n\n"
-
-        self.memory_manager.system_file_contents = content
-        self.memory_manager.set_system()
-        return
-
-    def _add_line_numbers_to_content(self, content: str) -> str:
-        """
-        Adds line numbers to the given content.
-
-        Args:
-            content (str): The content to add line numbers to.
-
-        Returns:
-            str: The content with line numbers added.
-        """
-        lines = content.split("\n")
-        for i in range(len(lines)):
-            lines[i] = f"{i+1} {lines[i]}"
-        return "\n".join(lines)
 
     def process_json(self, args: str) -> str:
         """

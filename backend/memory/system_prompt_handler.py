@@ -1,27 +1,116 @@
 """
-CRUD operations for system prompts.
+Methods and CRUD operations for managing system prompts.
 """
+from typing import Optional
 
 
 class SystemPromptHandler:
-    def __init__(self, db_connection):
+    def __init__(self, db_connection, tree=None):
         self.conn = db_connection
         self.cur = self.conn.cursor()
-        self.create_table()
+        self.system_file_summaries = None
+        self.system_file_contents = None
+        self.identity = "You are an AI Pair Programmer and a world class python developer helping the Human work on a project."
+        self.system_table_name = "system_prompt"
+        self.files_in_prompt = None
+        self.system = self.identity
+        self.tree = tree
+        self.create_tables()
 
-    def create_table(self):
-        """Create a table for system prompts if it doesn't exist."""
-        self.cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS system_prompts (
-                id TEXT PRIMARY KEY,
-                prompt TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    def set_system(self, input: dict = {}) -> None:
+        """Set the system message."""
+
+        # print(input)
+        if input.get("system_prompt") is not None:
+            print("Updating system prompt")
+            self.system = input.get("system_prompt")
+        else:
+            self.system = (
+                self.identity
+                + "\n\n"  # noqa 503
+                + "The following information is intended to aid in your responses to the User\n\n"  # noqa 503
+                + "The project directory is setup as follows:\n"  # noqa 503
             )
-        """
+            self.system = self.system + self.tree + "\n\n" if self.tree else ""
+
+            if self.system_file_contents:
+                self.system += (
+                    "Related File Contents:\n" + self.system_file_summaries + "\n\n"
+                )
+
+        self.cur.execute(f"DELETE FROM {self.system_table_name}")
+        self.cur.execute(
+            f"INSERT INTO {self.system_table_name} (role, content) VALUES (?, ?)",
+            ("system", self.system),
         )
-        self.conn.commit()
+        return True
+
+    def set_files_in_prompt(self, include_line_numbers: Optional[bool] = None) -> None:
+        """
+        Sets the files in the prompt.
+
+        Args:
+            files (List[File]): A list of files to be set in the prompt.
+            include_line_numbers (Optional[bool]): Whether to include line numbers in the prompt.
+        """
+        file_contents = self.codebase.get_file_contents()
+        content = ""
+        for k, v in file_contents.items():
+            print(k in self.files_in_prompt)
+            if k in self.files_in_prompt and include_line_numbers:
+                v = self._add_line_numbers_to_content(v)
+                content += f"{k}:\n{v}\n\n"
+            elif k in self.files_in_prompt:
+                content += f"{k}:\n{v}\n\n"
+
+        self.memory_manager.system_file_contents = content
+        self.memory_manager.set_system()
+        return
+
+    def _add_line_numbers_to_content(self, content: str) -> str:
+        """
+        Adds line numbers to the given content.
+
+        Args:
+            content (str): The content to add line numbers to.
+
+        Returns:
+            str: The content with line numbers added.
+        """
+        lines = content.split("\n")
+        for i in range(len(lines)):
+            lines[i] = f"{i + 1} {lines[i]}"
+        return "\n".join(lines)
+
+    def create_tables(self):
+        """Create a table for system prompts if it doesn't exist."""
+        try:
+            self.cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS system_prompts (
+                    id TEXT PRIMARY KEY,
+                    prompt TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """
+            )
+            self.conn.commit()
+
+            self.cur.execute(
+                f"""
+                    CREATE TABLE IF NOT EXISTS {self.system_table_name}
+                    (
+                        role VARCHAR(100),
+                        content TEXT
+                    );
+                    """
+            )
+            self.conn.commit()
+        except Exception as e:
+            print(e)
+            print("Failed to create table.")
+            raise e
 
     def create_prompt(self, prompt_id, prompt):
         """Create a new system prompt."""
