@@ -183,7 +183,7 @@ class CodingAgent:
         """
         lines = content.split("\n")
         for i in range(len(lines)):
-            lines[i] = f"{i+1} {lines[i]}"
+            lines[i] = f"{i + 1} {lines[i]}"
         return "\n".join(lines)
 
     def process_json(self, args: str) -> str:
