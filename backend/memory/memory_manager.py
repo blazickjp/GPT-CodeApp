@@ -167,8 +167,3 @@ class MemoryManager:
         except Exception as e:
             print("Failed to create tables: ", str(e))
         return
-
-    def reset_identity(self):
-        self.identity = "You are an AI Pair Programmer and a world class python developer helping the Human work on a project."
-        self.set_system()
-        return True

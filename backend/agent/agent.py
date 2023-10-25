@@ -135,12 +135,9 @@ class CodingAgent:
             if chunk["choices"][0]["finish_reason"] == "stop" and function_to_call.name:
                 if function_to_call.name == "Changes":
                     yield "```\n\n"
-                print(
-                    f"\n\nFunc Call: {function_to_call.name}\n\n{function_to_call.arguments}"
-                )
+
                 args = self.process_json(function_to_call.arguments)
                 function_response = self.function_map[function_to_call.name](**args)
-                print(f"Func Response: {json.dumps(function_response.to_dict())}")
                 if function_to_call.name == "Changes":
                     diff = function_response.execute()
                     # Show the diff back to the user

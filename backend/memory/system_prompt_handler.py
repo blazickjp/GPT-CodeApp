@@ -1,7 +1,8 @@
 """
 Methods and CRUD operations for managing system prompts.
 """
-from typing import Optional
+from typing import Optional, Dict
+import os
 
 
 class SystemPromptHandler:
@@ -16,6 +17,16 @@ class SystemPromptHandler:
         self.system = self.identity
         self.tree = tree
         self.create_tables()
+        self.directory = self.get_directory()
+
+    def get_directory(self) -> str:
+        self.cur.execute(
+            """
+            SELECT value FROM config WHERE field = 'directory';
+            """
+        )
+        result = self.cur.fetchone()
+        return result[0] if result else None
 
     def set_system(self, input: dict = {}) -> None:
         """Set the system message."""
@@ -35,7 +46,7 @@ class SystemPromptHandler:
 
             if self.system_file_contents:
                 self.system += (
-                    "Related File Contents:\n" + self.system_file_summaries + "\n\n"
+                    "Related File Contents:\n" + self.system_file_contents + "\n\n"
                 )
 
         self.cur.execute(f"DELETE FROM {self.system_table_name}")
@@ -45,6 +56,14 @@ class SystemPromptHandler:
         )
         return True
 
+    def get_file_contents(self) -> Dict[str, str]:
+        self.cur.execute("SELECT file_path, text FROM files")
+        results = self.cur.fetchall()
+        out = {}
+        for file_name, text in results:
+            out.update({os.path.relpath(file_name, self.directory): text})
+        return out
+
     def set_files_in_prompt(self, include_line_numbers: Optional[bool] = None) -> None:
         """
         Sets the files in the prompt.
@@ -53,7 +72,7 @@ class SystemPromptHandler:
             files (List[File]): A list of files to be set in the prompt.
             include_line_numbers (Optional[bool]): Whether to include line numbers in the prompt.
         """
-        file_contents = self.codebase.get_file_contents()
+        file_contents = self.get_file_contents()
         content = ""
         for k, v in file_contents.items():
             print(k in self.files_in_prompt)
@@ -63,8 +82,8 @@ class SystemPromptHandler:
             elif k in self.files_in_prompt:
                 content += f"{k}:\n{v}\n\n"
 
-        self.memory_manager.system_file_contents = content
-        self.memory_manager.set_system()
+        self.system_file_contents = content
+        self.set_system()
         return
 
     def _add_line_numbers_to_content(self, content: str) -> str:

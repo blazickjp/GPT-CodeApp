@@ -7,7 +7,6 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from app_setup import setup_app, app
 
 # import openai
-
 # openai.api_base = "http://127.0.0.1:5001/v1"
 
 
@@ -132,9 +131,9 @@ async def generate_readme():
 @app.post("/set_files_in_prompt")
 async def set_files_in_prompt(input: dict):
     files = [file for file in input.get("files", None)]
-    AGENT.memory_manager.prompt_hanlder.files_in_prompt = files
-    AGENT.memory_manager.prompt_hanlder.set_files_in_prompt()
-    AGENT.memory_manager.prompt_hanlder.set_system()
+    AGENT.memory_manager.prompt_handler.files_in_prompt = files
+    AGENT.memory_manager.prompt_handler.set_files_in_prompt()
+    AGENT.memory_manager.prompt_handler.set_system()
     return JSONResponse(status_code=200, content={})
 
 
