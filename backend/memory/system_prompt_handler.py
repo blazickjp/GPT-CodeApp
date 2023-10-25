@@ -30,7 +30,7 @@ class SystemPromptHandler:
 
     def set_system(self, input: dict = {}) -> None:
         """Set the system message."""
-
+        self.directory = self.get_directory()
         # print(input)
         if input.get("system_prompt") is not None:
             print("Updating system prompt")
@@ -75,7 +75,6 @@ class SystemPromptHandler:
         file_contents = self.get_file_contents()
         content = ""
         for k, v in file_contents.items():
-            print(k in self.files_in_prompt)
             if k in self.files_in_prompt and include_line_numbers:
                 v = self._add_line_numbers_to_content(v)
                 content += f"{k}:\n{v}\n\n"
