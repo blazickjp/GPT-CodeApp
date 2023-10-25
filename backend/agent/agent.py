@@ -92,6 +92,7 @@ class CodingAgent:
         message_history = [
             Message(**i).to_dict() for i in self.memory_manager.get_messages()
         ]
+        print(message_history)
         function_to_call = FunctionCall()
 
         keyword_args = {

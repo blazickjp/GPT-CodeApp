@@ -12,7 +12,7 @@ class SystemPromptHandler:
         self.system_file_summaries = None
         self.system_file_contents = None
         self.identity = "You are an AI Pair Programmer and a world class python developer helping the Human work on a project."
-        self.system_table_name = "system_prompt"
+        self.system_table_name = "default_system_prompt"
         self.files_in_prompt = None
         self.system = self.identity
         self.tree = tree

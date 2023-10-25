@@ -28,11 +28,12 @@ class MemoryManager:
         )
         self.system_file_summaries = None
         self.system_file_contents = None
-        self.memory_table_name = f"{table_name}_memory"
-        self.system_table_name = f"{table_name}_system_prompt"
         self.conn = db_connection
         self.cur = self.conn.cursor()
         self.prompt_handler = SystemPromptHandler(db_connection=self.conn, tree=tree)
+        self.memory_table_name = f"{table_name}_memory"
+        self.prompt_handler.system_table_name = f"{table_name}_system_prompt"
+        self.system_table_name = f"{table_name}_system_prompt"
         self.create_tables()
         self.prompt_handler.set_system()
 
@@ -46,7 +47,7 @@ class MemoryManager:
         results = self.cur.fetchall()
         messages = [{"role": result[0], "content": result[1]} for result in results]
 
-        max_tokens = 10_000 if chat_box else self.max_tokens
+        max_tokens = 30_000 if chat_box else self.max_tokens
         if chat_box:
             self.cur.execute(
                 f"""

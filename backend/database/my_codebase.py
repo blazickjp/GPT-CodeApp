@@ -123,15 +123,6 @@ class MyCodebase:
         except Exception as e:
             print(f"Failed to create tables: {e}")
 
-    def get_file_contents(self) -> Dict[str, str]:
-        self.cur.execute("SELECT file_path, text FROM files")
-        results = self.cur.fetchall()
-        out = {}
-        for file_name, text in results:
-            out.update({os.path.relpath(file_name, self.directory): text})
-        print(f"\n\nGet File Contents: {out.keys()}")
-        return out
-
     def tree(self) -> str:
         tree = {}
         start_from = os.path.basename(self.directory)
@@ -200,6 +191,7 @@ class MyCodebase:
         return (
             not file_name.startswith(".")
             and not file_name.startswith("_")  # noqa 503
+            and not file_name.endswith(".jsonl")  # noqa 503
             and any(  # noqa 503
                 file_name.endswith(ext) for ext in MyCodebase.FILE_EXTENSIONS
             )
