@@ -5,29 +5,19 @@ import tiktoken
 from typing import Dict
 
 
-EMBEDDING_MODEL = "text-embedding-ada-002"
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
-SUMMARY_MODEL = "gpt-3.5-turbo"
-README_MODEL = "gpt-4"
-SUMMARY_PROMPT = """
-Please summarise, in bullet points, what the following code is doing.
-Please be consise and include all the important informastion.\n\n
-CODE:{}
-SUMMARY:
-"""
 
 
 # new comment
 class MyCodebase:
-    load_dotenv()
-    IGNORE_DIRS = os.getenv("IGNORE_DIRS")
-    FILE_EXTENSIONS = os.getenv("FILE_EXTENSIONS")
-    UPDATE_FULL = os.getenv("AUTO_UPDATE_EMBEDDINGS", False)
+    UPDATE_FULL = False
 
-    def __init__(self, directory: str = ".", db_connection=None):
+    def __init__(self, directory: str = ".", db_connection=None, ignore_dirs=None, file_extensions=None):
         self.directory = directory
         self.conn = db_connection
         self.cur = self.conn.cursor()
+        self.ignore_dirs = ignore_dirs
+        self.file_extensions = file_extensions
         self.create_tables()
         self._update_files_and_embeddings()
         self.remove_old_files()
@@ -195,20 +185,18 @@ class MyCodebase:
                     except Exception as e:
                         print(f"Error updating file {file_path}: {e}")
 
-    @staticmethod
-    def _is_valid_file(file_name):
+    def _is_valid_file(self, file_name):
         return (
             not file_name.startswith(".")
             and not file_name.startswith("_")  # noqa 503
             and any(  # noqa 503
-                file_name.endswith(ext) for ext in MyCodebase.FILE_EXTENSIONS
+                file_name.endswith(ext) for ext in self.file_extensions  # noqa 503
             )
         ) or file_name == "Dockerfile"
 
-    @staticmethod
-    def _is_valid_directory(directory: str) -> bool:
+    def _is_valid_directory(self, directory: str) -> bool:
         return (
             not directory.startswith(".")
             and not directory.startswith("_")  # noqa 503
-            and directory not in MyCodebase.IGNORE_DIRS  # noqa 503
+            and directory not in self.ignore_dirs  # noqa 503
         )

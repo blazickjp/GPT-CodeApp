@@ -13,9 +13,9 @@ from pydantic import BaseModel
 from agent.agent_functions.changes import Changes
 from agent.agent_functions.shell_commands import CommandPlan
 
-load_dotenv()
 IDENTITY = "You are an AI Pair Programmer and a world class python developer. Your role is to assist the Human in developing, debugging, and optimizing their project. Feel free to ask for more details if something isn't clear."
-
+IGNORE_DIRS=['node_modules','.next','.venv','__pycache__','.git']
+FILE_EXTENSIONS=['.js','.py','.md']
 
 def create_database_connection() -> connection:
     try:
@@ -55,7 +55,8 @@ def setup_memory_manager(**kwargs) -> MemoryManager:
 
 
 def setup_codebase() -> MyCodebase:
-    my_codebase = MyCodebase(directory=DIRECTORY, db_connection=DB_CONNECTION)
+    my_codebase = MyCodebase(directory=DIRECTORY, db_connection=DB_CONNECTION, file_extensions=FILE_EXTENSIONS, ignore_dirs=IGNORE_DIRS)
+    my_codebase.ignore_dirs = IGNORE_DIRS
     return my_codebase
 
 
