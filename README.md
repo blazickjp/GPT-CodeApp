@@ -124,7 +124,16 @@ Now you're ready to start using the GPT-CodeApp with Anthropic and OpenAI models
 
 Now that you've set everything up, you're ready to start using GPT-CodeApp! Open `http://localhost:3000` in your web browser and start exploring. 
 
-We've also added some cool features like On-Demand Agent Functions that can be called on demand from the user interface (OpenAI Only). They perform specific tasks based on your input and can greatly enhance the functionality and interactivity of the application. To call an On-Demand Agent function, simply prepend the command with a "/".
+Using GPT-CodeApp is as simple as chatting with an AI. Here's how to get started:
+
+ * Open http://localhost:3000 in your web browser to access the GPT-CodeApp interface.
+ * Open the sidebar on the left side of the interface. This is where you'll input the directory of your coding project.
+ * Enter the directory of your coding project in the sidebar. This will allow the GPT-CodeApp to access your project files.
+
+Start interacting with the GPT-CodeApp just like you would with ChatGPT. You can ask questions, request code snippets, and more. One of the biggest advantages of GPT-CodeApp is the ability to use the search functionality to locate and add files directly to the system prompt. This is a powerful feature that allows you to quickly and easily reference specific parts of your codebase.
+
+
+Recently, we've also began experiemnting with some cool features like On-Demand Agent Functions that can be called on demand from the user interface (OpenAI Only). They perform specific tasks based on your input and can greatly enhance the functionality and interactivity of the application. To call an On-Demand Agent function, simply prepend the command with a "/".
 
 ### On-Demand Agent Function (OpenAI Only)
 
