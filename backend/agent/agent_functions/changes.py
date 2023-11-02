@@ -76,7 +76,7 @@ class Changes(OpenAISchema):
         """
         for change in changes:
             new_content = self.replace_part_with_missing_leading_whitespace(
-                whole_lines=content.split("\n"),
+                whole_lines=content.splitlines(),
                 part_lines=change.original.splitlines(),
                 replace_lines=change.updated.splitlines(),
             )
@@ -99,25 +99,21 @@ class Changes(OpenAISchema):
         """
         Counts the leading spaces in a line of code.
         """
-        spaces = 0
-        for char in line:
-            if char == " ":
-                spaces += 1
-            else:
-                break
+        spaces = len(line) - len(line.lstrip())
         return spaces
 
-    def execute(self) -> str:
+    def execute(self, directory) -> str:
         """
         Executes the changes on the file and returns a diff.
         """
+        DIRECTORY = directory
         relative_path = self.file_name.lstrip("/")
         file_path = os.path.join(DIRECTORY, relative_path)
         print(f"Directory: {DIRECTORY}")
         print(f"File Path: {file_path}")
         try:
             with open(file_path, "r") as f:
-                current_contents = f.read()
+                current_contents = f.readlines()
                 # current_contents_with_line_numbers = "\n".join(
                 #     [
                 #         f"{i+1} {line}"
@@ -199,7 +195,7 @@ class Changes(OpenAISchema):
         del whole_lines[start:end]
         # add new lines and adjust indentation
         for i, line in enumerate(replace_lines):
-            whole_lines.insert(start + i, spaces * " " + line)
+            whole_lines.insert(start + i, " " * spaces + line)
 
         return "\n".join(whole_lines)
 

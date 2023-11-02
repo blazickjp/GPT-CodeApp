@@ -18,7 +18,7 @@ from database.my_codebase import MyCodebase
 GPT_MODEL = "gpt-4"  # or any other chat model you want to use
 # GPT_MODEL = "anthropic"  # or any other chat model you want to use
 MAX_TOKENS = 2000  # or any other number of tokens you want to use
-TEMPERATURE = 0.2  # or any other temperature you want to use
+TEMPERATURE = 0.75  # or any other temperature you want to use
 
 
 class FunctionCall(BaseModel):
@@ -125,13 +125,13 @@ class CodingAgent:
         for i, chunk in enumerate(self.call_model_streaming(**keyword_args)):
             delta = chunk["choices"][0].get("delta", {})
             if "function_call" in delta:
-                yield from self.process_function_call(delta)
+                yield from self.process_function_call(delta, i)
             if self.should_stop_and_has_function(chunk):
                 yield from self.execute_function()
             else:
                 yield delta.get("content")
 
-    def process_function_call(self, delta):
+    def process_function_call(self, delta, i):
         function_call = delta["function_call"]
         if "name" in function_call:
             self.function_to_call.name = function_call["name"]
@@ -154,7 +154,7 @@ class CodingAgent:
         args = self.process_json(self.function_to_call.arguments)
         function_response = self.function_map[self.function_to_call.name](**args)
         if self.function_to_call.name == "Changes":
-            diff = function_response.execute()
+            diff = function_response.execute(self.codebase.directory)
             yield diff
 
     def process_json(self, args: str) -> str:

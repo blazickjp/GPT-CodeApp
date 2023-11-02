@@ -196,6 +196,7 @@ async def set_directory(input: dict):
         CODEBASE.set_directory(directory)
         AGENT.memory_manager.project_directory = directory
         AGENT.memory_manager.prompt_handler.tree = CODEBASE.tree()
+        AGENT.memory_manager.prompt_handler.directory = directory
         AGENT.memory_manager.prompt_handler.set_system()
         print("OK!")
         return JSONResponse(status_code=200, content={"message": "Success"})

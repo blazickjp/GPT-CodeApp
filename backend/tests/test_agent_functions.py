@@ -5,7 +5,8 @@ from agent.agent_functions.changes import Changes
 from dotenv import load_dotenv
 
 load_dotenv()
-DIRECTORY = os.getenv("PROJECT_DIRECTORY")
+DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+DIRECTORY = os.path.join(DIRECTORY, "..", "..")
 
 temp_file = "backend/tests/test_files/agent_function_test1.py"
 temp_file_full = os.path.join(DIRECTORY, temp_file)
@@ -14,6 +15,9 @@ temp_file_full = os.path.join(DIRECTORY, temp_file)
 def test_FileChange_real_world_example3():
     TEST_FILE = "backend/tests/test_files/app_setup_test.py"
     FULL_PATH = os.path.join(DIRECTORY, TEST_FILE)
+    # print("FULL_PATH", FULL_PATH)
+    print(DIRECTORY)
+
     if os.path.exists(temp_file_full):
         os.remove(temp_file_full)
         shutil.copy2(FULL_PATH, temp_file_full)
