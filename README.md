@@ -23,7 +23,7 @@ We're continuously improving and setting new goals. So, come join us on this exc
 
 ## 🔥 Recent Updates 🔥
 
-- **Anthropic Support:** We've added support for Anthropic, allowing you to leverage their AI models in addition to OpenAI's GPT-3. 🧠
+- **Bedrock Support:** We've added support for Bedrock, specifically the ClaudEv2 model, allowing you to leverage their AI models in addition to OpenAI's GPT-3.5 and GPT-4 models. 🧠
 - **Sagemaker Endpoint Support:** We're working on adding support for any Sagemaker endpoint. This will allow you to sause any model hosted on Amazon Sagemaker.
 - **Prompt Management:** We've added backend support for prompt management, giving you more control over the prompts that are sent to the AI models.
 - **SQLite Database:** We've moved from Postgres to SQLite for our database needs. This makes setup easier and reduces the resources required to run the application.
@@ -86,11 +86,11 @@ The frontend is a React application that uses Next.js. To set it up, follow thes
 
 ## 🗝️ Model Authentication
 
-Before you can use the GPT-CodeApp, you'll need to authenticate with the AI models from Anthropic and OpenAI. Here's how to do it:
+Before you can use the GPT-CodeApp, you'll need to authenticate with the AI models from Bedrock and OpenAI. Here's how to do it:
 
-### Anthropic Authentication
+### Bedrock Authentication
 
-Anthropic uses standard AWS authentication for boto3 and access to Bedrock models. Follow these steps to set it up:
+Bedrock uses standard AWS authentication for boto3 and access to the ClaudEv2 models. Follow these steps to set it up:
 
 1. Install the AWS CLI on your machine. You can do this by following the instructions in the [official AWS CLI User Guide](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html).
 
