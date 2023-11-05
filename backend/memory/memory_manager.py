@@ -1,4 +1,3 @@
-import os
 import tiktoken
 
 from typing import Optional, List
@@ -26,14 +25,16 @@ class MemoryManager:
         self.tree = tree
         self.system_file_summaries = None
         self.system_file_contents = None
-        self.memory_table_name = f"{table_name}_memory"
-        self.system_table_name = f"{table_name}_system_prompt"
         self.conn = db_connection
         self.cur = self.conn.cursor()
-        self.prompt_handler = SystemPromptHandler(db_connection=self.conn)
-
+        self.prompt_handler = SystemPromptHandler(
+            db_connection=self.conn, tree=tree, identity=self.identity
+        )
+        self.memory_table_name = f"{table_name}_memory"
+        self.prompt_handler.system_table_name = f"{table_name}_system_prompt"
+        self.system_table_name = f"{table_name}_system_prompt"
         self.create_tables()
-        self.set_system()
+        self.prompt_handler.set_system()
 
     def get_messages(self, chat_box: Optional[bool] = None) -> List[dict]:
         self.cur.execute(
@@ -45,7 +46,7 @@ class MemoryManager:
         results = self.cur.fetchall()
         messages = [{"role": result[0], "content": result[1]} for result in results]
 
-        max_tokens = 10_000 if chat_box else self.max_tokens
+        max_tokens = 30_000 if chat_box else self.max_tokens
         if chat_box:
             self.cur.execute(
                 f"""
@@ -74,7 +75,7 @@ class MemoryManager:
                 WITH Exclude AS (
                     SELECT interaction_index, last_idx
                     FROM (
-                        select lag(interaction_index,1) over (order by interaction_index desc) as last_idx, * 
+                        select lag(interaction_index,1) over (order by interaction_index desc) as last_idx, *
                         from {self.memory_table_name}
                         )
                     WHERE (content LIKE '/%' AND role = 'user')
@@ -197,21 +198,6 @@ class MemoryManager:
                 );
                 """
             )
-            self.cur.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS {self.system_table_name}
-                (
-                    role VARCHAR(100),
-                    content TEXT
-                );
-                """
-            )
-            self.conn.commit()
         except Exception as e:
             print("Failed to create tables: ", str(e))
         return
-
-    def reset_identity(self):
-        self.identity = "You are an AI Pair Programmer and a world class python developer helping the Human work on a project."
-        self.set_system()
-        return True

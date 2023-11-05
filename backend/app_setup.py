@@ -5,7 +5,6 @@ from psycopg2.extensions import connection
 from agent.agent import CodingAgent
 from memory.memory_manager import MemoryManager
 from database.my_codebase import MyCodebase
-from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Any, Callable
@@ -87,7 +86,13 @@ def setup_memory_manager(**kwargs) -> MemoryManager:
 
 
 def setup_codebase() -> MyCodebase:
-    my_codebase = MyCodebase(directory=DIRECTORY, db_connection=DB_CONNECTION, file_extensions=FILE_EXTENSIONS, ignore_dirs=IGNORE_DIRS)
+    my_codebase = MyCodebase(
+        directory=DIRECTORY,
+        db_connection=DB_CONNECTION,
+        file_extensions=FILE_EXTENSIONS,
+        ignore_dirs=IGNORE_DIRS,
+    )
+
     my_codebase.ignore_dirs = IGNORE_DIRS
     return my_codebase
 

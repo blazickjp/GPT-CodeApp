@@ -7,7 +7,6 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from app_setup import setup_app, app
 
 # import openai
-
 # openai.api_base = "http://127.0.0.1:5001/v1"
 
 
@@ -26,8 +25,8 @@ async def startup_event():
     if config.get("directory"):
         print("Dir", config["directory"])
         CODEBASE.set_directory(config["directory"])
-        AGENT.memory_manager.tree = CODEBASE.tree()
-        AGENT.memory_manager.set_system()
+        AGENT.memory_manager.prompt_handler.tree = CODEBASE.tree()
+        AGENT.memory_manager.prompt_handler.set_system()
         AGENT.memory_manager.project_directory = config["directory"]
     print(config)
     print("Starting up...")
@@ -60,7 +59,7 @@ async def get_system_prompt():
 
 @app.post("/update_system")
 async def update_system_prompt(input: dict):
-    AGENT.memory_manager.set_system(input)
+    AGENT.memory_manager.prompt_handler.set_system(input)
     return JSONResponse(status_code=200, content={})
 
 
@@ -135,9 +134,9 @@ async def generate_readme():
 @app.post("/set_files_in_prompt")
 async def set_files_in_prompt(input: dict):
     files = [file for file in input.get("files", None)]
-    AGENT.files_in_prompt = files
-    AGENT.set_files_in_prompt()
-    AGENT.memory_manager.set_system()
+    AGENT.memory_manager.prompt_handler.files_in_prompt = files
+    AGENT.memory_manager.prompt_handler.set_files_in_prompt()
+    AGENT.memory_manager.prompt_handler.set_system()
     return JSONResponse(status_code=200, content={})
 
 
@@ -158,7 +157,7 @@ async def save_prompt(input: dict):
         AGENT.memory_manager.prompt_handler.update_prompt(prompt_name, prompt)
     else:
         AGENT.memory_manager.prompt_handler.create_prompt(prompt_name, prompt)
-    AGENT.memory_manager.set_system({"system_prompt": prompt})
+    AGENT.memory_manager.prompt_handler.set_system({"system_prompt": prompt})
     return JSONResponse(status_code=200, content={})
 
 
@@ -188,7 +187,7 @@ async def set_prompt(input: dict):
     print(prompt_id)
     print(prompt)
     AGENT.memory_manager.prompt_handler.update_prompt(prompt_id, prompt)
-    AGENT.memory_manager.set_system({"system_prompt": prompt})
+    AGENT.memory_manager.prompt_handler.set_system({"system_prompt": prompt})
     return JSONResponse(status_code=200, content={})
 
 
@@ -199,8 +198,9 @@ async def set_directory(input: dict):
         print(f"Received directory: {directory}")
         CODEBASE.set_directory(directory)
         AGENT.memory_manager.project_directory = directory
-        AGENT.memory_manager.tree = CODEBASE.tree()
-        AGENT.memory_manager.set_system()
+        AGENT.memory_manager.prompt_handler.tree = CODEBASE.tree()
+        AGENT.memory_manager.prompt_handler.directory = directory
+        AGENT.memory_manager.prompt_handler.set_system()
         print("OK!")
         return JSONResponse(status_code=200, content={"message": "Success"})
     except Exception as e:
