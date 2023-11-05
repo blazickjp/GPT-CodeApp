@@ -165,40 +165,6 @@ class MemoryManager:
         num_tokens = len(encoding.encode(message))
         return num_tokens
 
-    def set_system(self, input: dict = {}) -> None:
-        """Set the system message."""
-
-        "Update the system prompt manually"
-        # print(input)
-        print(input.keys())
-        if input.get("system_prompt") is not None:
-            print("Updating system prompt")
-            self.system = input.get("system_prompt")
-        else:
-            self.system = (
-                self.identity
-                + "\n\n"  # noqa 503
-                + "********* Contextual Information *********\n\n"  # noqa 503
-            )
-            self.system += (
-                "The project directory is setup as follows:\n" + self.tree + "\n\n"
-                if self.tree
-                else ""
-            )
-
-            self.system += (
-                "Related File Contents:\n" + self.system_file_contents + "\n\n"
-                if self.system_file_contents
-                else ""
-            )
-
-        self.cur.execute(f"DELETE FROM {self.system_table_name}")
-        self.cur.execute(
-            f"INSERT INTO {self.system_table_name} (role, content) VALUES (?, ?)",
-            ("system", self.system),
-        )
-        return True
-
     def create_tables(self) -> None:
         try:
             self.cur.execute(

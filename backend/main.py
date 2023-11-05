@@ -72,7 +72,7 @@ async def message_streaming(request: Request) -> StreamingResponse:
 @app.get("/system_prompt")
 async def get_system_prompt():
     if AGENT.GPT_MODEL in ['gpt-4', 'gpt-3.5-turbo']:
-        return {"system_prompt": AGENT.memory_manager.system}
+        return {"system_prompt": AGENT.memory_manager.prompt_handler.system}
     elif AGENT.GPT_MODEL == 'anthropic':
         return {"system_prompt": AGENT.generate_anthropic_prompt(include_messages=False)}
 
@@ -145,21 +145,9 @@ async def generate_readme():
 @app.post("/set_files_in_prompt")
 async def set_files_in_prompt(input: dict):
     files = [file for file in input.get("files", None)]
-    # First update the config table
-    AGENT.memory_manager.cur.execute(
-        """
-        INSERT INTO config (field, value, last_updated)
-        VALUES (?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(field)
-        DO UPDATE SET value = excluded.value, last_updated = excluded.last_updated
-        WHERE field = 'files';
-        """,
-        ("files", json.dumps(files)),
-    )
     AGENT.memory_manager.prompt_handler.files_in_prompt = files
     AGENT.memory_manager.prompt_handler.set_files_in_prompt()
     AGENT.memory_manager.prompt_handler.set_system()
-
     return JSONResponse(status_code=200, content={})
 
 

@@ -1,9 +1,10 @@
 from unittest.mock import Mock
 from memory.memory_manager import MemoryManager
+from memory.system_prompt_handler import SystemPromptHandler
 
 
 class TestMemoryManager:
-    def setup_method(self):
+    def setup(self):
         # Create a mock connection object
         conn = Mock()
 
