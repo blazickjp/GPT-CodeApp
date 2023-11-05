@@ -30,7 +30,9 @@ class MemoryManager:
         self.system_file_contents = None
         self.conn = db_connection
         self.cur = self.conn.cursor()
-        self.prompt_handler = SystemPromptHandler(db_connection=self.conn, tree=tree)
+        self.prompt_handler = SystemPromptHandler(
+            db_connection=self.conn, tree=tree, identity=self.identity
+        )
         self.memory_table_name = f"{table_name}_memory"
         self.prompt_handler.system_table_name = f"{table_name}_system_prompt"
         self.system_table_name = f"{table_name}_system_prompt"

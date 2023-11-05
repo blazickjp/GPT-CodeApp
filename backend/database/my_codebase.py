@@ -1,8 +1,6 @@
 import os
 import datetime
-from dotenv import load_dotenv
 import tiktoken
-from typing import Dict
 
 
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
@@ -12,7 +10,13 @@ ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 class MyCodebase:
     UPDATE_FULL = False
 
-    def __init__(self, directory: str = ".", db_connection=None, ignore_dirs=None, file_extensions=None):
+    def __init__(
+        self,
+        directory: str = ".",
+        db_connection=None,
+        ignore_dirs=None,
+        file_extensions=None,
+    ):
         self.directory = directory
         self.conn = db_connection
         self.cur = self.conn.cursor()

@@ -1,13 +1,9 @@
 import os
 import difflib as dl
 
-from dotenv import load_dotenv
 from typing import List, Optional, Tuple
 from pydantic import Field
 from openai_function_call import OpenAISchema
-
-load_dotenv()
-DIRECTORY = os.getenv("PROJECT_DIRECTORY")
 
 
 class Change(OpenAISchema):
