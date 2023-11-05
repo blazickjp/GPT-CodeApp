@@ -1,38 +1,56 @@
-# import unittest
-# import os
-# from unittest.mock import Mock
-# from database.my_codebase import MyCodebase
+import unittest
+import os
+from unittest.mock import Mock
+from database.my_codebase import MyCodebase
+from unittest.mock import patch
+
+IGNORE_DIRS = ["node_modules", ".next", ".venv", "__pycache__", ".git"]
+FILE_EXTENSIONS = [".js", ".py", ".md"]
 
 
-# class MyCodebaseTests(unittest.TestCase):
-#     def setUp(self):
-#         # Create a mock connection object
-#         conn = Mock()
+class MyCodebaseTests(unittest.TestCase):
+    DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+    DIRECTORY = os.path.join(DIRECTORY, "..", "..")
+    print(DIRECTORY)
 
-#         # Create a mock cursor object
-#         cursor = Mock()
+    def setUp(self):
+        # Create a mock connection object
+        conn = Mock()
 
-#         # Configure the mock connection to return the mock cursor when cursor() is called
-#         conn.cursor.return_value = cursor
-#         self.codebase = MyCodebase(os.path.abspath("./"), db_connection=conn)
+        # Create a mock cursor object
+        cursor = Mock()
 
-#     def test_set_directory(self):
-#         new_directory = os.path.abspath("../")
-#         self.codebase.set_directory(new_directory)
-#         self.assertEqual(self.codebase.directory, os.path.abspath(new_directory))
+        # Configure the mock connection to return the mock cursor when cursor() is called
+        conn.cursor.return_value = cursor
 
-#     def test_is_valid_file(self):
-#         self.assertTrue(self.codebase._is_valid_file("valid_file.py"))
-#         self.assertFalse(self.codebase._is_valid_file(".invalid_file.py"))
+        # Configure the mock cursor to return an empty list when fetchall() is called
+        cursor.fetchall.return_value = []
 
-#     def test_search(self):
-#         search_results = self.codebase.search("search_term")
-#         self.assertIsInstance(search_results, str)
+        self.codebase = MyCodebase(
+            self.DIRECTORY,
+            db_connection=conn,
+            ignore_dirs=IGNORE_DIRS,
+            file_extensions=FILE_EXTENSIONS,
+        )
 
-#     def test_get_summaries(self):
-#         summaries = self.codebase.get_summaries()
-#         self.assertIsInstance(summaries, dict)
+    @patch(
+        "database.my_codebase.ENCODER.encode", return_value=list(range(10))
+    )  # mocks ENCODER.encode to always return a list of length 10
+    def test_set_directory(self, mock_encode):
+        new_directory = os.path.abspath("../")
+        self.codebase.set_directory(new_directory)
+        self.assertEqual(self.codebase.directory, os.path.abspath(new_directory))
 
-#     def test_tree(self):
-#         tree = self.codebase.tree()
-#         self.assertIsInstance(tree, str)
+    @patch(
+        "database.my_codebase.ENCODER.encode", return_value=list(range(10))
+    )  # mocks ENCODER.encode to always return a list of length 10
+    def test_is_valid_file(self, mock_encode):
+        self.assertTrue(self.codebase._is_valid_file("valid_file.py"))
+        self.assertFalse(self.codebase._is_valid_file(".invalid_file.py"))
+
+    @patch(
+        "database.my_codebase.ENCODER.encode", return_value=list(range(10))
+    )  # mocks ENCODER.encode to always return a list of length 10
+    def test_tree(self, mock_encode):
+        tree = self.codebase.tree()
+        self.assertIsInstance(tree, str)

@@ -18,7 +18,7 @@ from database.my_codebase import MyCodebase
 GPT_MODEL = "gpt-4"  # or any other chat model you want to use
 # GPT_MODEL = "anthropic"  # or any other chat model you want to use
 MAX_TOKENS = 2000  # or any other number of tokens you want to use
-TEMPERATURE = 0.2  # or any other temperature you want to use
+TEMPERATURE = 0.75  # or any other temperature you want to use
 
 
 class FunctionCall(BaseModel):
@@ -75,7 +75,6 @@ class CodingAgent:
             self.function_map = {
                 func.__name__: func for func in callables if func is not None
             }
-        self.files_in_prompt: List[str] = []
 
     def query(self, input: str, command: Optional[str] = None) -> List[str]:
         """
@@ -93,7 +92,8 @@ class CodingAgent:
         message_history = [
             Message(**i).to_dict() for i in self.memory_manager.get_messages()
         ]
-        function_to_call = FunctionCall()
+
+        self.function_to_call = FunctionCall()
 
         keyword_args = {
             "model": self.GPT_MODEL,
@@ -121,70 +121,41 @@ class CodingAgent:
                 # )
                 # self.set_files_in_prompt(include_line_numbers=True)
                 keyword_args["model"] = "gpt-4"
-
+        print(f"Calling model: {self.GPT_MODEL}")
         for i, chunk in enumerate(self.call_model_streaming(**keyword_args)):
             delta = chunk["choices"][0].get("delta", {})
             if "function_call" in delta:
-                if "name" in delta.function_call:
-                    function_to_call.name = delta.function_call["name"]
-                if "arguments" in delta.function_call:
-                    if function_to_call.name == "Changes" and i == 0:
-                        yield "\n```json\n" + delta.function_call["arguments"]
-                    else:
-                        function_to_call.arguments += delta.function_call["arguments"]
-                        yield delta.function_call["arguments"]
-            if chunk["choices"][0]["finish_reason"] == "stop" and function_to_call.name:
-                if function_to_call.name == "Changes":
-                    yield "```\n\n"
-                print(
-                    f"\n\nFunc Call: {function_to_call.name}\n\n{function_to_call.arguments}"
-                )
-                args = self.process_json(function_to_call.arguments)
-                function_response = self.function_map[function_to_call.name](**args)
-                print(f"Func Response: {json.dumps(function_response.to_dict())}")
-                if function_to_call.name == "Changes":
-                    diff = function_response.execute()
-                    # Show the diff back to the user
-                    yield diff
+                yield from self.process_function_call(delta, i)
+            if self.should_stop_and_has_function(chunk):
+                yield from self.execute_function()
             else:
                 yield delta.get("content")
 
-    def set_files_in_prompt(self, include_line_numbers: Optional[bool] = None) -> None:
-        """
-        Sets the files in the prompt.
+    def process_function_call(self, delta, i):
+        function_call = delta["function_call"]
+        if "name" in function_call:
+            self.function_to_call.name = function_call["name"]
+        if "arguments" in function_call:
+            if self.function_to_call.name == "Changes" and i == 0:
+                yield "\n```json\n" + function_call["arguments"]
+            else:
+                self.function_to_call.arguments += function_call["arguments"]
+                yield function_call["arguments"]
 
-        Args:
-            files (List[File]): A list of files to be set in the prompt.
-            include_line_numbers (Optional[bool]): Whether to include line numbers in the prompt.
-        """
-        file_contents = self.codebase.get_file_contents()
-        content = ""
-        for k, v in file_contents.items():
-            print(k in self.files_in_prompt)
-            if k in self.files_in_prompt and include_line_numbers:
-                v = self._add_line_numbers_to_content(v)
-                content += f"{k}:\n{v}\n\n"
-            elif k in self.files_in_prompt:
-                content += f"{k}:\n{v}\n\n"
+    def should_stop_and_has_function(self, delta):
+        return (
+            delta["choices"][0]["finish_reason"] == "stop"
+            and self.function_to_call.name  # noqa 503
+        )
 
-        self.memory_manager.system_file_contents = content
-        self.memory_manager.set_system()
-        return
-
-    def _add_line_numbers_to_content(self, content: str) -> str:
-        """
-        Adds line numbers to the given content.
-
-        Args:
-            content (str): The content to add line numbers to.
-
-        Returns:
-            str: The content with line numbers added.
-        """
-        lines = content.split("\n")
-        for i in range(len(lines)):
-            lines[i] = f"{i+1} {lines[i]}"
-        return "\n".join(lines)
+    def execute_function(self):
+        if self.function_to_call.name == "Changes":
+            yield "```\n\n"
+        args = self.process_json(self.function_to_call.arguments)
+        function_response = self.function_map[self.function_to_call.name](**args)
+        if self.function_to_call.name == "Changes":
+            diff = function_response.execute(self.codebase.directory)
+            yield diff
 
     def process_json(self, args: str) -> str:
         """
@@ -217,25 +188,6 @@ class CodingAgent:
 
             return json.loads(response_str)
 
-    def generate_llama_prompt(self) -> str:
-        """
-        Generates a prompt for the Code Llama model.
-
-        Args:
-            input (str): The input text to be processed by the GPT-3 model.
-
-        Returns:
-            str: The generated prompt.
-        """
-        prompt = f"### System Prompt\n{self.memory_manager.system}\n\n"
-        for message in self.memory_manager.get_messages():
-            if message["role"].lower() == "user":
-                prompt += f"### User Message\n{message['content']}\n\n"
-            if message["role"].lower() == "assistant":
-                prompt += f"### Assistant\n{message['content']}\n\n"
-
-        return prompt + "### Assistant"
-
     def generate_anthropic_prompt(self) -> str:
         """
         Generates a prompt for the Gaive model.
@@ -265,56 +217,7 @@ class CodingAgent:
         if self.GPT_MODEL == "gpt-4" or self.GPT_MODEL == "gpt-3.5-turbo":
             for chunk in openai.ChatCompletion.create(**kwargs):
                 yield chunk
-        if self.GPT_MODEL == "code-llama":
-            try:
-                sm_client = boto3.client("sagemaker-runtime")
-                endpoint = os.getenv("CODELLAMA_ENDPOINT")
-                if not endpoint:
-                    raise ValueError("CODELLAMA_ENDPOINT environment variable not set")
-                resp = sm_client.invoke_endpoint_with_response_stream(
-                    EndpointName=endpoint,
-                    Body=json.dumps(
-                        {
-                            "inputs": self.generate_llama_prompt(),
-                            "parameters": {
-                                "max_new_tokens": kwargs["max_tokens"],
-                            },
-                        }
-                    ),
-                    ContentType="application/json",
-                )
-            except Exception as e:
-                print(f"Error calling Code Llama: {e}")
-                yield {
-                    "choices": [
-                        {
-                            "finish_reason": "stop",
-                            "delta": {"content": "Error: " + str(e)},
-                        }
-                    ]
-                }
 
-            while True:
-                try:
-                    chunk = next(iter((resp["Body"])))
-                    bytes_to_send = chunk["PayloadPart"]["Bytes"]
-                    decoded_str = bytes_to_send.decode("utf-8")
-                    cleaned_str = decoded_str.replace(
-                        '{"generated_text": "', ""
-                    ).replace('"}', "")
-                    cleaned_str = cleaned_str.encode().decode("unicode_escape")
-
-                    yield {
-                        "choices": [
-                            {"finish_reason": "stop", "delta": {"content": cleaned_str}}
-                        ]
-                    }
-                except StopIteration:
-                    break
-
-                except UnboundLocalError:
-                    print("UnboundLocalError")
-                    break
         if self.GPT_MODEL == "anthropic":
             print("Calling anthropic")
             try:
