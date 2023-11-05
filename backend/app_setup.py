@@ -46,7 +46,6 @@ My task ends when [completion].
 IGNORE_DIRS = ["node_modules", ".next", ".venv", "__pycache__", ".git"]
 FILE_EXTENSIONS = [".js", ".py", ".md"]
 
-
 def create_database_connection() -> connection:
     try:
         conn = sqlite3.connect("database.db", check_same_thread=False)
@@ -91,6 +90,7 @@ def setup_codebase() -> MyCodebase:
         file_extensions=FILE_EXTENSIONS,
         ignore_dirs=IGNORE_DIRS,
     )
+
     my_codebase.ignore_dirs = IGNORE_DIRS
     return my_codebase
 
