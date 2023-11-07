@@ -1,5 +1,4 @@
 # import os
-import io
 import re
 import openai
 import json
@@ -69,7 +68,6 @@ class CodingAgent:
         self.callables = callables
         self.GPT_MODEL = GPT_MODEL
         self.codebase = codebase
-        self.buff = io.BytesIO()
         self.read_pos = 0
         if callables:
             self.function_map = {
@@ -217,26 +215,7 @@ class CodingAgent:
 
             return json.loads(response_str)
 
-    def generate_llama_prompt(self) -> str:
-        """
-        Generates a prompt for the Code Llama model.
-
-        Args:
-            input (str): The input text to be processed by the GPT-3 model.
-
-        Returns:
-            str: The generated prompt.
-        """
-        prompt = f"### System Prompt\n{self.memory_manager.system}\n\n"
-        for message in self.memory_manager.get_messages():
-            if message["role"].lower() == "user":
-                prompt += f"### User Message\n{message['content']}\n\n"
-            if message["role"].lower() == "assistant":
-                prompt += f"### Assistant\n{message['content']}\n\n"
-
-        return prompt + "### Assistant"
-
-    def generate_anthropic_prompt(self) -> str:
+    def generate_anthropic_prompt(self, include_messages=True) -> str:
         """
         Generates a prompt for the Gaive model.
 
@@ -246,75 +225,42 @@ class CodingAgent:
         Returns:
             str: The generated prompt.
         """
-        prompt = f"\n\nHuman: {self.memory_manager.system}\n\n"
-        user_messages = 0
-        for message in self.memory_manager.get_messages():
-            if message["role"].lower() == "user":
-                if user_messages == 0:
-                    prompt += f"{message['content']}\n\n"
-                    user_messages += 1
-                else:
-                    prompt += f"Human: {message['content']}\n\n"
-            if message["role"].lower() == "assistant":
-                prompt += f"Assistant: {message['content']}\n\n"
+        conversation_history = "The following is a portion of your conversation history with the human is inside the <conversation-history></conversation-history> XML tags.\n\n<conversation-history>\n"
+        messages = self.memory_manager.get_messages()
+        # Extract the last User messages
+        print(messages)
+        last_user_message = "\n\nThe last message from the human is tagged below in <last-message></last-message> XML tags.\n<last-message>\n" + [message['content'] for message in messages if message["role"] == "user"][-1] + "\n</last-message>"
 
-        return prompt + "Assistant:"
+
+        for idx, message in enumerate(messages):
+            if message["role"].lower() == "user":
+                    conversation_history += f"Human: {message['content']}\n\n"
+            if message["role"].lower() == "assistant":
+                conversation_history += f"Assistant: {message['content']}\n\n"
+        conversation_history += "\n</conversation-history>\n\n"
+        
+        if self.memory_manager.system_file_contents:
+            file_context = "Some file contents related to the conversation are wrapped in <file-contents></file-contenxt> XML Tags.\n\n<file-contents>\n" + self.memory_manager.system_file_contents + "\n</file-contents>\n\n"
+        else:
+            file_context = ""
+        if self.memory_manager.tree:
+            tree = "The following is the current working directory for the human within the <directory-tree></directory-tree> XML Tags\n<directory-tree>\n" + self.memory_manager.tree + "\n</directory-tree>\n\n"
+        else:
+            tree = ""
+        
+        if include_messages:
+            prompt = "\n\nHuman: " + self.memory_manager.identity + tree + file_context + conversation_history
+        else:
+            prompt = "\n\nHuman: " + self.memory_manager.identity + tree + file_context
+
+        return prompt + last_user_message + "\n\nPlease respond accordingly.\n\nAssistant:"
 
     def call_model_streaming(self, **kwargs):
         self.read_pos = 0
         if self.GPT_MODEL == "gpt-4" or self.GPT_MODEL == "gpt-3.5-turbo":
             for chunk in openai.ChatCompletion.create(**kwargs):
                 yield chunk
-        if self.GPT_MODEL == "code-llama":
-            try:
-                sm_client = boto3.client("sagemaker-runtime")
-                endpoint = os.getenv("CODELLAMA_ENDPOINT")
-                if not endpoint:
-                    raise ValueError("CODELLAMA_ENDPOINT environment variable not set")
-                resp = sm_client.invoke_endpoint_with_response_stream(
-                    EndpointName=endpoint,
-                    Body=json.dumps(
-                        {
-                            "inputs": self.generate_llama_prompt(),
-                            "parameters": {
-                                "max_new_tokens": kwargs["max_tokens"],
-                            },
-                        }
-                    ),
-                    ContentType="application/json",
-                )
-            except Exception as e:
-                print(f"Error calling Code Llama: {e}")
-                yield {
-                    "choices": [
-                        {
-                            "finish_reason": "stop",
-                            "delta": {"content": "Error: " + str(e)},
-                        }
-                    ]
-                }
 
-            while True:
-                try:
-                    chunk = next(iter((resp["Body"])))
-                    bytes_to_send = chunk["PayloadPart"]["Bytes"]
-                    decoded_str = bytes_to_send.decode("utf-8")
-                    cleaned_str = decoded_str.replace(
-                        '{"generated_text": "', ""
-                    ).replace('"}', "")
-                    cleaned_str = cleaned_str.encode().decode("unicode_escape")
-
-                    yield {
-                        "choices": [
-                            {"finish_reason": "stop", "delta": {"content": cleaned_str}}
-                        ]
-                    }
-                except StopIteration:
-                    break
-
-                except UnboundLocalError:
-                    print("UnboundLocalError")
-                    break
         if self.GPT_MODEL == "anthropic":
             print("Calling anthropic")
             try:

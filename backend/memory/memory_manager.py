@@ -22,11 +22,7 @@ class MemoryManager:
         self.model = model
         self.max_tokens = max_tokens
         self.system = None
-        self.identity = (
-            "You are an AI Pair Programmer and a world class python developer helping the Human work on a project."
-            if not identity
-            else identity
-        )
+        self.identity = identity
         self.tree = tree
         self.system_file_summaries = None
         self.system_file_contents = None
@@ -172,11 +168,6 @@ class MemoryManager:
                 else ""
             )
 
-            self.system += (
-                "Summaries of Relted Files:\n" + self.system_file_summaries + "\n\n"
-                if self.system_file_summaries
-                else ""
-            )
             self.system += (
                 "Related File Contents:\n" + self.system_file_contents + "\n\n"
                 if self.system_file_contents
