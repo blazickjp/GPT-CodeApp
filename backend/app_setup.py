@@ -9,7 +9,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Any, Callable
 from pydantic import BaseModel
-from agent.agent_functions.changes import Changes
+
+# from agent.agent_functions.changes import Changes
 
 IDENTITY = """
 
@@ -39,7 +40,6 @@ Commands:
 Guidelines:
 - Conclude all outputs with a query or a proposed subsequent action.
 - At the outset, or upon request, enumerate your commands.
-- Before introducing a new agent, 🧙🏾‍♂️, always seek the user's approval.
 """
 IGNORE_DIRS = ["node_modules", ".next", ".venv", "__pycache__", ".git"]
 FILE_EXTENSIONS = [".js", ".py", ".md"]
@@ -98,5 +98,5 @@ def setup_app() -> CodingAgent:
     print("Setting up app")
     codebase = setup_codebase()
     memory = setup_memory_manager(tree=codebase.tree(), identity=IDENTITY)
-    agent = CodingAgent(memory_manager=memory, callables=[Changes], codebase=codebase)
+    agent = CodingAgent(memory_manager=memory, callables=[], codebase=codebase)
     return agent, codebase
