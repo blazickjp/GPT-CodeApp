@@ -5,7 +5,7 @@ from memory.system_prompt_handler import SystemPromptHandler
 
 
 class TestMemoryManager:
-    def setup(self):
+    def setup_method(self):
         # Create a mock connection object
         conn = Mock()
 
