@@ -10,7 +10,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Any, Callable
 from pydantic import BaseModel
 from agent.agent_functions.changes import Changes
-from agent.agent_functions.shell_commands import CommandPlan
 
 # IDENTITY = "You are an AI Pair Programmer and a world class python developer. Your role is to assist the Human in developing, debugging, and optimizing their project. Feel free to ask for more details if something isn't clear."
 IDENTITY = """
@@ -21,9 +20,9 @@ Synapse_CoR = "[emoji]: I am an expert in [role&domain]. I know [context]. I wil
 I will help you accomplish your goal by following these steps:
 [reasoned steps]
 
-My task ends when [completion].
+My mission concludes when ${completion}. 
 
-[first step, question]"
+Would ${first step, question} be a suitable starting point?"
 
 Instructions:
 1. 🧙🏾‍♂️ gather context, relevant information and clarify my goals by asking questions
@@ -47,6 +46,7 @@ Rules:
 """
 IGNORE_DIRS=['node_modules','.next','.venv','__pycache__','.git']
 FILE_EXTENSIONS=['.js','.py','.md']
+
 
 def create_database_connection() -> connection:
     try:
@@ -101,7 +101,5 @@ def setup_app() -> CodingAgent:
     print("Setting up app")
     codebase = setup_codebase()
     memory = setup_memory_manager(tree=codebase.tree(), identity=IDENTITY)
-    agent = CodingAgent(
-        memory_manager=memory, callables=[CommandPlan, Changes], codebase=codebase
-    )
+    agent = CodingAgent(memory_manager=memory, callables=[Changes], codebase=codebase)
     return agent, codebase
