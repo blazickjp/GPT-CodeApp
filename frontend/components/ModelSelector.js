@@ -1,9 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { GiLightningBranches, GiStarsStack } from 'react-icons/gi';
 import { FaAmazon } from 'react-icons/fa';
 
 const ModelSelector = () => {
     const [activeButton, setActiveButton] = useState('anthropic');
+
+    const fetchCurrentModel = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_model`);
+            const data = await response.json();
+            // Assuming you have a state setter like setActiveButton
+            setActiveButton(data.model);
+        } catch (error) {
+            console.error('Failed to fetch current model:', error);
+        }
+    };
 
     const handleButtonClick = (e) => {
         console.log(e);
@@ -42,6 +53,10 @@ const ModelSelector = () => {
             <span>{text}</span>
         </button>
     );
+
+    useEffect(() => {
+        fetchCurrentModel();
+    }, []);
 
     return (
         <div className='inline-flex justify-center bg-gray-700 p-2 rounded-lg'> {/* You can adjust the color (bg-gray-800), padding (p-2), and roundness (rounded-lg) as needed */}

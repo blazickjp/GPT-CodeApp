@@ -22,13 +22,33 @@ async def startup_event():
         """
     ).fetchall()
     config = {field: value for field, value in config}
+
+    # Set the directory in prompt
     if config.get("directory"):
         print("Dir", config["directory"])
         CODEBASE.set_directory(config["directory"])
         AGENT.memory_manager.prompt_handler.tree = CODEBASE.tree()
         AGENT.memory_manager.prompt_handler.set_system()
         AGENT.memory_manager.project_directory = config["directory"]
-    print(config)
+
+    # Set the files in prompt
+    if config.get("files"):
+        print("Files", config["files"])
+        AGENT.memory_manager.prompt_handler.files_in_prompt = json.loads(
+            config["files"]
+        )
+        AGENT.memory_manager.prompt_handler.set_files_in_prompt()
+        AGENT.memory_manager.prompt_handler.set_system()
+
+    # Set the model
+    if config.get("model"):
+        print("Model", config["model"])
+        AGENT.GPT_MODEL = config["model"]
+
+    # Set the max message tokens
+    if config.get("max_message_tokens"):
+        print("Max Message Tokens", config["max_message_tokens"])
+        AGENT.memory_manager.max_tokens = int(config["max_message_tokens"])
     print("Starting up...")
 
 
@@ -131,17 +151,58 @@ async def generate_readme():
 @app.post("/set_files_in_prompt")
 async def set_files_in_prompt(input: dict):
     files = [file for file in input.get("files", None)]
+    # First update the config table
+    AGENT.memory_manager.cur.execute(
+        """
+        INSERT INTO config (field, value, last_updated)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(field)
+        DO UPDATE SET value = excluded.value, last_updated = excluded.last_updated
+        WHERE field = 'files';
+        """,
+        ("files", json.dumps(files)),
+    )
     AGENT.memory_manager.prompt_handler.files_in_prompt = files
     AGENT.memory_manager.prompt_handler.set_files_in_prompt()
     AGENT.memory_manager.prompt_handler.set_system()
+
     return JSONResponse(status_code=200, content={})
+
+
+@app.get("/get_files_in_prompt")
+async def get_files_in_prompt():
+    return {"files": AGENT.memory_manager.prompt_handler.files_in_prompt}
 
 
 @app.post("/set_model")
 async def set_model(input: dict):
     model = input.get("model")
-    AGENT.GPT_MODEL = model
-    return JSONResponse(status_code=200, content={})
+    # Update config table
+    if model:
+        AGENT.memory_manager.cur.execute(
+            """
+            INSERT INTO config (field, value, last_updated)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(field)
+            DO UPDATE SET value = excluded.value, last_updated = excluded.last_updated
+            WHERE field = 'model';
+            """,
+            ("model", json.dumps(model)),
+        )
+        AGENT.GPT_MODEL = model
+        return JSONResponse(status_code=200, content={})
+    else:
+        return JSONResponse(status_code=400, content={"error": "No model was provided"})
+
+
+@app.get("/get_model")
+async def get_model():
+    return {"model": AGENT.GPT_MODEL}
+
+
+@app.get("/get_max_message_tokens")
+async def get_max_message_tokens():
+    return {"max_message_tokens": AGENT.memory_manager.max_tokens}
 
 
 @app.post("/save_prompt")
@@ -221,6 +282,16 @@ async def get_home():
 @app.post("/set_max_message_tokens")
 async def set_max_message_tokens(input: dict):
     max_message_tokens = input.get("max_message_tokens")
-    print()
+    # Update config
+    AGENT.memory_manager.cur.execute(
+        """
+        INSERT INTO config (field, value, last_updated)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(field)
+        DO UPDATE SET value = excluded.value, last_updated = excluded.last_updated
+        WHERE field = 'max_message_tokens';
+        """,
+        ("max_message_tokens", json.dumps(max_message_tokens)),
+    )
     AGENT.memory_manager.max_tokens = max_message_tokens
     return JSONResponse(status_code=200, content={})
