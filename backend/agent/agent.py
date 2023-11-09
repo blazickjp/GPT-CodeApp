@@ -10,6 +10,9 @@ import boto3
 from typing import List, Optional, Callable
 from pydantic import BaseModel
 from database.my_codebase import MyCodebase
+from agent.agent_functions.changes import (
+    ASTChangeApplicator,
+)  # Import the ASTChangeApplicator
 
 # from agent.agent_functions import Program, File
 
@@ -33,6 +36,21 @@ class Message(BaseModel):
         return {
             "role": self.role,
             "content": self.content,
+        }
+
+
+class NewMessage(BaseModel):
+    role: str
+    content: str
+    file_path: Optional[str] = None
+    line_number: Optional[int] = None
+
+    def to_dict(self):
+        return {
+            "role": self.role,
+            "content": self.content,
+            "file_path": self.file_path,
+            "line_number": self.line_number,
         }
 
 
@@ -74,6 +92,46 @@ class CodingAgent:
             self.function_map = {
                 func.__name__: func for func in callables if func is not None
             }
+
+    def register_ast_functions(self):
+        # Register functions to handle AST changes
+        self.function_map.update(
+            {
+                "apply_ast_changes": self.apply_ast_changes,
+                # ... other functions as needed ...
+            }
+        )
+
+    def apply_ast_changes(self, source_code: str, changes: list) -> str:
+        """
+        Applies a list of AST changes to the given source code.
+
+        Args:
+            source_code (str): The original source code.
+            changes (list): A list of changes to apply to the AST.
+
+        Returns:
+            str: The updated source code after applying changes.
+        """
+        applicator = ASTChangeApplicator(source_code)
+        new_source_code = applicator.apply_changes(changes)
+        return new_source_code
+
+    # ... later in the code where the agent processes commands ...
+
+    def handle_ast_change_command(self, input_data: dict):
+        """
+        Handles a command to change the AST based on provided input data.
+
+        Args:
+            input_data (dict): Data containing the source code and changes to apply.
+        """
+        source_code = input_data["source_code"]
+        changes = input_data[
+            "changes"
+        ]  # This should be structured in a way the ASTChangeApplicator can understand
+        updated_code = self.apply_ast_changes(source_code, changes)
+        return updated_code
 
     def query(self, input: str, command: Optional[str] = None) -> List[str]:
         """

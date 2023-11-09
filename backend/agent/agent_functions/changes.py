@@ -1,11 +1,22 @@
 import ast
+import astor
 
 from pydantic import BaseModel
-import astor
 from openai_function_call import OpenAISchema
 
 
 class AddFunction(BaseModel):
+    """
+    Represents a function to be added to a Python file.
+
+    Args:
+        function_name (str): The name of the function.
+        args (str): The arguments of the function.
+        body (str): The body of the function.
+        decorator_list (list[str], optional): The list of decorators applied to the function. Defaults to [].
+        returns (str | None, optional): The return type of the function. Defaults to None.
+    """
+
     function_name: str
     args: str
     body: str
@@ -14,10 +25,29 @@ class AddFunction(BaseModel):
 
 
 class DeleteFunction(BaseModel):
+    """
+    Represents a request to delete a function from the agent.
+
+    Attributes:
+        function_name (str): The name of the function to delete.
+    """
+
     function_name: str
 
 
 class ModifyFunction(BaseModel):
+    """
+    A class representing modifications to a function.
+
+    Attributes:
+        function_name (str): The name of the function to modify.
+        new_args (str | None): The new arguments for the function, if any.
+        new_body (str | None): The new body of the function, if any.
+        new_decorator_list (list[str] | None): The new list of decorators for the function, if any.
+        new_returns (str | None): The new return type for the function, if any.
+        new_name (str | None): The new name for the function, if any.
+    """
+
     function_name: str
     new_args: str | None = None
     new_body: str | None = None
