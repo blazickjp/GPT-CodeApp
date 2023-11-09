@@ -47,6 +47,8 @@ class MyCodebaseTests(unittest.TestCase):
     def test_is_valid_file(self, mock_encode):
         self.assertTrue(self.codebase._is_valid_file("valid_file.py"))
         self.assertFalse(self.codebase._is_valid_file(".invalid_file.py"))
+        self.assertFalse(self.codebase._is_valid_file("invalid_file.json"))
+        self.assertFalse(self.codebase._is_valid_file("package-lock.json"))
 
     @patch(
         "database.my_codebase.ENCODER.encode", return_value=list(range(10))

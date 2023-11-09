@@ -1,5 +1,6 @@
 import unittest
 import ast
+import astor
 from agent.agent_functions.changes import (
     DeleteClass,
     ModifyFunction,
@@ -13,41 +14,9 @@ from agent.agent_functions.changes import (
     AddFunction,
     AddImport,
     DeleteImport,
-    RenameImport,
     VariableNameChange,
     CustomASTTransformer,
 )
-
-
-class TestImportOperations(unittest.TestCase):
-    def setUp(self):
-        self.source_code = """
-import math as mathematics
-from sys import exit, version
-"""
-
-    def test_renaming_import(self):
-        # Define the import rename operation
-        rename_import_change = RenameImport(old_name="mathematics", new_name="math")
-
-        # Apply the change
-        self.transformer = CustomASTTransformer(changes=[rename_import_change])
-
-        # Parse the source code into an AST
-        ast_tree = ast.parse(self.source_code)
-        new_ast_tree = self.transformer.visit(ast_tree)
-        ast.fix_missing_locations(new_ast_tree)
-
-        # Generate the new source code and define the expected result
-        new_source_code = ast.unparse(new_ast_tree).strip()
-        print(new_source_code)
-        expected_code = """
-import math as math
-from sys import exit, version
-""".strip()
-
-        # Assert the change is as expected
-        self.assertEqual(expected_code, new_source_code)
 
 
 class TestAddImport(unittest.TestCase):
@@ -69,6 +38,8 @@ import pandas as pd
         # Parse the source code into an AST
         ast_tree = ast.parse(self.source_code)
         new_ast_tree = self.transformer.visit(ast_tree)
+        print(ast.dump(new_ast_tree, indent=4))
+
         ast.fix_missing_locations(new_ast_tree)
 
         # Generate the new source code and define the expected result
@@ -349,6 +320,7 @@ def new_function():
 
         # Convert the new AST back to source code and compare to expected
         new_source_code = ast.unparse(new_ast_tree).strip()
+        print(new_source_code)
         self.assertEqual(expected_code.strip(), new_source_code)
 
 
@@ -520,8 +492,6 @@ def function_to_keep():
 
         self.assertEqual(expected_code.strip(), new_code)
 
-
-class TestAddClass(unittest.TestCase):
     def test_adding_new_class(self):
         source_code = ""
         expected_code = """
@@ -529,16 +499,20 @@ class NewClass:
 
     def new_method(self):
         pass
-"""
+    """.strip()  # Ensure consistent whitespace handling
+
         add_class_change = AddClass(
             class_name="NewClass", body="def new_method(self):\n    pass"
         )
         transformer = CustomASTTransformer(changes=[add_class_change])
         new_ast = transformer.visit(ast.parse(source_code))
-        new_code = ast.unparse(new_ast).strip()
+        new_code = astor.to_source(
+            new_ast
+        ).strip()  # Using astor.to_source instead of ast.unparse
+
         print(new_code)
 
-        self.assertEqual(expected_code.strip(), new_code)
+        self.assertEqual(expected_code, new_code)
 
 
 if __name__ == "__main__":

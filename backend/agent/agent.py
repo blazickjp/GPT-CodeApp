@@ -3,7 +3,6 @@ import io
 import re
 import openai
 import json
-import os
 import boto3
 
 # import time
@@ -17,7 +16,7 @@ from database.my_codebase import MyCodebase
 # GPT_MODEL = "gpt-3.5-turbo-0613"  # or any other chat model you want to use
 GPT_MODEL = "gpt-4-1106-preview"  # or any other chat model you want to use
 # GPT_MODEL = "anthropic"  # or any other chat model you want to use
-MAX_TOKENS = 2000  # or any other number of tokens you want to use
+MAX_TOKENS = 4000  # or any other number of tokens you want to use
 TEMPERATURE = 0.75  # or any other temperature you want to use
 
 
