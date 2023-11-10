@@ -225,11 +225,11 @@ class CodingAgent:
         Returns:
             str: The generated prompt.
         """
-        conversation_history = "The following is a portion of your conversation history with the human is inside the <conversation-history></conversation-history> XML tags.\n\n<conversation-history>\n"
+        conversation_history = "The following is a portion of your conversation history with the human, truncated to save token space, inside the <conversation-history></conversation-history> XML tags.\n\n<conversation-history>\n"
         messages = self.memory_manager.get_messages()
         # Extract the last User messages
         print(messages)
-        last_user_message = "\n\nThe last message from the human is tagged below in <last-message></last-message> XML tags.\n<last-message>\n" + [message['content'] for message in messages if message["role"] == "user"][-1] + "\n</last-message>"
+        last_user_message = "\n\nThe most recent message from the human is tagged below in the <last-message></last-message> XML tags. Your response should ALWAYS adress this question or request from the human.\n<last-message>\n" + [message['content'] for message in messages if message["role"] == "user"][-1] + "\n</last-message>"
 
 
         for idx, message in enumerate(messages):
@@ -240,11 +240,11 @@ class CodingAgent:
         conversation_history += "\n</conversation-history>\n\n"
         
         if self.memory_manager.system_file_contents:
-            file_context = "Some file contents related to the conversation are wrapped in <file-contents></file-contenxt> XML Tags.\n\n<file-contents>\n" + self.memory_manager.system_file_contents + "\n</file-contents>\n\n"
+            file_context = "The human as loadedd the following files into context to help give you background related to the most recent request. They are contained in the <file-contents></file-contenxt> XML Tags.\n\n<file-contents>\n" + self.memory_manager.system_file_contents + "\n</file-contents>\n\n"
         else:
             file_context = ""
         if self.memory_manager.tree:
-            tree = "The following is the current working directory for the human within the <directory-tree></directory-tree> XML Tags\n<directory-tree>\n" + self.memory_manager.tree + "\n</directory-tree>\n\n"
+            tree = "The working directory of the human is always loaded into context. This information is good background when the human is working on the project, but this may not always be the case. Sometimes the human may ask questions not related to the current project <directory-tree></directory-tree> XML Tags\n<directory-tree>\n" + self.memory_manager.tree + "\n</directory-tree>\n\n"
         else:
             tree = ""
         
