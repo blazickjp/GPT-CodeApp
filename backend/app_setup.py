@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Any, Callable
 from pydantic import BaseModel
 
-# from agent.agent_functions.changes import Changes
+from agent.agent_functions.changes import Changes
 
 IDENTITY = """
 
@@ -98,5 +98,7 @@ def setup_app() -> CodingAgent:
     print("Setting up app")
     codebase = setup_codebase()
     memory = setup_memory_manager(tree=codebase.tree(), identity=IDENTITY)
-    agent = CodingAgent(memory_manager=memory, callables=[], codebase=codebase)
+    agent = CodingAgent(
+        memory_manager=memory, callables=[Changes.openai_schema], codebase=codebase
+    )
     return agent, codebase

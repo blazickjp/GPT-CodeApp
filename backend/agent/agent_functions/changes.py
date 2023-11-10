@@ -1,153 +1,79 @@
 import ast
 import astor
-
+import difflib
+from typing import Tuple, List
 from pydantic import BaseModel
+from agent.agent_functions.file_ops import (
+    FunctionOperations,
+    ImportOperations,
+    ClassOperations,
+    MethodOperations,
+    VariableNameChange,
+    AddFunction,
+    AddClass,
+    DeleteFunction,
+    DeleteClass,
+    ModifyFunction,
+    ModifyClass,
+    AddMethod,
+    DeleteMethod,
+    ModifyMethod,
+    AddImport,
+    DeleteImport,
+    ModifyImport,
+)
+from instructor import OpenAISchema
 
 
-class AddFunction(BaseModel):
+class Changes(OpenAISchema):
     """
-    Represents a function to be added to a Python file.
-
-    Args:
-        function_name (str): The name of the function.
-        args (str): The arguments of the function.
-        body (str): The body of the function.
-        decorator_list (list[str], optional): The list of decorators applied to the function. Defaults to [].
-        returns (str | None, optional): The return type of the function. Defaults to None.
-    """
-
-    function_name: str
-    args: str
-    body: str
-    decorator_list: list[str] = []
-    returns: str | None = None
-
-
-class DeleteFunction(BaseModel):
-    """
-    Represents a request to delete a function from the agent.
+    A class representing a list of operations that can be performed on a file.
 
     Attributes:
-        function_name (str): The name of the function to delete.
+        ops (list): A list of operations that can be performed on a file.
+
+    Usage:
+        operations = Operations()
+        operations.ops = [FunctionOperations(), ClassOperations(), MethodOperations(), ImportOperations()]
     """
 
-    function_name: str
+    ops: list[
+        FunctionOperations | ClassOperations | MethodOperations | ImportOperations
+    ] = []
+    files: set[Tuple[str, str]] = set()
+    diffs: List[str] = []
 
+    def execute(self):
+        """
+        Execute all the operations in the list of operations.
 
-class ModifyFunction(BaseModel):
-    """
-    A class representing modifications to a function.
+        Returns:
+            str: The new source code after all the operations have been executed.
+        """
+        for op in self.ops:
+            with open(op.file_path, "r") as f:
+                source_code = f.read()
 
-    Attributes:
-        function_name (str): The name of the function to modify.
-        new_args (str | None): The new arguments for the function, if any.
-        new_body (str | None): The new body of the function, if any.
-        new_decorator_list (list[str] | None): The new list of decorators for the function, if any.
-        new_returns (str | None): The new return type for the function, if any.
-        new_name (str | None): The new name for the function, if any.
-    """
+            self.files.add((op.file_path, source_code))
 
-    function_name: str
-    new_args: str | None = None
-    new_body: str | None = None
-    new_decorator_list: list[str] | None = None
-    new_returns: str | None = None
-    new_name: str | None = None
+            # Apply changes to the source code
+            applicator = ASTChangeApplicator(source_code)
+            source_code = applicator.apply_changes(op.changes)
 
+        for file in self.files:
+            # Calculate diff from original source code
+            diff = op.diff(source_code)
+            self.diffs.append(diff)
 
-class AddClass(BaseModel):
-    class_name: str
-    bases: list[str] = []
-    body: str
-    decorator_list: list[str] = []
+        return self.diffs
 
-
-class DeleteClass(BaseModel):
-    class_name: str
-
-
-class ModifyClass(BaseModel):
-    name: str
-    new_bases: list[str] | None = None  # New base classes
-    new_body: list | None = (
-        None  # New body of the class, which might include method definitions etc.
-    )
-    new_decorator_list: list[str] | None = None  # New decorators for the class
-    new_name: str | None = None  # New name for the class
-
-
-class AddMethod(BaseModel):
-    class_name: str
-    method_name: str
-    args: str
-    body: str
-    decorator_list: list[str] = []
-    returns: str | None = None
-
-
-class DeleteMethod(BaseModel):
-    class_name: str
-    method_name: str
-
-
-class ModifyMethod(BaseModel):
-    class_name: str
-    method_name: str
-    new_args: str | None = None
-    new_body: str | None = None
-    new_decorator_list: list[str] | None = None
-    new_method_name: str | None = None
-    new_returns: str | None = None
-
-
-class VariableNameChange(BaseModel):
-    original_name: str
-    new_name: str
-
-
-class AddImport(BaseModel):
-    module: str
-    names: list | None = None
-    asnames: list | None = None
-    objects: list | None = None
-
-
-class DeleteImport(BaseModel):
-    module: str
-    names: list | None = None
-    asnames: list | None = None
-    objects: list | None = None
-
-
-class ModifyImport(BaseModel):
-    module: str
-    new_names: list | None = None
-    new_asnames: list | None = None
-    new_objects: list | None = None
-
-
-class ImportOperations(BaseModel):
-    add_imports: list[AddImport] = []
-    delete_imports: list[DeleteImport] = []
-    modify_imports: list[ModifyImport] = []
-
-
-class FunctionOperations(BaseModel):
-    add_functions: list[AddFunction] = []
-    delete_functions: list[DeleteFunction] = []
-    modify_functions: list[ModifyFunction] = []
-
-
-class ClassOperations(BaseModel):
-    add_classes: list[AddClass] = []
-    delete_classes: list[DeleteClass] = []
-    modify_classes: list[ModifyClass] = []
-
-
-class MethodOperations(BaseModel):
-    add_methods: list[AddMethod] = []
-    delete_methods: list[DeleteMethod] = []
-    modify_methods: list[ModifyMethod] = []
+    def diff(self, new_source_code):
+        """
+        Generates a diff from the original source code using difflib
+        """
+        return difflib.unified_diff(
+            self.source_code.splitlines(), new_source_code.splitlines()
+        )
 
 
 class ASTChangeApplicator:
@@ -168,13 +94,13 @@ class ASTChangeApplicator:
                 self.apply_change(change)
         return astor.to_source(self.ast_tree)
 
-    def sort_changes(self, changes):
-        # Implement sorting logic based on the type of changes and their dependencies.
-        return sorted(changes, key=lambda change: change.priority)
-
-    def is_conflict(self, change):
-        # Implement conflict detection logic based on the current state of the code.
-        return False
+    def generate_diff(self, new_source_code):
+        """
+        Generates a diff from the original source code using difflib
+        """
+        return difflib.unified_diff(
+            self.source_code.splitlines(), new_source_code.splitlines()
+        )
 
 
 class CustomASTTransformer(ast.NodeTransformer):
@@ -356,3 +282,38 @@ class CustomASTTransformer(ast.NodeTransformer):
             else:
                 new_body.append(node)
         return new_body
+
+
+class Changes(OpenAISchema):
+    """
+    A class representing a list of operations that can be performed on a file.
+
+    Attributes:
+        ops (list): A list of operations that can be performed on a file.
+
+    Usage:
+        operations = Operations()
+        operations.ops = [FunctionOperations(), ClassOperations(), MethodOperations(), ImportOperations()]
+    """
+
+    ops: list[
+        FunctionOperations | ClassOperations | MethodOperations | ImportOperations
+    ] = []
+
+    def execute(self):
+        """
+        Execute all the operations in the list of operations.
+
+        Returns:
+            str: The new source code after all the operations have been executed.
+        """
+        for op in self.ops:
+            with open(op.file_path, "r") as f:
+                source_code = f.read()
+
+            # Apply changes to the source code
+            applicator = ASTChangeApplicator(source_code)
+            source_code = applicator.apply_changes(op.changes)
+
+            # Calculate diff from original source code
+            diff = op.diff(source_code)

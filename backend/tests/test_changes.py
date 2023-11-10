@@ -28,6 +28,7 @@ import pandas as pd
     def test_adding_import_statement(self):
         # Define the import addition
         add_import_change = ImportOperations(
+            file_name="test.py",
             add_imports=[
                 AddImport(module="math", names=None, asnames=None, objects=["sqrt"])
             ],
@@ -58,7 +59,8 @@ class TestDeleteImport(unittest.TestCase):
     def test_removing_import_statement(self):
         # Define the import deletion
         delete_import_change = ImportOperations(
-            delete_imports=[DeleteImport(module="math", objects=["sqrt"])]
+            file_name="test.py",
+            delete_imports=[DeleteImport(module="math", objects=["sqrt"])],
         )
         self.transformer = CustomASTTransformer(changes=[delete_import_change])
 

@@ -1,28 +1,25 @@
 # import os
 import io
 import re
-import openai
+from openai import OpenAI
+
 import json
 import boto3
 import instructor
-from openai import OpenAI
 from pydantic import BaseModel
 
 # This enables response_model keyword
 # from client.chat.completions.create
-client = instructor.patch(OpenAI())
-
-# import time
-
 from typing import List, Optional, Callable
-from pydantic import BaseModel
 from database.my_codebase import MyCodebase
 from agent.agent_functions.changes import (
     ASTChangeApplicator,
+    Changes,
 )  # Import the ASTChangeApplicator
 
 # from agent.agent_functions import Program, File
 
+client = instructor.patch(OpenAI())
 # GPT_MODEL = "gpt-3.5-turbo-0613"  # or any other chat model you want to use
 GPT_MODEL = "gpt-4-1106-preview"  # or any other chat model you want to use
 # GPT_MODEL = "anthropic"  # or any other chat model you want to use
@@ -96,7 +93,7 @@ class CodingAgent:
         self.buff = io.BytesIO()
         self.read_pos = 0
         self.function_map = {}  # Initialize the function map here
-        self.function_to_call = FunctionCall()
+        self.function_to_call = None
         if callables:
             self.function_map = {
                 func.__name__: func for func in callables if func is not None
@@ -115,6 +112,7 @@ class CodingAgent:
         """
         print(f"Input Text: {input}")
         self.memory_manager.add_message("user", input)
+
         message_history = [
             Message(**i).to_dict() for i in self.memory_manager.get_messages()
         ]
@@ -132,30 +130,34 @@ class CodingAgent:
 
         # Override normal function calling when function_name is provided
         if command:
+            print(f"Command: {command}")
+            self.function_to_call = FunctionCall(name=command)
             if command not in self.function_map:
                 raise ValueError(f"Function {command} not registered with Agent")
 
-            keyword_args["functions"] = [self.function_map.get(command).openai_schema]
+            # function_to_call = [self.function_map.get(command).openai_schema]
             keyword_args["function_call"] = {"name": command}
 
             if command == "Changes":
+                print("Hello")
                 # self.memory_manager.identity = (
                 #     self.memory_manager.identity
                 #     + "\nLine numbers have been added to the Current File to aid in your response. They are not part of the actual file."
                 # )
                 # self.set_files_in_prompt(include_line_numbers=True)
-                keyword_args["model"] = "gpt-4-1106-preview"
+                keyword_args["max_tokens"] = 2000
 
         # Call the model
         print(f"Calling model: {self.GPT_MODEL}")
         for i, chunk in enumerate(self.call_model_streaming(**keyword_args)):
-            delta = chunk["choices"][0].get("delta", {})
+            print(chunk)
+            delta = chunk.choices[0].delta
             if "function_call" in delta:
                 yield from self.process_function_call(delta, i)
             if self.should_stop_and_has_function(chunk):
                 yield from self.execute_function()
             else:
-                yield delta.get("content")
+                yield delta.content
 
     def register_ast_functions(self):
         # Register functions to handle AST changes
@@ -197,23 +199,29 @@ class CodingAgent:
         return updated_code
 
     def process_function_call(self, delta, i):
-        function_call = delta["function_call"]
-        if "name" in function_call:
-            self.function_to_call.name = function_call["name"]
-        if "arguments" in function_call:
+        function_call = delta.function_call
+        if function_call.name:
+            self.function_to_call.name = function_call.name
+        if function_call.arguments:
             if self.function_to_call.name == "Changes" and i == 0:
-                yield "\n```json\n" + function_call["arguments"]
+                yield "\n```json\n" + function_call.arguments
             else:
-                self.function_to_call.arguments += function_call["arguments"]
-                yield function_call["arguments"]
+                self.function_to_call.arguments += function_call.arguments
+                yield function_call.arguments
 
     def should_stop_and_has_function(self, delta):
-        return (
-            delta["choices"][0]["finish_reason"] == "stop"
-            and self.function_to_call.name  # noqa 503
-        )
+        if self.function_to_call:
+            return (
+                delta.choices[0].finish_reason == "stop"
+                and self.function_to_call.name is not None  # noqa 503
+            )
+
+        return delta.choices[0].finish_reason == "stop"
 
     def execute_function(self):
+        print("Here")
+        if not self.function_to_call:
+            return
         if self.function_to_call.name == "Changes":
             yield "```\n\n"
         args = self.process_json(self.function_to_call.arguments)
@@ -280,8 +288,7 @@ class CodingAgent:
     def call_model_streaming(self, **kwargs):
         self.read_pos = 0
         if self.GPT_MODEL == "gpt-4-1106-preview" or self.GPT_MODEL == "gpt-3.5-turbo":
-            for chunk in openai.ChatCompletion.create(**kwargs):
-                print(chunk)
+            for chunk in client.chat.completions.create(**kwargs):
                 yield chunk
 
         if self.GPT_MODEL == "anthropic":
