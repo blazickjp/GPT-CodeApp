@@ -22,6 +22,15 @@ async def startup_event():
         """
     ).fetchall()
     config = {field: value for field, value in config}
+    # Set the model
+    if config.get("model"):
+        print("Model", config["model"])
+        AGENT.GPT_MODEL = config["model"]
+
+    # Set the max message tokens
+    if config.get("max_message_tokens"):
+        print("Max Message Tokens", config["max_message_tokens"])
+        AGENT.memory_manager.max_tokens = int(config["max_message_tokens"])
 
     # Set the directory in prompt
     if config.get("directory"):
@@ -40,15 +49,6 @@ async def startup_event():
         AGENT.memory_manager.prompt_handler.set_files_in_prompt()
         AGENT.memory_manager.prompt_handler.set_system()
 
-    # Set the model
-    if config.get("model"):
-        print("Model", config["model"])
-        AGENT.GPT_MODEL = config["model"]
-
-    # Set the max message tokens
-    if config.get("max_message_tokens"):
-        print("Max Message Tokens", config["max_message_tokens"])
-        AGENT.memory_manager.max_tokens = int(config["max_message_tokens"])
     print("Starting up...")
 
 

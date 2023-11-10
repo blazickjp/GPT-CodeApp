@@ -1,7 +1,5 @@
-import pytest
 from unittest.mock import Mock
 from memory.memory_manager import MemoryManager
-from memory.system_prompt_handler import SystemPromptHandler
 
 
 class TestMemoryManager:

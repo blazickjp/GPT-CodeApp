@@ -2,7 +2,6 @@ import ast
 import astor
 
 from pydantic import BaseModel
-from openai_function_call import OpenAISchema
 
 
 class AddFunction(BaseModel):
@@ -101,7 +100,7 @@ class ModifyMethod(BaseModel):
     new_returns: str | None = None
 
 
-class VariableNameChange(OpenAISchema):
+class VariableNameChange(BaseModel):
     original_name: str
     new_name: str
 
@@ -127,25 +126,25 @@ class ModifyImport(BaseModel):
     new_objects: list | None = None
 
 
-class ImportOperations(OpenAISchema):
+class ImportOperations(BaseModel):
     add_imports: list[AddImport] = []
     delete_imports: list[DeleteImport] = []
     modify_imports: list[ModifyImport] = []
 
 
-class FunctionOperations(OpenAISchema):
+class FunctionOperations(BaseModel):
     add_functions: list[AddFunction] = []
     delete_functions: list[DeleteFunction] = []
     modify_functions: list[ModifyFunction] = []
 
 
-class ClassOperations(OpenAISchema):
+class ClassOperations(BaseModel):
     add_classes: list[AddClass] = []
     delete_classes: list[DeleteClass] = []
     modify_classes: list[ModifyClass] = []
 
 
-class MethodOperations(OpenAISchema):
+class MethodOperations(BaseModel):
     add_methods: list[AddMethod] = []
     delete_methods: list[DeleteMethod] = []
     modify_methods: list[ModifyMethod] = []

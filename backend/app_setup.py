@@ -2,7 +2,7 @@
 import os
 import sqlite3
 from psycopg2.extensions import connection
-from agent.agent import CodingAgent
+from agent.coding_agent import CodingAgent
 from memory.memory_manager import MemoryManager
 from database.my_codebase import MyCodebase
 from fastapi import FastAPI
