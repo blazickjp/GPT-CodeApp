@@ -1,27 +1,7 @@
 import ast
 import astor
 import difflib
-from typing import Tuple, List
-from pydantic import BaseModel
-from agent.agent_functions.file_ops import (
-    FunctionOperations,
-    ImportOperations,
-    ClassOperations,
-    MethodOperations,
-    VariableNameChange,
-    AddFunction,
-    AddClass,
-    DeleteFunction,
-    DeleteClass,
-    ModifyFunction,
-    ModifyClass,
-    AddMethod,
-    DeleteMethod,
-    ModifyMethod,
-    AddImport,
-    DeleteImport,
-    ModifyImport,
-)
+from typing import List
 from instructor import OpenAISchema
 
 
@@ -37,10 +17,7 @@ class Changes(OpenAISchema):
         operations.ops = [FunctionOperations(), ClassOperations(), MethodOperations(), ImportOperations()]
     """
 
-    ops: list[
-        FunctionOperations | ClassOperations | MethodOperations | ImportOperations
-    ] = []
-    files: set[Tuple[str, str]] = set()
+    files: set = set()
     diffs: List[str] = []
 
     def execute(self):
@@ -60,9 +37,10 @@ class Changes(OpenAISchema):
             applicator = ASTChangeApplicator(source_code)
             source_code = applicator.apply_changes(op.changes)
 
-        for file in self.files:
-            # Calculate diff from original source code
-            diff = op.diff(source_code)
+            with open(op.file_path, "w") as f:
+                f.write(source_code)
+
+            diff = self.diff(source_code)
             self.diffs.append(diff)
 
         return self.diffs
@@ -74,6 +52,49 @@ class Changes(OpenAISchema):
         return difflib.unified_diff(
             self.source_code.splitlines(), new_source_code.splitlines()
         )
+
+    @classmethod
+    def from_streaming_response(cls, completion):
+        json_chunks = cls.extract_json(completion)
+        yield from cls.tasks_from_chunks(json_chunks)
+
+    @classmethod
+    def tasks_from_chunks(cls, json_chunks):
+        started = False
+        potential_object = ""
+        for chunk in json_chunks:
+            potential_object += chunk
+            print(potential_object)
+            if not started:
+                if "[" in chunk:
+                    started = True
+                    potential_object = chunk[chunk.find("[") + 1 :]
+                continue
+
+            task_json, potential_object = cls.get_object(potential_object, 0)
+            if task_json:
+                obj = cls.task_type.model_validate_json(task_json)  # type: ignore
+                yield obj
+
+    @staticmethod
+    def extract_json(completion):
+        for chunk in completion:
+            if chunk.choices:
+                delta = chunk.choices[0].delta
+                if delta.function_call:
+                    if delta.function_call.arguments:
+                        yield delta.function_call.arguments
+
+    @staticmethod
+    def get_object(str, stack):
+        for i, c in enumerate(str):
+            if c == "{":
+                stack += 1
+            if c == "}":
+                stack -= 1
+                if stack == 0:
+                    return str[: i + 1], str[i + 2 :]
+        return None, str
 
 
 class ASTChangeApplicator:
@@ -282,38 +303,3 @@ class CustomASTTransformer(ast.NodeTransformer):
             else:
                 new_body.append(node)
         return new_body
-
-
-class Changes(OpenAISchema):
-    """
-    A class representing a list of operations that can be performed on a file.
-
-    Attributes:
-        ops (list): A list of operations that can be performed on a file.
-
-    Usage:
-        operations = Operations()
-        operations.ops = [FunctionOperations(), ClassOperations(), MethodOperations(), ImportOperations()]
-    """
-
-    ops: list[
-        FunctionOperations | ClassOperations | MethodOperations | ImportOperations
-    ] = []
-
-    def execute(self):
-        """
-        Execute all the operations in the list of operations.
-
-        Returns:
-            str: The new source code after all the operations have been executed.
-        """
-        for op in self.ops:
-            with open(op.file_path, "r") as f:
-                source_code = f.read()
-
-            # Apply changes to the source code
-            applicator = ASTChangeApplicator(source_code)
-            source_code = applicator.apply_changes(op.changes)
-
-            # Calculate diff from original source code
-            diff = op.diff(source_code)

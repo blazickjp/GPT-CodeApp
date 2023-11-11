@@ -137,19 +137,17 @@ class CodingAgent:
 
             # function_to_call = [self.function_map.get(command).openai_schema]
             keyword_args["function_call"] = {"name": command}
-
             if command == "Changes":
-                print("Hello")
                 # self.memory_manager.identity = (
                 #     self.memory_manager.identity
                 #     + "\nLine numbers have been added to the Current File to aid in your response. They are not part of the actual file."
                 # )
                 # self.set_files_in_prompt(include_line_numbers=True)
-                keyword_args["max_tokens"] = 2000
+                keyword_args["functions"] = [Changes.openai_schema]
 
         # Call the model
         print(f"Calling model: {self.GPT_MODEL}")
-        for i, chunk in enumerate(self.call_model_streaming(**keyword_args)):
+        for i, chunk in enumerate(self.call_model_streaming(command, **keyword_args)):
             print(chunk)
             delta = chunk.choices[0].delta
             if "function_call" in delta:
@@ -285,13 +283,21 @@ class CodingAgent:
 
         return prompt + "Assistant:"
 
-    def call_model_streaming(self, **kwargs):
+    def call_model_streaming(self, command: Optional[str] | None = None, **kwargs):
+        print("Calling model streaming")
+        print(kwargs.keys())
         self.read_pos = 0
-        if self.GPT_MODEL == "gpt-4-1106-preview" or self.GPT_MODEL == "gpt-3.5-turbo":
-            for chunk in client.chat.completions.create(**kwargs):
-                yield chunk
+        if self.GPT_MODEL != "anthropic":
+            if command:
+                print("Here")
+                completion = client.chat.completions.create(**kwargs)
+                yield Changes.from_streaming_response(completion)
 
-        if self.GPT_MODEL == "anthropic":
+            else:
+                for chunk in client.chat.completions.create(**kwargs):
+                    yield chunk
+
+        if kwargs["model"] == "anthropic":
             print("Calling anthropic")
             try:
                 sm_client = boto3.client("bedrock-runtime")

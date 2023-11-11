@@ -1,7 +1,310 @@
-from pydantic import BaseModel
+import ast
+import astor
+import difflib
+from instructor import OpenAISchema
 
 
-class AddFunction(BaseModel):
+class Changes(OpenAISchema):
+    """
+    A class representing a list of operations that can be performed on a file.
+
+    Attributes:
+        ops (list): A list of operations that can be performed on a file.
+
+    Usage:
+        operations = Operations()
+        operations.ops = [FunctionOperations(), ClassOperations(), MethodOperations(), ImportOperations()]
+    """
+
+    # files: set = set()
+    # diffs: List[str] = []
+
+    def execute(self):
+        """
+        Execute all the operations in the list of operations.
+
+        Returns:
+            str: The new source code after all the operations have been executed.
+        """
+        for op in self.ops:
+            with open(op.file_path, "r") as f:
+                source_code = f.read()
+
+            self.files.add((op.file_path, source_code))
+
+            # Apply changes to the source code
+            applicator = ASTChangeApplicator(source_code)
+            source_code = applicator.apply_changes(op.changes)
+
+            with open(op.file_path, "w") as f:
+                f.write(source_code)
+
+            diff = self.diff(source_code)
+            self.diffs.append(diff)
+
+        return self.diffs
+
+    def diff(self, new_source_code):
+        """
+        Generates a diff from the original source code using difflib
+        """
+        return difflib.unified_diff(
+            self.source_code.splitlines(), new_source_code.splitlines()
+        )
+
+    @classmethod
+    def from_streaming_response(cls, completion):
+        json_chunks = cls.extract_json(completion)
+        yield from cls.tasks_from_chunks(json_chunks)
+
+    @classmethod
+    def tasks_from_chunks(cls, json_chunks):
+        started = False
+        potential_object = ""
+        for chunk in json_chunks:
+            potential_object += chunk
+            print(potential_object)
+            if not started:
+                if "[" in chunk:
+                    started = True
+                    potential_object = chunk[chunk.find("[") + 1 :]
+                continue
+
+            task_json, potential_object = cls.get_object(potential_object, 0)
+            if task_json:
+                obj = cls.task_type.model_validate_json(task_json)  # type: ignore
+                yield obj
+
+    @staticmethod
+    def extract_json(completion):
+        for chunk in completion:
+            if chunk.choices:
+                delta = chunk.choices[0].delta
+                if delta.function_call:
+                    if delta.function_call.arguments:
+                        yield delta.function_call.arguments
+
+    @staticmethod
+    def get_object(str, stack):
+        for i, c in enumerate(str):
+            if c == "{":
+                stack += 1
+            if c == "}":
+                stack -= 1
+                if stack == 0:
+                    return str[: i + 1], str[i + 2 :]
+        return None, str
+
+
+class ASTChangeApplicator:
+    def __init__(self, source_code: str):
+        self.source_code = source_code
+        self.ast_tree = ast.parse(source_code)
+
+    def apply_changes(self, changes):
+        transformer = CustomASTTransformer(changes)
+        modified_tree = transformer.visit(self.ast_tree)
+        return astor.to_source(modified_tree)
+
+    def check_and_apply_changes(self, changes):
+        # Here we would sort and check for conflicts.
+        sorted_changes = self.sort_changes(changes)
+        for change in sorted_changes:
+            if not self.is_conflict(change):
+                self.apply_change(change)
+        return astor.to_source(self.ast_tree)
+
+    def generate_diff(self, new_source_code):
+        """
+        Generates a diff from the original source code using difflib
+        """
+        return difflib.unified_diff(
+            self.source_code.splitlines(), new_source_code.splitlines()
+        )
+
+
+class CustomASTTransformer(ast.NodeTransformer):
+    def __init__(self, changes):
+        self.changes = changes
+        super().__init__()
+
+    def visit_Module(self, node):
+        # Handle adding new classes and functions to the module
+        for change in self.changes:
+            if isinstance(change, AddFunction):
+                new_function_node = self.create_function_node(change)
+                node.body.append(new_function_node)
+            elif isinstance(change, AddClass):
+                new_class_node = self.create_class_node(change)
+                node.body.append(new_class_node)
+            elif isinstance(change, DeleteFunction):
+                node.body = [
+                    n
+                    for n in node.body
+                    if not (
+                        isinstance(n, ast.FunctionDef)
+                        and n.name == change.function_name
+                    )
+                ]
+            elif isinstance(change, DeleteClass):
+                node.body = [
+                    n
+                    for n in node.body
+                    if not (isinstance(n, ast.ClassDef) and n.name == change.class_name)
+                ]
+        # import_changes = [
+        #     change for change in self.changes if isinstance(change, ImportOperations)
+        # ]
+        # for change in import_changes:
+        #     for add_import in change.add_imports:
+        #         new_import_node = self.create_import_node(add_import)
+        #         node.body.insert(0, new_import_node)
+        #     for delete_import in change.delete_imports:
+        #         node.body = self.remove_import_node(node.body, delete_import)
+
+        self.generic_visit(node)
+        return node
+
+    def visit_ClassDef(self, node):
+        # Handle renaming, adding, deleting, and modifying methods in a class
+        for change in self.changes:
+            if isinstance(change, ModifyClass) and node.name == change.name:
+                if change.new_name is not None:
+                    node.name = change.new_name
+            elif isinstance(change, AddMethod) and node.name == change.class_name:
+                new_method_node = self.create_method_node(change)
+                node.body.append(new_method_node)
+            elif isinstance(change, DeleteMethod) and node.name == change.class_name:
+                node.body = [
+                    n
+                    for n in node.body
+                    if not (
+                        isinstance(n, ast.FunctionDef) and n.name == change.method_name
+                    )
+                ]
+            elif isinstance(change, ModifyMethod) and node.name == change.class_name:
+                for n in node.body:
+                    if isinstance(n, ast.FunctionDef) and n.name == change.method_name:
+                        if change.new_args is not None:
+                            n.args = self.create_args(change.new_args)
+                        if change.new_body is not None:
+                            new_body_ast = ast.parse(change.new_body).body
+                            n.body = new_body_ast
+                        if change.new_method_name is not None:
+                            n.name = change.new_method_name
+
+        self.generic_visit(node)
+        return node
+
+    def visit_FunctionDef(self, node):
+        # Handle renaming and modifying functions at the module level
+        for change in self.changes:
+            if isinstance(change, ModifyFunction) and node.name == change.function_name:
+                if change.new_args is not None:
+                    node.args = self.create_args(change.new_args)
+                if change.new_body is not None:
+                    node.body = [ast.parse(change.new_body).body[0]]
+                if change.new_name is not None:
+                    node.name = change.new_name
+        self.generic_visit(node)
+        return node
+
+    def visit_Name(self, node):
+        # Handle variable name changes
+        for change in self.changes:
+            if (
+                isinstance(change, VariableNameChange)
+                and node.id == change.original_name
+            ):
+                node.id = change.new_name
+        self.generic_visit(node)
+        return node
+
+    # Helper methods
+    def create_function_node(self, change):
+        return ast.FunctionDef(
+            name=change.function_name,
+            args=self.create_args(change.args),
+            body=[ast.parse(change.body).body[0]],
+            decorator_list=[ast.parse(d).body[0].value for d in change.decorator_list],
+            returns=ast.parse(change.returns).body[0].value if change.returns else None,
+        )
+
+    def create_class_node(self, change):
+        class_body = (
+            [ast.parse(change.body).body[0]]
+            if isinstance(change.body, str)
+            else change.body
+        )
+        bases = [ast.parse(base).body[0].value for base in change.bases]
+        decorator_list = [
+            ast.parse(deco).body[0].value for deco in change.decorator_list
+        ]
+
+        # Handling Python 3.11 compatibility where `keywords` attribute may not be present
+        class_def_args = {
+            "name": change.class_name,
+            "bases": bases,
+            "body": class_body,
+            "decorator_list": decorator_list,
+        }
+
+        # Include keywords if it's a valid attribute for the current Python version
+        if hasattr(ast.ClassDef, "keywords"):
+            class_def_args["keywords"] = []
+
+        return ast.ClassDef(**class_def_args)
+
+    def create_method_node(self, change):
+        return ast.FunctionDef(
+            name=change.method_name,
+            args=self.create_args(change.args),
+            body=[ast.parse(change.body).body[0]],
+            decorator_list=[ast.parse(d).body[0].value for d in change.decorator_list],
+            returns=ast.parse(change.returns).body[0].value if change.returns else None,
+        )
+
+    def create_args(self, args_str):
+        return ast.parse("def _({}): pass".format(args_str)).body[0].args
+
+    # Helper method to create import node
+    def create_import_node(self, add_import):
+        if add_import.names:
+            return ast.Import(
+                names=[ast.alias(name=name, asname=None) for name in add_import.names]
+            )
+        elif add_import.objects:
+            return ast.ImportFrom(
+                module=add_import.module,
+                names=[ast.alias(name=obj, asname=None) for obj in add_import.objects],
+                level=0,
+            )
+        else:
+            return ast.Import(names=[ast.alias(name=add_import.module, asname=None)])
+
+    # Helper method to remove import node
+    def remove_import_node(self, body, delete_import):
+        new_body = []
+        for node in body:
+            if isinstance(node, ast.ImportFrom) and node.module == delete_import.module:
+                # Keep only names not in delete_import.objects
+                new_names = [
+                    alias
+                    for alias in node.names
+                    if alias.name not in delete_import.objects
+                ]
+                if new_names:
+                    # Create a new node with the remaining names
+                    new_node = ast.ImportFrom(
+                        module=node.module, names=new_names, level=node.level
+                    )
+                    new_body.append(new_node)
+            else:
+                new_body.append(node)
+        return new_body
+
+
+class AddFunction(Changes):
     """
     Represents a function to be added to a Python file.
 
@@ -20,7 +323,7 @@ class AddFunction(BaseModel):
     returns: str | None = None
 
 
-class DeleteFunction(BaseModel):
+class DeleteFunction(Changes):
     """
     Represents a request to delete a function from the agent.
 
@@ -31,7 +334,7 @@ class DeleteFunction(BaseModel):
     function_name: str
 
 
-class ModifyFunction(BaseModel):
+class ModifyFunction(Changes):
     """
     A class representing modifications to a function.
 
@@ -52,7 +355,7 @@ class ModifyFunction(BaseModel):
     new_name: str | None = None
 
 
-class AddClass(BaseModel):
+class AddClass(Changes):
     """Represents a class to be added to a file.
 
     Attributes:
@@ -68,7 +371,7 @@ class AddClass(BaseModel):
     decorator_list: list[str] = []
 
 
-class DeleteClass(BaseModel):
+class DeleteClass(Changes):
     """Represents a class to be deleted.
 
     Attributes:
@@ -78,7 +381,7 @@ class DeleteClass(BaseModel):
     class_name: str
 
 
-class ModifyClass(BaseModel):
+class ModifyClass(Changes):
     """Represents a request to modify a Python class.
 
     Attributes:
@@ -97,17 +400,7 @@ class ModifyClass(BaseModel):
     new_name: str | None = None
 
 
-class ModifyClass(BaseModel):
-    name: str
-    new_bases: list[str] | None = None  # New base classes
-    new_body: list | None = (
-        None  # New body of the class, which might include method definitions etc.
-    )
-    new_decorator_list: list[str] | None = None  # New decorators for the class
-    new_name: str | None = None  # New name for the class
-
-
-class AddMethod(BaseModel):
+class AddMethod(Changes):
     """
     Represents a method to be added to a class.
 
@@ -128,7 +421,7 @@ class AddMethod(BaseModel):
     returns: str | None = None
 
 
-class DeleteMethod(BaseModel):
+class DeleteMethod(Changes):
     """Represents a method to be deleted from a class.
 
     Attributes:
@@ -140,7 +433,7 @@ class DeleteMethod(BaseModel):
     method_name: str
 
 
-class ModifyMethod(BaseModel):
+class ModifyMethod(Changes):
     """Represents a method modification operation.
 
     Attributes:
@@ -162,7 +455,7 @@ class ModifyMethod(BaseModel):
     new_returns: str | None = None
 
 
-class VariableNameChange(BaseModel):
+class VariableNameChange(Changes):
     """
     Represents a request to change the name of a variable.
 
@@ -175,7 +468,7 @@ class VariableNameChange(BaseModel):
     new_name: str
 
 
-class AddImport(BaseModel):
+class AddImport(Changes):
     """
     Represents an import statement to be added to a Python file.
 
@@ -192,7 +485,7 @@ class AddImport(BaseModel):
     objects: list | None = None
 
 
-class DeleteImport(BaseModel):
+class DeleteImport(Changes):
     """
     Represents a request to delete one or more imports from a Python module.
 
@@ -209,7 +502,7 @@ class DeleteImport(BaseModel):
     objects: list | None = None
 
 
-class ModifyImport(BaseModel):
+class ModifyImport(Changes):
     """
     Represents a modification to an import statement in a Python file.
 
@@ -224,68 +517,3 @@ class ModifyImport(BaseModel):
     new_names: list | None = None
     new_asnames: list | None = None
     new_objects: list | None = None
-
-
-class ImportOperations(BaseModel):
-    """
-    Represents a set of operations to perform on an import statement in a Python file.
-
-    Attributes:
-        file_name (str): The name of the file to perform the import operations on.
-        add_imports (List[AddImport]): A list of import statements to add to the file.
-        delete_imports (List[DeleteImport]): A list of import statements to delete from the file.
-        modify_imports (List[ModifyImport]): A list of import statements to modify in the file.
-    """
-
-    file_name: str
-    add_imports: list[AddImport] = []
-    delete_imports: list[DeleteImport] = []
-    modify_imports: list[ModifyImport] = []
-
-
-class FunctionOperations(BaseModel):
-    """Represents a set of operations to be performed on a file's functions.
-
-    Attributes:
-        file_name (str): The name of the file to operate on.
-        add_functions (list[AddFunction]): A list of functions to add to the file.
-        delete_functions (list[DeleteFunction]): A list of functions to delete from the file.
-        modify_functions (list[ModifyFunction]): A list of functions to modify in the file.
-    """
-
-    file_name: str
-    add_functions: list[AddFunction] = []
-    delete_functions: list[DeleteFunction] = []
-    modify_functions: list[ModifyFunction] = []
-
-
-class ClassOperations(BaseModel):
-    """Represents a set of operations to perform on a file's classes.
-
-    Attributes:
-        file_name (str): The name of the file to perform the operations on.
-        add_classes (list[AddClass]): A list of classes to add to the file.
-        delete_classes (list[DeleteClass]): A list of classes to delete from the file.
-        modify_classes (list[ModifyClass]): A list of classes to modify in the file.
-    """
-
-    file_name: str
-    add_classes: list[AddClass] = []
-    delete_classes: list[DeleteClass] = []
-    modify_classes: list[ModifyClass] = []
-
-
-class MethodOperations(BaseModel):
-    """Represents a set of operations to be performed on a file's methods.
-
-    Attributes:
-        file_name (str): The name of the file to perform the operations on.
-        add_methods (list[AddMethod]): A list of methods to be added to the file.
-        delete_methods (list[DeleteMethod]): A list of methods to be deleted from the file.
-        modify_methods (list[ModifyMethod]): A list of methods to be modified in the file.
-    """
-
-    file_name: str
-    add_methods: list[AddMethod] = []
-    delete_methods: list[DeleteMethod] = []
-    modify_methods: list[ModifyMethod] = []

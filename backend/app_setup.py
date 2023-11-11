@@ -98,7 +98,5 @@ def setup_app() -> CodingAgent:
     print("Setting up app")
     codebase = setup_codebase()
     memory = setup_memory_manager(tree=codebase.tree(), identity=IDENTITY)
-    agent = CodingAgent(
-        memory_manager=memory, callables=[Changes.openai_schema], codebase=codebase
-    )
+    agent = CodingAgent(memory_manager=memory, callables=[Changes], codebase=codebase)
     return agent, codebase
