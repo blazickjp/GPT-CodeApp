@@ -60,7 +60,6 @@ class Changes(OpenAISchema):
 
     @classmethod
     def tasks_from_chunks(cls, json_chunks):
-        started = False
         potential_object = ""
         for chunk in json_chunks:
             potential_object += chunk
@@ -79,7 +78,6 @@ class Changes(OpenAISchema):
 
     @staticmethod
     def extract_json(completion):
-        # start = True
         for idx, chunk in enumerate(completion):
             if chunk.choices:
                 delta = chunk.choices[0].delta
@@ -89,14 +87,12 @@ class Changes(OpenAISchema):
 
     @staticmethod
     def get_object(str, stack):
-        # print("\n\nTest: \n\n", type(str))
         for i, c in enumerate(str):
             if c == "{":
                 stack += 1
                 first = i
             if c == "}" and stack > 0:
                 stack -= 1
-                # print(stack)
                 if stack == 0:
                     return True, str[first + 1 : i]
         return None, str
