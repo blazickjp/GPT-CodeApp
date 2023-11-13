@@ -1,4 +1,5 @@
 import ast
+import json
 import astor
 import difflib
 from instructor import OpenAISchema
@@ -63,36 +64,41 @@ class Changes(OpenAISchema):
         potential_object = ""
         for chunk in json_chunks:
             potential_object += chunk
-            print(potential_object)
-            if not started:
-                if "[" in chunk:
-                    started = True
-                    potential_object = chunk[chunk.find("[") + 1 :]
-                continue
-
-            task_json, potential_object = cls.get_object(potential_object, 0)
-            if task_json:
-                obj = cls.task_type.model_validate_json(task_json)  # type: ignore
-                yield obj
+            if potential_object.strip():  # Ensure the string is not just whitespace
+                try:
+                    # Convert the JSON string to a dictionary
+                    potential_dict = json.loads(potential_object)
+                    # Now you can unpack the dictionary with **
+                    yield cls(**potential_dict)
+                    potential_object = (
+                        ""  # Reset potential_object after successful yield
+                    )
+                except json.JSONDecodeError:
+                    # Handle incomplete JSON by waiting for more chunks
+                    continue
 
     @staticmethod
     def extract_json(completion):
-        for chunk in completion:
+        # start = True
+        for idx, chunk in enumerate(completion):
             if chunk.choices:
                 delta = chunk.choices[0].delta
-                if delta.function_call:
-                    if delta.function_call.arguments:
-                        yield delta.function_call.arguments
+                if delta.tool_calls:
+                    if delta.tool_calls[0].function.arguments:
+                        yield delta.tool_calls[0].function.arguments
 
     @staticmethod
     def get_object(str, stack):
+        # print("\n\nTest: \n\n", type(str))
         for i, c in enumerate(str):
             if c == "{":
                 stack += 1
-            if c == "}":
+                first = i
+            if c == "}" and stack > 0:
                 stack -= 1
+                # print(stack)
                 if stack == 0:
-                    return str[: i + 1], str[i + 2 :]
+                    return True, str[first + 1 : i]
         return None, str
 
 

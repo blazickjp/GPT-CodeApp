@@ -55,6 +55,8 @@ class Changes(OpenAISchema):
 
     @classmethod
     def from_streaming_response(cls, completion):
+        print("Here")
+        print("Streaming: ", completion)
         json_chunks = cls.extract_json(completion)
         yield from cls.tasks_from_chunks(json_chunks)
 
@@ -62,9 +64,9 @@ class Changes(OpenAISchema):
     def tasks_from_chunks(cls, json_chunks):
         started = False
         potential_object = ""
+        print("Starting to stream")
         for chunk in json_chunks:
             potential_object += chunk
-            print(potential_object)
             if not started:
                 if "[" in chunk:
                     started = True
