@@ -1,23 +1,13 @@
 # import os
 import io
 import re
-from openai import OpenAI
-
 import json
 import boto3
 import instructor
+from openai import OpenAI
 from pydantic import BaseModel
-
-# This enables response_model keyword
-# from client.chat.completions.create
 from typing import List, Optional, Callable
 from database.my_codebase import MyCodebase
-from agent.agent_functions.changes import (
-    ASTChangeApplicator,
-    Changes,
-)  # Import the ASTChangeApplicator
-
-# from agent.agent_functions import Program, File
 
 client = instructor.patch(OpenAI())
 # GPT_MODEL = "gpt-3.5-turbo-0613"  # or any other chat model you want to use
@@ -143,7 +133,8 @@ class CodingAgent:
                 #     + "\nLine numbers have been added to the Current File to aid in your response. They are not part of the actual file."
                 # )
                 # self.set_files_in_prompt(include_line_numbers=True)
-                keyword_args["functions"] = [Changes.openai_schema]
+                # keyword_args["functions"] = [Changes.openai_schema]
+                keyword_args["max_tokens"] = 2000
 
         # Call the model
         print(f"Calling model: {self.GPT_MODEL}")
@@ -156,45 +147,6 @@ class CodingAgent:
                 yield from self.execute_function()
             else:
                 yield delta.content
-
-    def register_ast_functions(self):
-        # Register functions to handle AST changes
-        self.function_map.update(
-            {
-                "apply_ast_changes": self.apply_ast_changes,
-            }
-        )
-
-    def apply_ast_changes(self, source_code: str, changes: list) -> str:
-        """
-        Applies a list of AST changes to the given source code.
-
-        Args:
-            source_code (str): The original source code.
-            changes (list): A list of changes to apply to the AST.
-
-        Returns:
-            str: The updated source code after applying changes.
-        """
-        applicator = ASTChangeApplicator(source_code)
-        new_source_code = applicator.apply_changes(changes)
-        return new_source_code
-
-    # ... later in the code where the agent processes commands ...
-
-    def handle_ast_change_command(self, input_data: dict):
-        """
-        Handles a command to change the AST based on provided input data.
-
-        Args:
-            input_data (dict): Data containing the source code and changes to apply.
-        """
-        source_code = input_data["source_code"]
-        changes = input_data[
-            "changes"
-        ]  # This should be structured in a way the ASTChangeApplicator can understand
-        updated_code = self.apply_ast_changes(source_code, changes)
-        return updated_code
 
     def process_function_call(self, delta, i):
         function_call = delta.function_call

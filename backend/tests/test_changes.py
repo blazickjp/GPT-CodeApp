@@ -1,14 +1,14 @@
+from hmac import new
 import unittest
 import ast
 import astor
-from agent.agent_functions.changes import (
+from agent.agent_functions.file_ops import (
     DeleteClass,
     ModifyFunction,
     DeleteFunction,
     AddClass,
     AddMethod,
     DeleteMethod,
-    ImportOperations,
     ModifyClass,
     ModifyMethod,
     AddFunction,
@@ -27,11 +27,12 @@ import pandas as pd
 
     def test_adding_import_statement(self):
         # Define the import addition
-        add_import_change = ImportOperations(
+        add_import_change = AddImport(
             file_name="test.py",
-            add_imports=[
-                AddImport(module="math", names=None, asnames=None, objects=["sqrt"])
-            ],
+            module="math",
+            names=None,
+            asnames=None,
+            objects=["sqrt"],
         )
 
         self.transformer = CustomASTTransformer(changes=[add_import_change])
@@ -39,12 +40,11 @@ import pandas as pd
         # Parse the source code into an AST
         ast_tree = ast.parse(self.source_code)
         new_ast_tree = self.transformer.visit(ast_tree)
-        print(ast.dump(new_ast_tree, indent=4))
-
         ast.fix_missing_locations(new_ast_tree)
 
         # Generate the new source code and define the expected result
         new_source_code = ast.unparse(new_ast_tree).strip()
+        print(new_source_code)
         expected_code = "from math import sqrt\nimport pandas as pd"
 
         # Assert the addition is as expected
@@ -58,9 +58,8 @@ class TestDeleteImport(unittest.TestCase):
 
     def test_removing_import_statement(self):
         # Define the import deletion
-        delete_import_change = ImportOperations(
-            file_name="test.py",
-            delete_imports=[DeleteImport(module="math", objects=["sqrt"])],
+        delete_import_change = DeleteImport(
+            file_name="test.py", module="math", objects=["sqrt"]
         )
         self.transformer = CustomASTTransformer(changes=[delete_import_change])
 
@@ -85,7 +84,9 @@ class OldClassName:
 
     def test_renaming_class(self):
         # Define the class rename operation
-        modify_class_change = ModifyClass(name="OldClassName", new_name="NewClassName")
+        modify_class_change = ModifyClass(
+            file_name="test.py", class_name="OldClassName", new_name="NewClassName"
+        )
         self.transformer = CustomASTTransformer(changes=[modify_class_change])
 
         # Apply the change
@@ -120,6 +121,7 @@ class MyClass:
     def test_modifying_method_body(self):
         # Define the modification
         modify_method_change = ModifyMethod(
+            file_name="test.py",
             class_name="MyClass",
             method_name="method_to_modify",
             new_body="return x * 2",
@@ -166,7 +168,7 @@ class MyClass:
 
         # Create a DeleteMethod instance for the method to be deleted
         delete_method_change = DeleteMethod(
-            class_name="MyClass", method_name="method_to_delete"
+            file_name="test.py", class_name="MyClass", method_name="method_to_delete"
         )
 
         # Apply the change using the CustomASTTransformer
@@ -201,6 +203,7 @@ class MyClass:
 
         # Create an AddMethod instance for the new method
         add_method_change = AddMethod(
+            file_name="test.py",
             class_name="MyClass",
             method_name="new_method",
             args="self, arg",
@@ -229,7 +232,9 @@ class TestVariableNameChange(unittest.TestCase):
         ast_tree = ast.parse(source_code)
 
         # Create a VariableNameChange instance for the rename operation
-        rename_change = VariableNameChange(original_name="x", new_name="y")
+        rename_change = VariableNameChange(
+            file_name="test.py", original_name="x", new_name="y"
+        )
 
         # Apply the change using the CustomASTTransformer
         transformer = CustomASTTransformer(changes=[rename_change])
@@ -257,7 +262,9 @@ def example_function():
         ast_tree = ast.parse(source_code)
 
         # Create a VariableNameChange instance for the rename operation
-        rename_change = VariableNameChange(original_name="x", new_name="y")
+        rename_change = VariableNameChange(
+            file_name="test.py", original_name="x", new_name="y"
+        )
 
         # Apply the change using the CustomASTTransformer
         transformer = CustomASTTransformer(changes=[rename_change])
@@ -284,7 +291,9 @@ def example_function():
         ast_tree = ast.parse(source_code)
 
         # Create a VariableNameChange instance for the rename operation
-        rename_change = VariableNameChange(original_name="count", new_name="quantity")
+        rename_change = VariableNameChange(
+            file_name="test.py", original_name="count", new_name="quantity"
+        )
 
         # Apply the change using the CustomASTTransformer
         transformer = CustomASTTransformer(changes=[rename_change])
@@ -308,6 +317,7 @@ def new_function():
 
         # Create an AddFunction instance for the new function
         add_function_change = AddFunction(
+            file_name="test.py",
             function_name="new_function",
             args="",
             body="pass",
@@ -345,6 +355,7 @@ class ExampleClass:
 
         # Create a ClassMethodChange instance for the rename operation
         method_change = ModifyMethod(
+            file_name="test.py",
             class_name="ExampleClass",
             method_name="method_one",
             new_method_name="renamed_method",
@@ -377,6 +388,7 @@ class ExampleClass:
 
         # Create a ClassMethodChange instance for the rename operation
         method_change = ModifyMethod(
+            file_name="test.py",
             class_name="ExampleClass",
             method_name="method_one",
             new_body="for i in range(10):\n    print(i)",
@@ -411,6 +423,7 @@ class ExampleClass:
 
         # Create a ClassMethodChange instance for the rename operation
         method_change = ModifyMethod(
+            file_name="test.py",
             class_name="ExampleClass",
             method_name="method_one",
             new_body="for i in range(10):\n    print(i)\nreturn 'Hello!'",
@@ -443,7 +456,9 @@ class AnotherClass:
     def method(self):
         pass
 """
-        delete_class_change = DeleteClass(class_name="ClassToDelete")
+        delete_class_change = DeleteClass(
+            file_name="test.py", class_name="ClassToDelete"
+        )
         transformer = CustomASTTransformer(changes=[delete_class_change])
         new_ast = transformer.visit(ast.parse(source_code))
         new_code = ast.unparse(new_ast).strip()
@@ -462,6 +477,7 @@ def modified_function():
     return 2
 """
         modify_function_change = ModifyFunction(
+            file_name="test.py",
             function_name="function_to_modify",
             new_name="modified_function",
             new_body="return 2",
@@ -486,7 +502,9 @@ def function_to_keep():
 def function_to_keep():
     pass
 """
-        delete_function_change = DeleteFunction(function_name="function_to_delete")
+        delete_function_change = DeleteFunction(
+            file_name="test.py", function_name="function_to_delete"
+        )
         transformer = CustomASTTransformer(changes=[delete_function_change])
         new_ast = transformer.visit(ast.parse(source_code))
         new_code = ast.unparse(new_ast).strip()
@@ -504,7 +522,9 @@ class NewClass:
     """.strip()  # Ensure consistent whitespace handling
 
         add_class_change = AddClass(
-            class_name="NewClass", body="def new_method(self):\n    pass"
+            file_name="test.py",
+            class_name="NewClass",
+            body="def new_method(self):\n    pass",
         )
         transformer = CustomASTTransformer(changes=[add_class_change])
         new_ast = transformer.visit(ast.parse(source_code))

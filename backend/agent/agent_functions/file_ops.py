@@ -5,20 +5,52 @@ import difflib
 from instructor import OpenAISchema
 
 
+def from_streaming_response(completion, class_list):
+    function_name = None
+    json_accumulator = ""
+    idx = None
+
+    for _, chunk in enumerate(completion):
+        if chunk.choices:
+            delta = chunk.choices[0].delta
+            if delta.tool_calls:
+                for call in delta.tool_calls:
+                    # If we've started a new call, reset the accumulator and save the function name
+                    if call.index != idx:
+                        if json_accumulator:
+                            try:
+                                data = json.loads(json_accumulator)
+                                if function_name in class_list:
+                                    yield class_list[function_name](**data)
+                            except json.JSONDecodeError as e:
+                                print(f"JSON decode error: {e}")
+
+                        function_name = call.function.name
+                        json_accumulator = ""
+                        idx = call.index
+
+                    # Accumulate JSON string
+                    json_accumulator += call.function.arguments
+
+    # After the loop, process the last accumulated JSON
+    if json_accumulator:
+        try:
+            data = json.loads(json_accumulator)
+            if function_name in class_list:
+                yield class_list[function_name](**data)
+        except json.JSONDecodeError as e:
+            print(f"JSON decode error: {e}")
+
+
 class Changes(OpenAISchema):
     """
     A class representing a list of operations that can be performed on a file.
 
     Attributes:
-        ops (list): A list of operations that can be performed on a file.
+        ops Tuple(TaskType, Op): A list of operations that can be performed on a file.
 
     Usage:
-        operations = Operations()
-        operations.ops = [FunctionOperations(), ClassOperations(), MethodOperations(), ImportOperations()]
     """
-
-    # files: set = set()
-    # diffs: List[str] = []
 
     def execute(self):
         """
@@ -53,49 +85,55 @@ class Changes(OpenAISchema):
             self.source_code.splitlines(), new_source_code.splitlines()
         )
 
-    @classmethod
-    def from_streaming_response(cls, completion):
-        json_chunks = cls.extract_json(completion)
-        yield from cls.tasks_from_chunks(json_chunks)
+    # @classmethod
+    # def from_streaming_response(cls, completion):
+    #     name, json_chunks = cls.extract_json(completion)
+    #     yield from cls.tasks_from_chunks(json_chunks, name)
 
-    @classmethod
-    def tasks_from_chunks(cls, json_chunks):
-        potential_object = ""
-        for chunk in json_chunks:
-            potential_object += chunk
-            if potential_object.strip():  # Ensure the string is not just whitespace
-                try:
-                    # Convert the JSON string to a dictionary
-                    potential_dict = json.loads(potential_object)
-                    # Now you can unpack the dictionary with **
-                    yield cls(**potential_dict)
-                    potential_object = (
-                        ""  # Reset potential_object after successful yield
-                    )
-                except json.JSONDecodeError:
-                    # Handle incomplete JSON by waiting for more chunks
-                    continue
+    # @classmethod
+    # def tasks_from_chunks(cls, json_chunks, name):
+    #     potential_object = ""
+    #     for chunk in json_chunks:
+    #         potential_object += chunk
+    #         if potential_object.strip():  # Ensure the string is not just whitespace
+    #             try:
+    #                 # Convert the JSON string to a dictionary
+    #                 potential_dict = json.loads(potential_object)
+    #                 # Now you can unpack the dictionary with **
+    #                 yield cls(**potential_dict)
+    #                 potential_object = (
+    #                     ""  # Reset potential_object after successful yield
+    #                 )
+    #             except json.JSONDecodeError:
+    #                 # Handle incomplete JSON by waiting for more chunks
+    #                 continue
 
-    @staticmethod
-    def extract_json(completion):
-        for idx, chunk in enumerate(completion):
-            if chunk.choices:
-                delta = chunk.choices[0].delta
-                if delta.tool_calls:
-                    if delta.tool_calls[0].function.arguments:
-                        yield delta.tool_calls[0].function.arguments
+    # @staticmethod
+    # def extract_json(completion):
+    #     NAME = None
+    #     for idx, chunk in enumerate(completion):
+    #         if chunk.choices:
+    #             delta = chunk.choices[0].delta
+    #             if delta.tool_calls:
+    #                 NAME = (
+    #                     delta.tool_calls[0].function.name
+    #                     if delta.tool_calls[0].function.name
+    #                     else NAME
+    #                 )
+    #                 if delta.tool_calls[0].function.arguments:
+    #                     yield NAME, delta.tool_calls[0].function.arguments
 
-    @staticmethod
-    def get_object(str, stack):
-        for i, c in enumerate(str):
-            if c == "{":
-                stack += 1
-                first = i
-            if c == "}" and stack > 0:
-                stack -= 1
-                if stack == 0:
-                    return True, str[first + 1 : i]
-        return None, str
+    # @staticmethod
+    # def get_object(str, stack):
+    #     for i, c in enumerate(str):
+    #         if c == "{":
+    #             stack += 1
+    #             first = i
+    #         if c == "}" and stack > 0:
+    #             stack -= 1
+    #             if stack == 0:
+    #                 return True, str[first + 1 : i]
+    #     return None, str
 
 
 class ASTChangeApplicator:
@@ -124,6 +162,12 @@ class ASTChangeApplicator:
             self.source_code.splitlines(), new_source_code.splitlines()
         )
 
+    def is_conflict(self, change):
+        return NotImplementedError
+
+    def sort_changes(self, changes):
+        return NotImplementedError
+
 
 class CustomASTTransformer(ast.NodeTransformer):
     def __init__(self, changes):
@@ -136,9 +180,6 @@ class CustomASTTransformer(ast.NodeTransformer):
             if isinstance(change, AddFunction):
                 new_function_node = self.create_function_node(change)
                 node.body.append(new_function_node)
-            elif isinstance(change, AddClass):
-                new_class_node = self.create_class_node(change)
-                node.body.append(new_class_node)
             elif isinstance(change, DeleteFunction):
                 node.body = [
                     n
@@ -148,21 +189,20 @@ class CustomASTTransformer(ast.NodeTransformer):
                         and n.name == change.function_name
                     )
                 ]
+            elif isinstance(change, AddClass):
+                new_class_node = self.create_class_node(change)
+                node.body.append(new_class_node)
             elif isinstance(change, DeleteClass):
                 node.body = [
                     n
                     for n in node.body
                     if not (isinstance(n, ast.ClassDef) and n.name == change.class_name)
                 ]
-        # import_changes = [
-        #     change for change in self.changes if isinstance(change, ImportOperations)
-        # ]
-        # for change in import_changes:
-        #     for add_import in change.add_imports:
-        #         new_import_node = self.create_import_node(add_import)
-        #         node.body.insert(0, new_import_node)
-        #     for delete_import in change.delete_imports:
-        #         node.body = self.remove_import_node(node.body, delete_import)
+            elif isinstance(change, AddImport):
+                new_import_node = self.create_import_node(change)
+                node.body.insert(0, new_import_node)
+            elif isinstance(change, DeleteImport):
+                node.body = self.remove_import_node(node.body, change)
 
         self.generic_visit(node)
         return node
@@ -170,7 +210,7 @@ class CustomASTTransformer(ast.NodeTransformer):
     def visit_ClassDef(self, node):
         # Handle renaming, adding, deleting, and modifying methods in a class
         for change in self.changes:
-            if isinstance(change, ModifyClass) and node.name == change.name:
+            if isinstance(change, ModifyClass) and node.name == change.class_name:
                 if change.new_name is not None:
                     node.name = change.new_name
             elif isinstance(change, AddMethod) and node.name == change.class_name:
@@ -311,6 +351,7 @@ class AddFunction(Changes):
     Represents a function to be added to a Python file.
 
     Args:
+        file_name (str): The name of the file to add the function to.
         function_name (str): The name of the function.
         args (str): The arguments of the function.
         body (str): The body of the function.
@@ -318,6 +359,7 @@ class AddFunction(Changes):
         returns (str | None, optional): The return type of the function. Defaults to None.
     """
 
+    file_name: str
     function_name: str
     args: str
     body: str
@@ -330,9 +372,11 @@ class DeleteFunction(Changes):
     Represents a request to delete a function from the agent.
 
     Attributes:
+        file_name (str): The name of the file containing the function to delete.
         function_name (str): The name of the function to delete.
     """
 
+    file_name: str
     function_name: str
 
 
@@ -341,6 +385,7 @@ class ModifyFunction(Changes):
     A class representing modifications to a function.
 
     Attributes:
+        file_name (str): The name of the file containing the function to modify.
         function_name (str): The name of the function to modify.
         new_args (str | None): The new arguments for the function, if any.
         new_body (str | None): The new body of the function, if any.
@@ -349,6 +394,7 @@ class ModifyFunction(Changes):
         new_name (str | None): The new name for the function, if any.
     """
 
+    file_name: str
     function_name: str
     new_args: str | None = None
     new_body: str | None = None
@@ -361,12 +407,14 @@ class AddClass(Changes):
     """Represents a class to be added to a file.
 
     Attributes:
+        file_name (str): The name of the file to add the class to.
         class_name (str): The name of the class.
         bases (list[str], optional): The base classes of the class. Defaults to an empty list.
         body (str): The body of the class.
         decorator_list (list[str], optional): The decorators applied to the class. Defaults to an empty list.
     """
 
+    file_name: str
     class_name: str
     bases: list[str] = []
     body: str
@@ -377,9 +425,11 @@ class DeleteClass(Changes):
     """Represents a class to be deleted.
 
     Attributes:
+        file_name (str): The name of the file containing the class to be deleted.
         class_name (str): The name of the class to be deleted.
     """
 
+    file_name: str
     class_name: str
 
 
@@ -387,6 +437,7 @@ class ModifyClass(Changes):
     """Represents a request to modify a Python class.
 
     Attributes:
+        file_name (str): The name of the file containing the class to modify.
         name (str): The name of the class to modify.
         new_bases (list[str], optional): The new base classes for the class.
         new_body (list, optional): The new body of the class, which might include
@@ -395,11 +446,13 @@ class ModifyClass(Changes):
         new_name (str, optional): The new name for the class.
     """
 
-    name: str
+    file_name: str
+    class_name: str
     new_bases: list[str] | None = None
     new_body: list | None = None
     new_decorator_list: list[str] | None = None
     new_name: str | None = None
+    new_args: str | None = None
 
 
 class AddMethod(Changes):
@@ -407,6 +460,7 @@ class AddMethod(Changes):
     Represents a method to be added to a class.
 
     Attributes:
+        file_name (str): The name of the file containing the class to which the method will be added.
         class_name (str): The name of the class to which the method will be added.
         method_name (str): The name of the method.
         args (str): The arguments of the method.
@@ -415,6 +469,7 @@ class AddMethod(Changes):
         returns (str, optional): The return type of the method. Defaults to None.
     """
 
+    file_name: str
     class_name: str
     method_name: str
     args: str
@@ -427,10 +482,12 @@ class DeleteMethod(Changes):
     """Represents a method to be deleted from a class.
 
     Attributes:
+        file_name (str): The name of the file containing the class.
         class_name (str): The name of the class containing the method.
         method_name (str): The name of the method to be deleted.
     """
 
+    file_name: str
     class_name: str
     method_name: str
 
@@ -439,6 +496,7 @@ class ModifyMethod(Changes):
     """Represents a method modification operation.
 
     Attributes:
+        file_name (str): The name of the file containing the class.
         class_name (str): The name of the class containing the method to be modified.
         method_name (str): The name of the method to be modified.
         new_args (str, optional): The new arguments for the method. Defaults to None.
@@ -448,6 +506,7 @@ class ModifyMethod(Changes):
         new_returns (str, optional): The new return type for the method. Defaults to None.
     """
 
+    file_name: str
     class_name: str
     method_name: str
     new_args: str | None = None
@@ -459,7 +518,7 @@ class ModifyMethod(Changes):
 
 class VariableNameChange(Changes):
     """
-    Represents a request to change the name of a variable.
+    Represents a request to change the name of a variable. Changes take place over the entire codebase.
 
     Attributes:
         original_name (str): The original name of the variable.
@@ -481,6 +540,7 @@ class AddImport(Changes):
         objects (list, optional): A list of objects to be imported from the module. Defaults to None.
     """
 
+    file_name: str
     module: str
     names: list | None = None
     asnames: list | None = None
@@ -498,6 +558,7 @@ class DeleteImport(Changes):
         objects (list, optional): A list of import objects to delete. Defaults to None.
     """
 
+    file_name: str
     module: str
     names: list | None = None
     asnames: list | None = None
@@ -509,13 +570,34 @@ class ModifyImport(Changes):
     Represents a modification to an import statement in a Python file.
 
     Attributes:
+        file_name (str): The name of the file containing the import statement.
         module (str): The name of the module being imported.
         new_names (list, optional): A list of new names to be imported from the module.
         new_asnames (list, optional): A list of new names to be imported from the module with an alias.
         new_objects (list, optional): A list of new objects to be imported from the module.
     """
 
+    file_name: str
     module: str
     new_names: list | None = None
     new_asnames: list | None = None
     new_objects: list | None = None
+
+
+_OP_LIST = [
+    AddImport,
+    DeleteImport,
+    AddFunction,
+    DeleteFunction,
+    AddClass,
+    DeleteClass,
+    AddMethod,
+    DeleteMethod,
+    ModifyFunction,
+    ModifyClass,
+    ModifyMethod,
+    ModifyImport,
+    VariableNameChange,
+]
+
+_OP_LIST = {cls.__name__: cls for cls in _OP_LIST}
