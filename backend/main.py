@@ -82,7 +82,7 @@ async def update_system_prompt(input: dict):
 
 @app.get("/get_functions")
 async def get_functions():
-    if AGENT.functions is None:
+    if AGENT.tools is None:
         agent_functions = {
             "agent_functions": [
                 {"name": "None", "description": "The Agent has 0 Functions Loaded"}
@@ -91,24 +91,15 @@ async def get_functions():
     else:
         agent_functions = {
             "agent_functions": [
-                {"name": func.__name__, "description": func.__doc__}
-                for func in AGENT.functions
+                {"name": cls.__name__, "description": cls.__doc__}
+                for cls in AGENT.function_map[0].values()
             ]
         }
-    if AGENT.callables is None:
+
         on_demand_functions = {
             "on_demand_functions": [
-                {
-                    "name": "None",
-                    "description": "The Agent has 0 Functions for On-Demand-Calling",
-                }
-            ]
-        }
-    else:
-        on_demand_functions = {
-            "on_demand_functions": [
-                {"name": func.__name__, "description": func.__doc__}
-                for func in AGENT.callables
+                {"name": cls.__name__, "description": cls.__doc__}
+                for cls in AGENT.function_map[0].values()
             ]
         }
     return JSONResponse(content={**agent_functions, **on_demand_functions})
@@ -177,6 +168,8 @@ async def get_files_in_prompt():
 @app.post("/set_model")
 async def set_model(input: dict):
     model = input.get("model")
+    print(f"Current model: {AGENT.GPT_MODEL}")
+    print(f"Received model: {model}")
     # Update config table
     if model:
         AGENT.memory_manager.cur.execute(
@@ -187,7 +180,7 @@ async def set_model(input: dict):
             DO UPDATE SET value = excluded.value, last_updated = excluded.last_updated
             WHERE field = 'model';
             """,
-            ("model", json.dumps(model)),
+            ("model", model),
         )
         AGENT.GPT_MODEL = model
         return JSONResponse(status_code=200, content={})

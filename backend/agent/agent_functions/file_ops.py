@@ -3,6 +3,7 @@ import json
 import astor
 import difflib
 from instructor import OpenAISchema
+from pydantic import Field
 
 
 def from_streaming_response(completion, class_list):
@@ -85,56 +86,6 @@ class Changes(OpenAISchema):
             self.source_code.splitlines(), new_source_code.splitlines()
         )
 
-    # @classmethod
-    # def from_streaming_response(cls, completion):
-    #     name, json_chunks = cls.extract_json(completion)
-    #     yield from cls.tasks_from_chunks(json_chunks, name)
-
-    # @classmethod
-    # def tasks_from_chunks(cls, json_chunks, name):
-    #     potential_object = ""
-    #     for chunk in json_chunks:
-    #         potential_object += chunk
-    #         if potential_object.strip():  # Ensure the string is not just whitespace
-    #             try:
-    #                 # Convert the JSON string to a dictionary
-    #                 potential_dict = json.loads(potential_object)
-    #                 # Now you can unpack the dictionary with **
-    #                 yield cls(**potential_dict)
-    #                 potential_object = (
-    #                     ""  # Reset potential_object after successful yield
-    #                 )
-    #             except json.JSONDecodeError:
-    #                 # Handle incomplete JSON by waiting for more chunks
-    #                 continue
-
-    # @staticmethod
-    # def extract_json(completion):
-    #     NAME = None
-    #     for idx, chunk in enumerate(completion):
-    #         if chunk.choices:
-    #             delta = chunk.choices[0].delta
-    #             if delta.tool_calls:
-    #                 NAME = (
-    #                     delta.tool_calls[0].function.name
-    #                     if delta.tool_calls[0].function.name
-    #                     else NAME
-    #                 )
-    #                 if delta.tool_calls[0].function.arguments:
-    #                     yield NAME, delta.tool_calls[0].function.arguments
-
-    # @staticmethod
-    # def get_object(str, stack):
-    #     for i, c in enumerate(str):
-    #         if c == "{":
-    #             stack += 1
-    #             first = i
-    #         if c == "}" and stack > 0:
-    #             stack -= 1
-    #             if stack == 0:
-    #                 return True, str[first + 1 : i]
-    #     return None, str
-
 
 class ASTChangeApplicator:
     def __init__(self, source_code: str):
@@ -151,7 +102,7 @@ class ASTChangeApplicator:
         sorted_changes = self.sort_changes(changes)
         for change in sorted_changes:
             if not self.is_conflict(change):
-                self.apply_change(change)
+                self.apply_changes(change)
         return astor.to_source(self.ast_tree)
 
     def generate_diff(self, new_source_code):
@@ -349,76 +300,103 @@ class CustomASTTransformer(ast.NodeTransformer):
 class AddFunction(Changes):
     """
     Represents a function to be added to a Python file.
-
-    Args:
-        file_name (str): The name of the file to add the function to.
-        function_name (str): The name of the function.
-        args (str): The arguments of the function.
-        body (str): The body of the function.
-        decorator_list (list[str], optional): The list of decorators applied to the function. Defaults to [].
-        returns (str | None, optional): The return type of the function. Defaults to None.
     """
 
-    file_name: str
-    function_name: str
-    args: str
-    body: str
-    decorator_list: list[str] = []
-    returns: str | None = None
+    file_name: str = Field(
+        ..., description="The name of the file to add the function to."
+    )
+    function_name: str = Field(..., description="The name of the function.")
+    args: str = Field(..., description="The arguments of the function.")
+    body: str = Field(..., description="The body of the function.")
+    decorator_list: list[str] = Field(
+        [], description="The list of decorators to be applied to the function."
+    )
+    returns: str | None = Field(None, description="The return type of the function.")
+
+    def to_string(self):
+        out = dict(
+            file_name=self.file_name,
+            function_name=self.function_name,
+            args=self.args,
+            body=self.body,
+            decorator_list=self.decorator_list,
+            returns=self.returns,
+        )
+        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
 
 
 class DeleteFunction(Changes):
     """
     Represents a request to delete a function from the agent.
-
-    Attributes:
-        file_name (str): The name of the file containing the function to delete.
-        function_name (str): The name of the function to delete.
     """
 
-    file_name: str
-    function_name: str
+    file_name: str = Field(
+        ..., description="The name of the file containing the function to delete."
+    )
+    function_name: str = Field(..., description="The name of the function to delete.")
+
+    def to_string(self):
+        out = dict(
+            file_name=self.file_name,
+            function_name=self.function_name,
+        )
+        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
 
 
 class ModifyFunction(Changes):
     """
     A class representing modifications to a function.
-
-    Attributes:
-        file_name (str): The name of the file containing the function to modify.
-        function_name (str): The name of the function to modify.
-        new_args (str | None): The new arguments for the function, if any.
-        new_body (str | None): The new body of the function, if any.
-        new_decorator_list (list[str] | None): The new list of decorators for the function, if any.
-        new_returns (str | None): The new return type for the function, if any.
-        new_name (str | None): The new name for the function, if any.
     """
 
-    file_name: str
-    function_name: str
-    new_args: str | None = None
-    new_body: str | None = None
-    new_decorator_list: list[str] | None = None
-    new_returns: str | None = None
-    new_name: str | None = None
+    file_name: str = Field(
+        ..., description="The name of the file containing the function to modify."
+    )
+    function_name: str = Field(..., description="The name of the function to modify.")
+    new_args: str | None = Field(
+        None, description="The new arguments for the function."
+    )
+    new_body: str | None = Field(None, description="The new body of the function.")
+    new_decorator_list: list[str] | None = Field(
+        None, description="The new list of decorators for the function."
+    )
+    new_returns: str | None = Field(
+        None, description="The new return type for the function."
+    )
+    new_name: str | None = Field(None, description="The new name for the function.")
+
+    def to_string(self):
+        out = dict(
+            file_name=self.file_name,
+            function_name=self.function_name,
+            new_args=self.new_args,
+            new_body=self.new_body,
+            new_decorator_list=self.new_decorator_list,
+            new_returns=self.new_returns,
+            new_name=self.new_name,
+        )
+        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
 
 
 class AddClass(Changes):
-    """Represents a class to be added to a file.
+    """Represents a class to be added to a file."""
 
-    Attributes:
-        file_name (str): The name of the file to add the class to.
-        class_name (str): The name of the class.
-        bases (list[str], optional): The base classes of the class. Defaults to an empty list.
-        body (str): The body of the class.
-        decorator_list (list[str], optional): The decorators applied to the class. Defaults to an empty list.
-    """
+    file_name: str = Field(..., description="The name of the file to add the class to.")
+    class_name: str = Field(..., description="The name of the class.")
+    bases: list[str] = Field([], description="The base classes for the class.")
+    body: str = Field(..., description="The body of the class.")
+    decorator_list: list[str] = Field(
+        [], description="The list of decorators to be applied to the class."
+    )
 
-    file_name: str
-    class_name: str
-    bases: list[str] = []
-    body: str
-    decorator_list: list[str] = []
+    def to_string(self):
+        out = dict(
+            file_name=self.file_name,
+            class_name=self.class_name,
+            bases=self.bases,
+            body=self.body,
+            decorator_list=self.decorator_list,
+        )
+        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
 
 
 class DeleteClass(Changes):
@@ -429,159 +407,234 @@ class DeleteClass(Changes):
         class_name (str): The name of the class to be deleted.
     """
 
-    file_name: str
-    class_name: str
+    file_name: str = Field(
+        ..., description="The name of the file containing the class to delete."
+    )
+    class_name: str = Field(..., description="The name of the class to delete.")
 
 
 class ModifyClass(Changes):
-    """Represents a request to modify a Python class.
+    """Represents a request to modify a Python class."""
 
-    Attributes:
-        file_name (str): The name of the file containing the class to modify.
-        name (str): The name of the class to modify.
-        new_bases (list[str], optional): The new base classes for the class.
-        new_body (list, optional): The new body of the class, which might include
-            method definitions, etc.
-        new_decorator_list (list[str], optional): The new decorators for the class.
-        new_name (str, optional): The new name for the class.
-    """
+    file_name: str = Field(
+        ..., description="The name of the file containing the class to modify."
+    )
+    class_name: str = Field(..., description="The name of the class to modify.")
+    new_bases: list[str] | None = Field(
+        None, description="The new base classes for the class."
+    )
+    new_body: list | None = Field(None, description="The new body of the class.")
+    new_decorator_list: list[str] | None = Field(
+        None, description="The new list of decorators for the class."
+    )
+    new_name: str | None = Field(None, description="The new name for the class.")
+    new_args: str | None = Field(None, description="The new arguments for the class.")
 
-    file_name: str
-    class_name: str
-    new_bases: list[str] | None = None
-    new_body: list | None = None
-    new_decorator_list: list[str] | None = None
-    new_name: str | None = None
-    new_args: str | None = None
+    def to_string(self):
+        out = dict(
+            file_name=self.file_name,
+            class_name=self.class_name,
+            new_bases=self.new_bases,
+            new_body=self.new_body,
+            new_decorator_list=self.new_decorator_list,
+            new_name=self.new_name,
+            new_args=self.new_args,
+        )
+        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
 
 
 class AddMethod(Changes):
     """
     Represents a method to be added to a class.
-
-    Attributes:
-        file_name (str): The name of the file containing the class to which the method will be added.
-        class_name (str): The name of the class to which the method will be added.
-        method_name (str): The name of the method.
-        args (str): The arguments of the method.
-        body (str): The body of the method.
-        decorator_list (list[str], optional): The list of decorators to be applied to the method. Defaults to [].
-        returns (str, optional): The return type of the method. Defaults to None.
     """
 
-    file_name: str
-    class_name: str
-    method_name: str
-    args: str
-    body: str
-    decorator_list: list[str] = []
-    returns: str | None = None
+    file_name: str = Field(
+        ...,
+        description="The name of the file containing the class to add the method to.",
+    )
+    class_name: str = Field(
+        ..., description="The name of the class to add the method to."
+    )
+    method_name: str = Field(..., description="The name of the method.")
+    args: str = Field(..., description="The arguments of the method.")
+    body: str = Field(..., description="The body of the method.")
+    decorator_list: list[str] = Field(
+        [], description="The list of decorators to be applied to the method."
+    )
+    returns: str | None = Field(None, description="The return type of the method.")
+
+    def to_string(self):
+        out = dict(
+            file_name=self.file_name,
+            class_name=self.class_name,
+            method_name=self.method_name,
+            args=self.args,
+            body=self.body,
+            decorator_list=self.decorator_list,
+            returns=self.returns,
+        )
+        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
 
 
 class DeleteMethod(Changes):
-    """Represents a method to be deleted from a class.
+    """Represents a method to be deleted from a class."""
 
-    Attributes:
-        file_name (str): The name of the file containing the class.
-        class_name (str): The name of the class containing the method.
-        method_name (str): The name of the method to be deleted.
-    """
+    file_name: str = Field(
+        ...,
+        description="The name of the file containing the class to delete the method from.",
+    )
 
-    file_name: str
-    class_name: str
-    method_name: str
+    class_name: str = Field(
+        ..., description="The name of the class to delete the method from."
+    )
+    method_name: str = Field(..., description="The name of the method to delete.")
+
+    def to_string(self):
+        out = dict(
+            file_name=self.file_name,
+            class_name=self.class_name,
+            method_name=self.method_name,
+        )
+        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
 
 
 class ModifyMethod(Changes):
-    """Represents a method modification operation.
+    """Represents a method modification operation."""
 
-    Attributes:
-        file_name (str): The name of the file containing the class.
-        class_name (str): The name of the class containing the method to be modified.
-        method_name (str): The name of the method to be modified.
-        new_args (str, optional): The new arguments for the method. Defaults to None.
-        new_body (str, optional): The new body of the method. Defaults to None.
-        new_decorator_list (list[str], optional): The new list of decorators for the method. Defaults to None.
-        new_method_name (str, optional): The new name for the method. Defaults to None.
-        new_returns (str, optional): The new return type for the method. Defaults to None.
-    """
+    file_name: str = Field(
+        ...,
+        description="The name of the file containing the class to modify the method in.",
+    )
+    class_name: str = Field(
+        ..., description="The name of the class to modify the method in."
+    )
+    method_name: str = Field(..., description="The name of the method to modify.")
+    new_args: str | None = Field(None, description="The new arguments for the method.")
+    new_body: str | None = Field(None, description="The new body of the method.")
+    new_decorator_list: list[str] | None = Field(
+        None, description="The new list of decorators for the method."
+    )
+    new_method_name: str | None = Field(
+        None, description="The new name for the method."
+    )
+    new_returns: str | None = Field(
+        None, description="The new return type for the method."
+    )
 
-    file_name: str
-    class_name: str
-    method_name: str
-    new_args: str | None = None
-    new_body: str | None = None
-    new_decorator_list: list[str] | None = None
-    new_method_name: str | None = None
-    new_returns: str | None = None
+    def to_string(self):
+        out = dict(
+            file_name=self.file_name,
+            class_name=self.class_name,
+            method_name=self.method_name,
+            new_args=self.new_args,
+            new_body=self.new_body,
+            new_decorator_list=self.new_decorator_list,
+            new_method_name=self.new_method_name,
+            new_returns=self.new_returns,
+        )
+        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
 
 
 class VariableNameChange(Changes):
     """
     Represents a request to change the name of a variable. Changes take place over the entire codebase.
-
-    Attributes:
-        original_name (str): The original name of the variable.
-        new_name (str): The new name to assign to the variable.
     """
 
-    original_name: str
-    new_name: str
+    original_name: str = Field(..., description="The original name of the variable.")
+    new_name: str = Field(..., description="The new name of the variable.")
+
+    def to_string(self):
+        out = dict(original_name=self.original_name, new_name=self.new_name)
+        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
 
 
 class AddImport(Changes):
     """
     Represents an import statement to be added to a Python file.
-
-    Args:
-        module (str): The name of the module to be imported.
-        names (list, optional): A list of names to be imported from the module. Defaults to None.
-        asnames (list, optional): A list of aliases for the imported names. Defaults to None.
-        objects (list, optional): A list of objects to be imported from the module. Defaults to None.
     """
 
-    file_name: str
-    module: str
-    names: list | None = None
-    asnames: list | None = None
-    objects: list | None = None
+    file_name: str = Field(
+        ..., description="The name of the file to add the import to."
+    )
+    module: str = Field(..., description="The name of the module to import.")
+    names: list | None = Field(
+        None, description="The names to import from the module. Defaults to None."
+    )
+    asnames: list | None = Field(
+        None, description="The names to import from the module with an alias."
+    )
+    objects: list | None = Field(
+        None, description="The objects to import from the module."
+    )
+
+    def to_string(self):
+        out = dict(
+            file_name=self.file_name,
+            module=self.module,
+            names=self.names,
+            asnames=self.asnames,
+            objects=self.objects,
+        )
+        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
 
 
 class DeleteImport(Changes):
     """
     Represents a request to delete one or more imports from a Python module.
-
-    Args:
-        module (str): The name of the module to delete imports from.
-        names (list, optional): A list of import names to delete. Defaults to None.
-        asnames (list, optional): A list of import aliases to delete. Defaults to None.
-        objects (list, optional): A list of import objects to delete. Defaults to None.
     """
 
-    file_name: str
-    module: str
-    names: list | None = None
-    asnames: list | None = None
-    objects: list | None = None
+    file_name: str = Field(
+        ..., description="The name of the file to delete the import from."
+    )
+    module: str = Field(
+        ..., description="The name of the module to delete imports from."
+    )
+    names: list | None = Field(
+        None, description="The names to delete from the module. Defaults to None."
+    )
+    asnames: list | None = Field(
+        None, description="The names to delete from the module with an alias."
+    )
+    objects: list | None = Field(
+        None, description="The objects to delete from the module."
+    )
+
+    def to_string(self):
+        out = dict(
+            file_name=self.file_name,
+            module=self.module,
+            names=self.names,
+            asnames=self.asnames,
+            objects=self.objects,
+        )
+        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
 
 
 class ModifyImport(Changes):
     """
-    Represents a modification to an import statement in a Python file.
+    Represents a modification to an import statement in a Python file."""
 
-    Attributes:
-        file_name (str): The name of the file containing the import statement.
-        module (str): The name of the module being imported.
-        new_names (list, optional): A list of new names to be imported from the module.
-        new_asnames (list, optional): A list of new names to be imported from the module with an alias.
-        new_objects (list, optional): A list of new objects to be imported from the module.
-    """
+    file_name: str = Field(
+        ..., description="The name of the file containing the import to modify."
+    )
+    module: str = Field(..., description="The name of the module to modify.")
+    new_names: list | None = Field(
+        None, description="The new names to import from the module."
+    )
+    new_asnames: list | None = Field(
+        None, description="The new names to import from the module with an alias."
+    )
+    new_objects: list | None = Field(None, description="The new objects to import.")
 
-    file_name: str
-    module: str
-    new_names: list | None = None
-    new_asnames: list | None = None
-    new_objects: list | None = None
+    def to_string(self):
+        out = dict(
+            file_name=self.file_name,
+            module=self.module,
+            new_names=self.new_names,
+            new_asnames=self.new_asnames,
+            new_objects=self.new_objects,
+        )
+        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
 
 
 _OP_LIST = [

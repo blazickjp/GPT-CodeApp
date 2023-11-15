@@ -1,4 +1,3 @@
-from hmac import new
 import unittest
 import ast
 import astor
@@ -16,6 +15,7 @@ from agent.agent_functions.file_ops import (
     DeleteImport,
     VariableNameChange,
     CustomASTTransformer,
+    # ModifyImport,
 )
 
 

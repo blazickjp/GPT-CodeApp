@@ -2,7 +2,7 @@ import json
 from agent.agent_prompts import CHANGES_SYSTEM_PROMPT
 from openai import OpenAI
 from agent.agent_functions.file_ops import _OP_LIST, from_streaming_response
-
+import time
 import instructor
 
 
@@ -27,7 +27,7 @@ client = instructor.patch(OpenAI())
 chunks = client.chat.completions.create(
     model="gpt-4-1106-preview",
     temperature=0.1,
-    seed=42,
+    seed=1337,
     stream=True,
     tools=[
         {"type": "function", "function": cls.openai_schema} for cls in _OP_LIST.values()
@@ -47,6 +47,7 @@ chunks = client.chat.completions.create(
 )
 for i in from_streaming_response(chunks, _OP_LIST):
     print(i)
+    time.sleep(1)
 # cls = _OP_LIST[tool_call.function.name](**json.loads(tool_call.function.arguments))
 # print(cls)
 """
