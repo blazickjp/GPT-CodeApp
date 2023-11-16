@@ -2,9 +2,16 @@
     "[python]": {
         "editor.defaultFormatter": "ms-python.black-formatter"
     },
-    "python.linting.flake8Args": [
+    "python.linting.Flake8": [
         "--max-line-length=150",
         "--ignore=E203,F841,F401,E302,E305,W503",
     ],
-    "python.formatting.provider": "none"
+    "flake8.ignorePatterns": [
+        "**/site-packages/**/*.py",
+        ".vscode/*.py"
+    ],
+    "flake8.args": [
+        "--max-line-length=150",
+        "--ignore=E203,F841,F401,E302,E305,W503",
+    ],
 }

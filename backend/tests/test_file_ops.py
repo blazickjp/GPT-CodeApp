@@ -1,6 +1,7 @@
 import unittest
 import ast
 import astor
+from agent.agent_functions.ast_ops import CustomASTTransformer
 from agent.agent_functions.file_ops import (
     DeleteClass,
     ModifyFunction,
@@ -14,9 +15,71 @@ from agent.agent_functions.file_ops import (
     AddImport,
     DeleteImport,
     VariableNameChange,
-    CustomASTTransformer,
-    # ModifyImport,
+    ModifyImport,
 )
+
+
+class TestDocstringModification(unittest.TestCase):
+    def test_modify_function_docstring(self):
+        source_code = '''
+def example_function(param):
+    """Original docstring."""
+    return param
+'''
+        expected_docstring = "Updated function docstring."
+
+        modify_function_change = ModifyFunction(
+            file_name="test.py",
+            function_name="example_function",
+            new_docstring=expected_docstring,
+        )
+        transformer = CustomASTTransformer(changes=[modify_function_change])
+        new_ast = transformer.visit(ast.parse(source_code))
+
+        new_docstring = ast.get_docstring(new_ast.body[0])
+        self.assertEqual(new_docstring, expected_docstring)
+
+    def test_modify_class_docstring(self):
+        source_code = '''
+class ExampleClass:
+    """Original docstring."""
+    pass
+'''
+        expected_docstring = "Updated class docstring."
+
+        modify_class_change = ModifyClass(
+            file_name="test.py",
+            class_name="ExampleClass",
+            new_docstring=expected_docstring,
+        )
+        transformer = CustomASTTransformer(changes=[modify_class_change])
+        new_ast = transformer.visit(ast.parse(source_code))
+
+        new_docstring = ast.get_docstring(new_ast.body[0])
+        self.assertEqual(new_docstring, expected_docstring)
+
+    def test_modify_method_docstring(self):
+        print("Starting test_modify_method_docstring")  # Debug print
+        source_code = '''
+class ExampleClass:
+    def example_method(self):
+        """Original docstring."""
+        pass
+    '''
+        expected_docstring = "Updated method docstring."
+
+        modify_method_change = ModifyMethod(
+            file_name="test.py",
+            class_name="ExampleClass",
+            method_name="example_method",
+            new_docstring=expected_docstring,
+        )
+        transformer = CustomASTTransformer(changes=[modify_method_change])
+        new_ast = transformer.visit(ast.parse(source_code))
+
+        new_docstring = ast.get_docstring(new_ast.body[0].body[0])
+        self.assertEqual(new_docstring, expected_docstring)
+        print("Finished test_modify_method_docstring")  # Debug print
 
 
 class TestAddImport(unittest.TestCase):
@@ -71,6 +134,32 @@ class TestDeleteImport(unittest.TestCase):
         new_source_code = ast.unparse(new_ast_tree).strip()
         print(new_source_code)
         self.assertEqual("from math import sin, cos", new_source_code)
+
+
+class TestModifyImport(unittest.TestCase):
+    def setUp(self):
+        self.source_code = "from math import sqrt, sin, cos"
+        self.ast_tree = ast.parse(self.source_code)
+
+    def test_modifying_import_statement(self):
+        # Define the import modification
+        modify_import_change = ModifyImport(
+            file_name="test.py",
+            module="math",
+            objects_to_remove=["sqrt"],
+            objects_to_add=["acos"],
+        )
+        self.transformer = CustomASTTransformer(changes=[modify_import_change])
+
+        # Apply the change
+        new_ast_tree = self.transformer.visit(self.ast_tree)
+        ast.fix_missing_locations(new_ast_tree)
+
+        # Generate the new source code and assert it's empty
+        new_source_code = ast.unparse(new_ast_tree).strip()
+        print(new_source_code)
+        self.assertTrue("acos" in new_source_code)
+        self.assertFalse("sqrt" in new_source_code)
 
 
 class TestModifyClass(unittest.TestCase):

@@ -2,13 +2,17 @@
 import re
 import json
 import boto3
+import difflib
+import ast
 
 import instructor
 from openai import OpenAI
 from pydantic import BaseModel
 from typing import List, Optional
+from agent.agent_functions.ast_ops import ASTChangeApplicator
+
 from database.my_codebase import MyCodebase
-from agent.agent_prompts import (
+from agent.agent_prompts import (  # noqa
     CHANGES_SYSTEM_PROMPT,
     DEFAULT_SYSTEM_PROMPT,
     PROFESSOR_SYNAPSE,
@@ -63,7 +67,7 @@ class CodingAgent:
         self.temperature = 0.75
         self.tool_choice = "auto"
         self.function_to_call = None
-        self.functions_to_execute = []
+        self.ops_to_execute = []
         if function_map:
             self.tools = [
                 {"type": "function", "function": op.openai_schema}
@@ -111,8 +115,10 @@ class CodingAgent:
             self.memory_manager.prompt_handler.identity = ""
             self.memory_manager.prompt_handler.set_system()
             temp_system = self.memory_manager.prompt_handler.system
+
             self.memory_manager.prompt_handler.identity = DEFAULT_SYSTEM_PROMPT
             self.memory_manager.prompt_handler.set_system()
+
             assert keyword_args["messages"][0]["role"] == "system"
             keyword_args["messages"][0]["content"] = temp_system
 
@@ -134,7 +140,7 @@ class CodingAgent:
                                 completed_op = self.function_map[0][function_name](
                                     **data
                                 )
-                                self.functions_to_execute.append(completed_op)
+                                self.ops_to_execute.append(completed_op)
                                 return_string = completed_op.to_string()
                                 yield return_string
                             except json.JSONDecodeError as e:
@@ -155,7 +161,7 @@ class CodingAgent:
                     try:
                         data = json.loads(json_accumulator)
                         completed_op = self.function_map[0][function_name](**data)
-                        self.functions_to_execute.append(completed_op)
+                        self.ops_to_execute.append(completed_op)
                         return_string = completed_op.to_string()
                         print(return_string)
                         yield return_string
@@ -165,8 +171,42 @@ class CodingAgent:
                 # Process normal text response
                 yield chunk.choices[0].delta.content
 
-    def execute_functions(self):
-        return NotImplementedError
+    def execute_ops(self):
+        diffs = []  # List to store the diffs for each operation
+
+        for op in self.ops_to_execute:
+            print(f"Executing operation: {op.to_string()}")
+            # Read the existing code from the file
+            with open(op.file_name, "r") as file:
+                original_code = file.read()
+            print(f"Original code: {original_code}")
+
+            # Parse the original code into an AST
+            ast_tree = ast.parse(original_code)
+
+            # Create an ASTChangeApplicator to apply the changes
+            applicator = ASTChangeApplicator(ast_tree)
+
+            # Apply the operation to the AST tree
+            transformed_code = applicator.apply_changes([op])
+            print(f"Transformed code: {transformed_code}")
+
+            # Compute the diff
+            diff = difflib.unified_diff(
+                original_code.splitlines(keepends=True),
+                transformed_code.splitlines(keepends=True),
+                fromfile="before.py",
+                tofile="after.py",
+            )
+            diff_string = "".join(diff)
+            diffs.append(diff_string)
+            print(f"Diff: {diff_string}")
+
+            # Write the transformed code back to the file
+            with open(op.file_name, "w") as file:
+                file.write(transformed_code)
+
+        return diffs
 
     def process_json(self, args: str) -> str:
         """
