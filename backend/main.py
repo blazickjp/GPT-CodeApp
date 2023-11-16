@@ -70,8 +70,11 @@ async def message_streaming(request: Request) -> StreamingResponse:
 
 
 @app.get("/system_prompt")
-async def get_system_prompt():
-    return {"system_prompt": AGENT.memory_manager.prompt_handler.system}
+async def system_prompt():
+    if AGENT.GPT_MODEL.startswith("gpt"):
+        return {"system_prompt": AGENT.memory_manager.prompt_handler.system}
+    elif AGENT.GPT_MODEL == 'anthropic':
+        return {"system_prompt": AGENT.generate_anthropic_prompt(include_messages=False)}
 
 
 @app.post("/update_system")

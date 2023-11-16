@@ -136,6 +136,7 @@ Start interacting with the GPT-CodeApp just like you would with ChatGPT. You can
 Recently, we've also began experiemnting with some cool features like On-Demand Agent Functions that can be called on demand from the user interface (OpenAI Only). They perform specific tasks based on your input and can greatly enhance the functionality and interactivity of the application. To call an On-Demand Agent function, simply prepend the command with a "/".
 
 ### On-Demand Agent Function (OpenAI Only)
+This feature is currently being revamped. Stay tuned for exciting updates!
 
 On-Demand Agent functions are special functions that can be called on demand from the user interface differing from typical OpenAI functions in that we're forcing the function call instead of relying on the LLM to recognize when to call the function. They are designed to perform specific tasks based on user input and can greatly enhance the functionality and interactivity of the application. To call an On-Demand Agent function, you simply prepend the command with a "/".
 

@@ -325,3 +325,43 @@ class CodingAgent:
                 except UnboundLocalError:
                     print("UnboundLocalError")
                     break
+
+    def generate_anthropic_prompt(self, include_messages=None) -> str:
+        """
+        Generates a prompt for the Gaive model.
+
+        Args:
+            input (str): The input text to be processed by the GPT-3 model.
+
+        Returns:
+            str: The generated prompt.
+        """
+        conversation_history = "The following is a portion of your conversation history with the human, truncated to save token space, inside the <conversation-history></conversation-history> XML tags.\n\n<conversation-history>\n"
+        messages = self.memory_manager.get_messages()
+        # Extract the last User messages
+        print(messages)
+        last_user_message = "\n\nThe most recent message from the human is tagged below in the <last-message></last-message> XML tags. Your response should ALWAYS adress this question or request from the human.\n<last-message>\n" + [message['content'] for message in messages if message["role"] == "user"][-1] + "\n</last-message>"
+
+
+        for idx, message in enumerate(messages):
+            if message["role"].lower() == "user":
+                    conversation_history += f"Human: {message['content']}\n\n"
+            if message["role"].lower() == "assistant":
+                conversation_history += f"Assistant: {message['content']}\n\n"
+        conversation_history += "\n</conversation-history>\n\n"
+        
+        if self.memory_manager.prompt_handler.system_file_contents:
+            file_context = "The human as loadedd the following files into context to help give you background related to the most recent request. They are contained in the <file-contents></file-contenxt> XML Tags.\n\n<file-contents>\n" + self.memory_manager.prompt_handler.system_file_contents + "\n</file-contents>\n\n"
+        else:
+            file_context = ""
+        if self.memory_manager.prompt_handler.tree:
+            tree = "The working directory of the human is always loaded into context. This information is good background when the human is working on the project, but this may not always be the case. Sometimes the human may ask questions not related to the current project <directory-tree></directory-tree> XML Tags\n<directory-tree>\n" + self.memory_manager.prompt_handler.tree + "\n</directory-tree>\n\n"
+        else:
+            tree = ""
+        
+        if include_messages:
+            prompt = "\n\nHuman: " + self.memory_manager.identity + tree + file_context + conversation_history
+        else:
+            prompt = "\n\nHuman: " + self.memory_manager.identity + tree + file_context
+
+        return prompt + last_user_message + "\n\nPlease respond accordingly.\n\nAssistant:"
