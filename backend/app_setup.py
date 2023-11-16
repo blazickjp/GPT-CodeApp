@@ -2,14 +2,15 @@
 import os
 import sqlite3
 from psycopg2.extensions import connection
-from agent.agent import CodingAgent
+from agent.coding_agent import CodingAgent
+from agent.agent_prompts import PROFESSOR_SYNAPSE, DEFAULT_SYSTEM_PROMPT
+from agent.agent_functions.file_ops import _OP_LIST
 from memory.memory_manager import MemoryManager
 from database.my_codebase import MyCodebase
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Any, Callable
 from pydantic import BaseModel
-from agent.agent_functions.changes import Changes
 
 # IDENTITY = "You are an AI Pair Programmer and a world class python developer. Your role is to assist the Human in developing, debugging, and optimizing their project. Feel free to ask for more details if something isn't clear."
 IDENTITY = """
@@ -100,6 +101,8 @@ def setup_codebase() -> MyCodebase:
 def setup_app() -> CodingAgent:
     print("Setting up app")
     codebase = setup_codebase()
-    memory = setup_memory_manager(tree=codebase.tree(), identity=IDENTITY)
-    agent = CodingAgent(memory_manager=memory, callables=[Changes], codebase=codebase)
+    memory = setup_memory_manager(tree=codebase.tree(), identity=DEFAULT_SYSTEM_PROMPT)
+    agent = CodingAgent(
+        memory_manager=memory, function_map=[_OP_LIST], codebase=codebase
+    )
     return agent, codebase

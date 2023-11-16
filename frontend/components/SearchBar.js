@@ -33,10 +33,22 @@ const SearchBar = ({ addFileToContext }) => {
             {fileIcon(value.split('.').pop())} <span className="ml-2">{label}</span>
         </div>
     );
-    
+
     const handleChange = option => {
         setSelectedOptions(option);
     };
+
+    const fetchFilesInContext = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_files_in_prompt`);
+            const data = await response.json();
+            // Assuming you have a state setter like setSelectedOptions
+            setSelectedOptions(data.files.map(file => ({ label: file, value: file })));
+        } catch (error) {
+            console.error('Failed to fetch files in context:', error);
+        }
+    };
+
 
     const sendFiles = () => {
         console.log(options);
@@ -95,9 +107,10 @@ const SearchBar = ({ addFileToContext }) => {
     };
 
     // This was taking too long everytime you make a change and need to refresh to UI
-    // useEffect(() => {
-    //     fetchSearchData();
-    // }, []);
+    useEffect(() => {
+        fetchSearchData();
+        fetchFilesInContext();
+    }, []);
 
     // Define custom styles
     const customStyles = {

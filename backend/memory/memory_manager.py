@@ -12,7 +12,7 @@ class MemoryManager:
         model: str = "gpt-3.5-turbo",
         identity: str = None,
         tree: str = None,
-        max_tokens: int = 1_000,
+        max_tokens: int = 1000,
         table_name: str = "default",
         db_connection=None,
     ) -> None:
@@ -46,7 +46,8 @@ class MemoryManager:
         results = self.cur.fetchall()
         messages = [{"role": result[0], "content": result[1]} for result in results]
 
-        max_tokens = 30_000 if chat_box else self.max_tokens
+        max_tokens = 30000 if chat_box else self.max_tokens
+        print(chat_box, max_tokens)
         if chat_box:
             self.cur.execute(
                 f"""
@@ -62,7 +63,7 @@ class MemoryManager:
                 )
                 select role, full_content, content, tokens
                 from t1
-                WHERE token_cum_sum <= ?
+                WHERE token_cum_sum <= ?;
                 """,
                 (
                     self.project_directory,
@@ -71,33 +72,48 @@ class MemoryManager:
             )
         else:
             self.cur.execute(
+                # f"""
+                # WITH Exclude AS (
+                #     SELECT interaction_index, last_idx
+                #     FROM (
+                #         select lag(interaction_index,1) over (order by interaction_index desc) as last_idx, *
+                #         from {self.memory_table_name}
+                #         )
+                #     WHERE (content LIKE '/%' AND role = 'user')
+                # ),
+                # Filtered AS (
+                #     SELECT *
+                #     FROM {self.memory_table_name}
+                #     WHERE interaction_index NOT IN (SELECT interaction_index FROM Exclude)
+                #     and interaction_index NOT IN (SELECT last_idx FROM Exclude)
+                # ),
+                # t1 AS (
+                #     SELECT role,
+                #         content as full_content,
+                #         COALESCE(summarized_message, content) as content,
+                #         COALESCE(summarized_message_tokens, content_tokens) as tokens,
+                #         SUM(COALESCE(summarized_message_tokens, content_tokens)) OVER (ORDER BY interaction_index DESC) as token_cum_sum
+                #     FROM Filtered
+                #     WHERE project_directory = ?
+                #     ORDER BY interaction_index DESC
+                # )
+                # SELECT role, full_content, content, tokens
+                # FROM t1
+                # WHERE token_cum_sum <= ?;
+                # """,
                 f"""
-                WITH Exclude AS (
-                    SELECT interaction_index, last_idx
-                    FROM (
-                        select lag(interaction_index,1) over (order by interaction_index desc) as last_idx, *
-                        from {self.memory_table_name}
-                        )
-                    WHERE (content LIKE '/%' AND role = 'user')
-                ),
-                Filtered AS (
-                    SELECT *
-                    FROM {self.memory_table_name}
-                    WHERE interaction_index NOT IN (SELECT interaction_index FROM Exclude)
-                    and interaction_index NOT IN (SELECT last_idx FROM Exclude)
-                ),
-                t1 AS (
+                with t1 as (
                     SELECT role,
                         content as full_content,
                         COALESCE(summarized_message, content) as content,
                         COALESCE(summarized_message_tokens, content_tokens) as tokens,
-                        SUM(COALESCE(summarized_message_tokens, content_tokens)) OVER (ORDER BY interaction_index DESC) as token_cum_sum
-                    FROM Filtered
+                        sum(COALESCE(summarized_message_tokens, content_tokens)) OVER (ORDER BY interaction_index DESC) as token_cum_sum
+                    FROM {self.memory_table_name}
                     WHERE project_directory = ?
-                    ORDER BY interaction_index DESC
+                    ORDER BY interaction_index desc
                 )
-                SELECT role, full_content, content, tokens
-                FROM t1
+                select role, full_content, content, tokens
+                from t1
                 WHERE token_cum_sum <= ?;
                 """,
                 (
@@ -106,11 +122,12 @@ class MemoryManager:
                 ),
             )
         results = self.cur.fetchall()
+        # print(results, self.project_directory, max_tokens, self.memory_table_name)
+        # print([char for char in self.project_directory])
         for result in results[::-1]:
             messages.append(
                 {"role": result[0], "content": result[2], "full_content": result[1]}
             )
-
         return messages
 
     def add_message(self, role: str, content: str) -> None:

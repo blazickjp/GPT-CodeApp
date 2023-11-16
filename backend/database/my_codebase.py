@@ -159,7 +159,7 @@ class MyCodebase:
         self.cur.execute("SELECT file_path FROM files")
         file_paths = [result[0] for result in self.cur.fetchall()]
         for file_path in file_paths:
-            if not os.path.exists(file_path):
+            if not os.path.exists(file_path) or not self._is_valid_file(file_path):
                 self.cur.execute(
                     """
                     DELETE FROM files WHERE file_path = ?
@@ -179,6 +179,7 @@ class MyCodebase:
                         self.update_file(file_path)
                     except Exception as e:
                         print(f"Error updating file {file_path}: {e}")
+                    self.remove_old_files()
 
     def _is_valid_file(self, file_name):
         return (

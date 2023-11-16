@@ -62,6 +62,21 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
             console.error('Error saving prompt', error);
         }
     }
+    const fetchMaxMessageTokens = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_max_message_tokens`);
+            const data = await response.json();
+            // Assuming you have a state setter like setMaxTokens
+            setMaxTokens(data.max_message_tokens);
+        } catch (error) {
+            console.error('Failed to fetch max message tokens:', error);
+        }
+    };
+
+    // Call this function on component mount using useEffect
+    useEffect(() => {
+        fetchMaxMessageTokens();
+    }, []);
 
 
     useEffect(() => {

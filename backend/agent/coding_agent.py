@@ -1,28 +1,25 @@
 # import os
 import re
-import openai
 import json
-import os
 import boto3
+import difflib
+import ast
 
-# import time
-
-from typing import List, Optional, Callable
+import instructor
+from openai import OpenAI
 from pydantic import BaseModel
+from typing import List, Optional
+from agent.agent_functions.ast_ops import ASTChangeApplicator
+
 from database.my_codebase import MyCodebase
+from agent.agent_prompts import (  # noqa
+    CHANGES_SYSTEM_PROMPT,
+    DEFAULT_SYSTEM_PROMPT,
+    PROFESSOR_SYNAPSE,
+)
 
-# from agent.agent_functions import Program, File
-
-# GPT_MODEL = "gpt-3.5-turbo-0613"  # or any other chat model you want to use
-GPT_MODEL = "gpt-4-1106-preview"  # or any other chat model you want to use
-# GPT_MODEL = "anthropic"  # or any other chat model you want to use
-MAX_TOKENS = 2000  # or any other number of tokens you want to use
-TEMPERATURE = 0.75  # or any other temperature you want to use
-
-
-class FunctionCall(BaseModel):
-    name: Optional[str] = None
-    arguments: str = ""
+# client = instructor.patch(OpenAI())
+client = instructor.patch(OpenAI())
 
 
 class Message(BaseModel):
@@ -51,8 +48,7 @@ class CodingAgent:
     def __init__(
         self,
         memory_manager,
-        functions: Optional[List[dict]] = None,
-        callables: Optional[List[Callable]] = None,
+        function_map: Optional[dict] = None,
         codebase: Optional[MyCodebase] = None,
     ):
         """
@@ -64,15 +60,21 @@ class CodingAgent:
             callables (Optional[List[Callable]]): A list of callable functions.
         """
         self.memory_manager = memory_manager
-        self.functions = functions
-        self.callables = callables
-        self.GPT_MODEL = GPT_MODEL
+        self.function_map = function_map
+        self.GPT_MODEL = None
         self.codebase = codebase
-        self.read_pos = 0
-        if callables:
-            self.function_map = {
-                func.__name__: func for func in callables if func is not None
-            }
+        self.max_tokens = 4000
+        self.temperature = 0.75
+        self.tool_choice = "auto"
+        self.function_to_call = None
+        self.ops_to_execute = []
+        if function_map:
+            self.tools = [
+                {"type": "function", "function": op.openai_schema}
+                for op in self.function_map[0].values()
+            ]
+        else:
+            self.tools = None
 
     def query(self, input: str, command: Optional[str] = None) -> List[str]:
         """
@@ -87,73 +89,124 @@ class CodingAgent:
         """
         print(f"Input Text: {input}")
         self.memory_manager.add_message("user", input)
+
         message_history = [
             Message(**i).to_dict() for i in self.memory_manager.get_messages()
         ]
 
-        self.function_to_call = FunctionCall()
-
         keyword_args = {
             "model": self.GPT_MODEL,
             "messages": message_history,
-            "max_tokens": MAX_TOKENS,
-            "temperature": TEMPERATURE,
+            "max_tokens": self.max_tokens,
+            "temperature": self.temperature,
             "stream": True,
         }
-        if self.functions:
-            keyword_args["functions"] = self.functions
-            keyword_args["function_call"] = "auto"
 
-        # Override normal function calling when function_name is provided
-        if command:
-            if command not in self.function_map:
-                raise ValueError(f"Function {command} not registered with Agent")
+        print("Message Count: ", len(keyword_args["messages"]))
 
-            keyword_args["functions"] = [self.function_map.get(command).openai_schema]
-            keyword_args["function_call"] = {"name": command}
+        # Override normal function calling when function_name is providednd}")
+        if command and command.lower() == "changes":
+            function_name = None
+            json_accumulator = ""
+            idx = None
+            keyword_args["tools"] = self.tools
+            keyword_args["tool_choice"] = "auto"
 
-            if command == "Changes":
-                # self.memory_manager.identity = (
-                #     self.memory_manager.identity
-                #     + "\nLine numbers have been added to the Current File to aid in your response. They are not part of the actual file."
-                # )
-                # self.set_files_in_prompt(include_line_numbers=True)
-                keyword_args["model"] = "gpt-4-1106-preview"
+            self.memory_manager.prompt_handler.identity = ""
+            self.memory_manager.prompt_handler.set_system()
+            temp_system = self.memory_manager.prompt_handler.system
+
+            self.memory_manager.prompt_handler.identity = DEFAULT_SYSTEM_PROMPT
+            self.memory_manager.prompt_handler.set_system()
+
+            assert keyword_args["messages"][0]["role"] == "system"
+            keyword_args["messages"][0]["content"] = temp_system
+
+        # Call the model
         print(f"Calling model: {self.GPT_MODEL}")
-        for i, chunk in enumerate(self.call_model_streaming(**keyword_args)):
-            delta = chunk["choices"][0].get("delta", {})
-            if "function_call" in delta:
-                yield from self.process_function_call(delta, i)
-            if self.should_stop_and_has_function(chunk):
-                yield from self.execute_function()
+        for i, chunk in enumerate(self.call_model_streaming(command, **keyword_args)):
+            delta = chunk.choices[0].delta
+            if delta.tool_calls:
+                # print("Processing function call")
+                # Initialize json_accumulator and idx outside the loop
+                for call in delta.tool_calls:
+                    # print("Call:", call.index, "Index:", idx)
+                    # Check if we have started a new function call
+                    if call.index != idx:
+                        # Process the previous function call if any
+                        if function_name and json_accumulator:
+                            try:
+                                data = json.loads(json_accumulator)
+                                completed_op = self.function_map[0][function_name](
+                                    **data
+                                )
+                                self.ops_to_execute.append(completed_op)
+                                return_string = completed_op.to_string()
+                                yield return_string
+                            except json.JSONDecodeError as e:
+                                print(f"JSON decode error: {e}")
+
+                        # Now reset for the new call
+                        idx = call.index
+                        json_accumulator = call.function.arguments
+                        function_name = call.function.name  # Set the new function name
+                        print(f"Function Name: {function_name}")
+                    else:
+                        # Continue accumulating JSON string for the current function call
+                        json_accumulator += call.function.arguments
+                        # print(f"JSON Accumulator (continued): {json_accumulator}")
+
+                # After the loop, process the final function call if any
+                if function_name and json_accumulator:
+                    try:
+                        data = json.loads(json_accumulator)
+                        completed_op = self.function_map[0][function_name](**data)
+                        self.ops_to_execute.append(completed_op)
+                        return_string = completed_op.to_string()
+                        print(return_string)
+                        yield return_string
+                    except json.JSONDecodeError as e:
+                        print(f"JSON decode error: {e}")
             else:
-                yield delta.get("content")
+                # Process normal text response
+                yield chunk.choices[0].delta.content
 
-    def process_function_call(self, delta, i):
-        function_call = delta["function_call"]
-        if "name" in function_call:
-            self.function_to_call.name = function_call["name"]
-        if "arguments" in function_call:
-            if self.function_to_call.name == "Changes" and i == 0:
-                yield "\n```json\n" + function_call["arguments"]
-            else:
-                self.function_to_call.arguments += function_call["arguments"]
-                yield function_call["arguments"]
+    def execute_ops(self):
+        diffs = []  # List to store the diffs for each operation
 
-    def should_stop_and_has_function(self, delta):
-        return (
-            delta["choices"][0]["finish_reason"] == "stop"
-            and self.function_to_call.name  # noqa 503
-        )
+        for op in self.ops_to_execute:
+            print(f"Executing operation: {op.to_string()}")
+            # Read the existing code from the file
+            with open(op.file_name, "r") as file:
+                original_code = file.read()
+            print(f"Original code: {original_code}")
 
-    def execute_function(self):
-        if self.function_to_call.name == "Changes":
-            yield "```\n\n"
-        args = self.process_json(self.function_to_call.arguments)
-        function_response = self.function_map[self.function_to_call.name](**args)
-        if self.function_to_call.name == "Changes":
-            diff = function_response.execute(self.codebase.directory)
-            yield diff
+            # Parse the original code into an AST
+            ast_tree = ast.parse(original_code)
+
+            # Create an ASTChangeApplicator to apply the changes
+            applicator = ASTChangeApplicator(ast_tree)
+
+            # Apply the operation to the AST tree
+            transformed_code = applicator.apply_changes([op])
+            print(f"Transformed code: {transformed_code}")
+
+            # Compute the diff
+            diff = difflib.unified_diff(
+                original_code.splitlines(keepends=True),
+                transformed_code.splitlines(keepends=True),
+                fromfile="before.py",
+                tofile="after.py",
+            )
+            diff_string = "".join(diff)
+            diffs.append(diff_string)
+            print(f"Diff: {diff_string}")
+
+            # Write the transformed code back to the file
+            with open(op.file_name, "w") as file:
+                file.write(transformed_code)
+
+        return diffs
 
     def process_json(self, args: str) -> str:
         """
@@ -226,10 +279,12 @@ class CodingAgent:
 
         return prompt + last_user_message + "\n\nPlease respond accordingly.\n\nAssistant:"
 
-    def call_model_streaming(self, **kwargs):
-        self.read_pos = 0
-        if self.GPT_MODEL == "gpt-4-1106-preview" or self.GPT_MODEL == "gpt-3.5-turbo":
-            for chunk in openai.ChatCompletion.create(**kwargs):
+    def call_model_streaming(self, command: Optional[str] | None = None, **kwargs):
+        print("Calling model streaming")
+        print(kwargs["model"])
+        if self.GPT_MODEL.startswith("gpt"):
+            print("Calling OpenAI")
+            for chunk in client.chat.completions.create(**kwargs):
                 yield chunk
 
         if self.GPT_MODEL == "anthropic":
@@ -244,8 +299,7 @@ class CodingAgent:
                         {
                             "prompt": self.generate_anthropic_prompt(),
                             "max_tokens_to_sample": max(kwargs["max_tokens"], 2000),
-                            "temperature": kwargs["temperature"],
-                            # "stop_sequences": ["Human:"]
+                            "temperature": self.temperature,
                         }
                     ),
                 )
