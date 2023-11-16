@@ -145,9 +145,21 @@ async def generate_readme():
 @app.post("/set_files_in_prompt")
 async def set_files_in_prompt(input: dict):
     files = [file for file in input.get("files", None)]
+    # First update the config table
+    AGENT.memory_manager.cur.execute(
+        """
+        INSERT INTO config (field, value, last_updated)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(field)
+        DO UPDATE SET value = excluded.value, last_updated = excluded.last_updated
+        WHERE field = 'files';
+        """,
+        ("files", json.dumps(files)),
+    )
     AGENT.memory_manager.prompt_handler.files_in_prompt = files
     AGENT.memory_manager.prompt_handler.set_files_in_prompt()
     AGENT.memory_manager.prompt_handler.set_system()
+
     return JSONResponse(status_code=200, content={})
 
 

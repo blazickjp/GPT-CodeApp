@@ -239,7 +239,7 @@ class CodingAgent:
 
             return json.loads(response_str)
 
-    def generate_anthropic_prompt(self) -> str:
+    def generate_anthropic_prompt(self, include_messages=None) -> str:
         """
         Generates a prompt for the Gaive model.
 
