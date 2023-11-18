@@ -9,7 +9,7 @@ from memory.system_prompt_handler import SystemPromptHandler
 class MemoryManager:
     def __init__(
         self,
-        model: str = "gpt-3.5-turbo",
+        model: str = "gpt-3.5-turbo-16k",
         identity: str = None,
         tree: str = None,
         max_tokens: int = 1000,
@@ -133,18 +133,25 @@ class MemoryManager:
             )
         return messages
 
-    def add_message(self, role: str, content: str) -> None:
-        timestamp = datetime.now().isoformat()  # Current timestamp in milliseconds
+    def add_message(
+        self,
+        role: str,
+        content: str,
+        command: Optional[str] = None,
+        function_response: Optional[str] = None,
+    ) -> None:
+        timestamp = datetime.now().isoformat()
         message_tokens = self.get_total_tokens_in_message(content)
         summary, summary_tokens = (
             self.summarize(content) if message_tokens > float("inf") else (None, None)
         )
+        is_function_call = command is not None
         try:
             self.cur.execute(
                 f"""
                 INSERT INTO {self.memory_table_name}
-                (interaction_index, role, content, content_tokens, summarized_message, summarized_message_tokens, project_directory)
-                VALUES (?, ?, ?, ?, ?, ?, ?);
+                (interaction_index, role, content, content_tokens, summarized_message, summarized_message_tokens, project_directory, is_function_call, function_response)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """,
                 (
                     timestamp,
@@ -154,10 +161,11 @@ class MemoryManager:
                     summary,
                     summary_tokens,
                     self.project_directory,
+                    is_function_call,
+                    function_response,
                 ),
             )
             self.conn.commit()
-
         except Exception as e:
             print("Failed to insert data: ", str(e))
         return
@@ -180,7 +188,9 @@ class MemoryManager:
                     content_tokens INT,
                     summarized_message TEXT,
                     summarized_message_tokens INT,
-                    project_directory TEXT
+                    project_directory TEXT,
+                    is_function_call BOOLEAN DEFAULT FALSE,
+                    function_response BOOLEAN DEFAULT FALSE
                 );
                 """
             )

@@ -91,7 +91,8 @@ class CodingAgent:
         self.memory_manager.add_message("user", input)
 
         message_history = [
-            Message(**i).to_dict() for i in self.memory_manager.get_messages()
+            {"role": i["role"], "content": i["content"]}
+            for i in self.memory_manager.get_messages()
         ]
 
         keyword_args = {
@@ -141,7 +142,7 @@ class CodingAgent:
                                     **data
                                 )
                                 self.ops_to_execute.append(completed_op)
-                                return_string = completed_op.to_string()
+                                return_string = completed_op.to_json()
                                 yield return_string
                             except json.JSONDecodeError as e:
                                 print(f"JSON decode error: {e}")
@@ -162,7 +163,7 @@ class CodingAgent:
                         data = json.loads(json_accumulator)
                         completed_op = self.function_map[0][function_name](**data)
                         self.ops_to_execute.append(completed_op)
-                        return_string = completed_op.to_string()
+                        return_string = completed_op.to_json()
                         print(return_string)
                         yield return_string
                     except json.JSONDecodeError as e:
@@ -175,7 +176,7 @@ class CodingAgent:
         diffs = []  # List to store the diffs for each operation
 
         for op in self.ops_to_execute:
-            print(f"Executing operation: {op.to_string()}")
+            print(f"Executing operation: {op.to_json()}")
             # Read the existing code from the file
             with open(op.file_name, "r") as file:
                 original_code = file.read()
@@ -340,28 +341,49 @@ class CodingAgent:
         messages = self.memory_manager.get_messages()
         # Extract the last User messages
         print(messages)
-        last_user_message = "\n\nThe most recent message from the human is tagged below in the <last-message></last-message> XML tags. Your response should ALWAYS adress this question or request from the human.\n<last-message>\n" + [message['content'] for message in messages if message["role"] == "user"][-1] + "\n</last-message>"
-
+        last_user_message = (
+            "\n\nThe most recent message from the human is tagged below in the <last-message></last-message> XML tags. Your response should ALWAYS adress this question or request from the human.\n<last-message>\n"
+            + [message["content"] for message in messages if message["role"] == "user"][
+                -1
+            ]
+            + "\n</last-message>"
+        )
 
         for idx, message in enumerate(messages):
             if message["role"].lower() == "user":
-                    conversation_history += f"Human: {message['content']}\n\n"
+                conversation_history += f"Human: {message['content']}\n\n"
             if message["role"].lower() == "assistant":
                 conversation_history += f"Assistant: {message['content']}\n\n"
         conversation_history += "\n</conversation-history>\n\n"
-        
+
         if self.memory_manager.prompt_handler.system_file_contents:
-            file_context = "The human as loadedd the following files into context to help give you background related to the most recent request. They are contained in the <file-contents></file-contenxt> XML Tags.\n\n<file-contents>\n" + self.memory_manager.prompt_handler.system_file_contents + "\n</file-contents>\n\n"
+            file_context = (
+                "The human as loadedd the following files into context to help give you background related to the most recent request. They are contained in the <file-contents></file-contenxt> XML Tags.\n\n<file-contents>\n"
+                + self.memory_manager.prompt_handler.system_file_contents
+                + "\n</file-contents>\n\n"
+            )
         else:
             file_context = ""
         if self.memory_manager.prompt_handler.tree:
-            tree = "The working directory of the human is always loaded into context. This information is good background when the human is working on the project, but this may not always be the case. Sometimes the human may ask questions not related to the current project <directory-tree></directory-tree> XML Tags\n<directory-tree>\n" + self.memory_manager.prompt_handler.tree + "\n</directory-tree>\n\n"
+            tree = (
+                "The working directory of the human is always loaded into context. This information is good background when the human is working on the project, but this may not always be the case. Sometimes the human may ask questions not related to the current project <directory-tree></directory-tree> XML Tags\n<directory-tree>\n"
+                + self.memory_manager.prompt_handler.tree
+                + "\n</directory-tree>\n\n"
+            )
         else:
             tree = ""
-        
+
         if include_messages:
-            prompt = "\n\nHuman: " + self.memory_manager.identity + tree + file_context + conversation_history
+            prompt = (
+                "\n\nHuman: "
+                + self.memory_manager.identity
+                + tree
+                + file_context
+                + conversation_history
+            )
         else:
             prompt = "\n\nHuman: " + self.memory_manager.identity + tree + file_context
 
-        return prompt + last_user_message + "\n\nPlease respond accordingly.\n\nAssistant:"
+        return (
+            prompt + last_user_message + "\n\nPlease respond accordingly.\n\nAssistant:"
+        )

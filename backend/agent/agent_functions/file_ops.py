@@ -5,19 +5,31 @@ from pydantic import Field
 
 class AddFunction(OpenAISchema):
     """
-    Represents a function to be added to a Python file.
+    A request to add a new function to a specified Python file. The class captures the necessary details about the function to be added, including its name, arguments, return type, and the actual code body.
     """
 
     file_name: str = Field(
-        ..., description="The name of the file to add the function to."
+        ..., description="The name of the file to add the function to, i.e 'foo.py'"
     )
-    function_name: str = Field(..., description="The name of the function.")
-    args: str = Field(..., description="The arguments of the function.")
-    body: str = Field(..., description="The body of the function.")
+    function_name: str = Field(..., description="The name of the function, i.e 'foo'")
+    docstring: str | None = Field(
+        None, description="The docstring for the function, i.e 'This is a function.'"
+    )
+    args: str = Field(
+        ..., description="The arguments of the function, i.e 'arg1, arg2'"
+    )
+    arg_types: dict | None = Field(
+        None,
+        description="The types for the argument, i.e {'arg1': 'str', 'arg2': 'int'}",
+    )
+    body: str = Field(..., description="The body of the function, i.e 'return arg1'")
     decorator_list: list[str] = Field(
-        [], description="The list of decorators to be applied to the function."
+        [],
+        description="The list of decorators to be applied to the function, i.e '@staticmethod'",
     )
-    returns: str | None = Field(None, description="The return type of the function.")
+    returns: str | None = Field(
+        None, description="The return type of the function, i.e 'str'"
+    )
 
     def to_string(self):
         out = dict(
@@ -33,7 +45,7 @@ class AddFunction(OpenAISchema):
 
 class DeleteFunction(OpenAISchema):
     """
-    Represents a request to delete a function from the agent.
+    A request to delete an existing function from a specified Python file. The class specifies which function should be removed based on its name.
     """
 
     file_name: str = Field(
@@ -51,7 +63,7 @@ class DeleteFunction(OpenAISchema):
 
 class ModifyFunction(OpenAISchema):
     """
-    A class representing modifications to a function. Modifications will override the existing function.
+    A request to modify an existing function in a specified Python file. The class allows for changes to the function's name, arguments, body, decorators, and return type.
     """
 
     file_name: str = Field(
@@ -60,6 +72,10 @@ class ModifyFunction(OpenAISchema):
     function_name: str = Field(..., description="The name of the function to modify.")
     new_args: str | None = Field(
         None, description="The new arguments for the function."
+    )
+    new_arg_types: dict | None = Field(
+        None,
+        description="The types for the argument, i.e {'arg1': 'str', 'arg2': 'int'}",
     )
     new_body: str | None = Field(
         None,
@@ -90,7 +106,9 @@ class ModifyFunction(OpenAISchema):
 
 
 class AddClass(OpenAISchema):
-    """Represents a class to be added to a file."""
+    """
+    Represents a request to add a new class to a specified Python file. This class includes the necessary details of the class to be added, such as its name, base classes, body, and decorators.
+    """
 
     file_name: str = Field(..., description="The name of the file to add the class to.")
     class_name: str = Field(..., description="The name of the class.")
@@ -112,11 +130,8 @@ class AddClass(OpenAISchema):
 
 
 class DeleteClass(OpenAISchema):
-    """Represents a class to be deleted.
-
-    Attributes:
-        file_name (str): The name of the file containing the class to be deleted.
-        class_name (str): The name of the class to be deleted.
+    """
+    Represents a request to delete an existing class from a specified Python file. The class specifies which class should be removed based on its name.
     """
 
     file_name: str = Field(
@@ -126,7 +141,9 @@ class DeleteClass(OpenAISchema):
 
 
 class ModifyClass(OpenAISchema):
-    """Represents a request to modify a Python class. Modifications will override the existing class."""
+    """
+    Represents a request to modify an existing class in a specified Python file. Modifications can include changes to the class's name, base classes, body, decorators, and other attributes.
+    """
 
     file_name: str = Field(
         ..., description="The name of the file containing the class to modify."
@@ -144,6 +161,10 @@ class ModifyClass(OpenAISchema):
     )
     new_name: str | None = Field(None, description="The new name for the class.")
     new_args: str | None = Field(None, description="The new arguments for the class.")
+    new_arg_types: dict | None = Field(
+        None,
+        description="The types for the argument, i.e {'arg1': 'str', 'arg2': 'int'}",
+    )
     new_docstring: str | None = Field(
         None, description="The new docstring for the function."
     )
@@ -163,7 +184,7 @@ class ModifyClass(OpenAISchema):
 
 class AddMethod(OpenAISchema):
     """
-    Represents a method to be added to a class.
+    Represents a method to be added to an existing class within a specified Python file. Includes details such as the method name, arguments, body, decorators, and return type.
     """
 
     file_name: str = Field(
@@ -175,6 +196,10 @@ class AddMethod(OpenAISchema):
     )
     method_name: str = Field(..., description="The name of the method.")
     args: str = Field(..., description="The arguments of the method.")
+    arg_types: dict | None = Field(
+        None,
+        description="The types for the argument, i.e {'arg1': 'str', 'arg2': 'int'}",
+    )
     body: str = Field(..., description="The body of the method.")
     decorator_list: list[str] = Field(
         [], description="The list of decorators to be applied to the method."
@@ -195,7 +220,9 @@ class AddMethod(OpenAISchema):
 
 
 class DeleteMethod(OpenAISchema):
-    """Represents a method to be deleted from a class."""
+    """
+    Represents a method to be deleted from an existing class within a specified Python file. Specifies the class and method name for deletion.
+    """
 
     file_name: str = Field(
         ...,
@@ -218,7 +245,7 @@ class DeleteMethod(OpenAISchema):
 
 class ModifyMethod(OpenAISchema):
     """
-    Represents a method modification operation. Modifications will override the existing method.
+    Represents a request to modify an existing method within a class in a specified Python file. Modifications can include the method's name, arguments, body, decorators, and return type.
     """
 
     file_name: str = Field(
@@ -230,6 +257,10 @@ class ModifyMethod(OpenAISchema):
     )
     method_name: str = Field(..., description="The name of the method to modify.")
     new_args: str | None = Field(None, description="The new arguments for the method.")
+    new_arg_types: dict | None = Field(
+        None,
+        description="The types for the argument, i.e {'arg1': 'str', 'arg2': 'int'}",
+    )
     new_body: str | None = Field(
         None,
         description="The new body of the method as a string. This will replace the entire existing body of the method.",
@@ -263,7 +294,7 @@ class ModifyMethod(OpenAISchema):
 
 class VariableNameChange(OpenAISchema):
     """
-    Represents a request to change the name of a variable. Changes take place over the entire codebase.
+    Represents a request to change the name of a variable throughout the entire codebase. This operation replaces all instances of the original variable name with a new name.
     """
 
     original_name: str = Field(..., description="The original name of the variable.")
@@ -276,7 +307,7 @@ class VariableNameChange(OpenAISchema):
 
 class AddImport(OpenAISchema):
     """
-    Represents an import statement to be added to a Python file.
+    Represents an import statement to be added to a Python file. Includes details such as the module to be imported and specific objects from the module if applicable.
     """
 
     file_name: str = Field(
@@ -306,7 +337,7 @@ class AddImport(OpenAISchema):
 
 class DeleteImport(OpenAISchema):
     """
-    Represents a request to delete one or more imports from a Python module.
+    Represents a request to delete an import statement from a Python file. Specifies the module and, optionally, specific names or objects to be removed.
     """
 
     file_name: str = Field(
@@ -338,7 +369,8 @@ class DeleteImport(OpenAISchema):
 
 class ModifyImport(OpenAISchema):
     """
-    Represents a modification to an import statement in a Python file."""
+    Represents a modification to an import statement in a Python file. Can be used to change imported names, aliases, or add/remove specific objects from the import.
+    """
 
     file_name: str = Field(
         ..., description="The name of the file containing the import to modify."
