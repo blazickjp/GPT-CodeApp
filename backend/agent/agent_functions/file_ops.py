@@ -1,10 +1,15 @@
 import json
 from instructor import OpenAISchema
 from pydantic import Field
-from agent.agent_functions.function_ops import AddFunction, DeleteFunction, ModifyFunction
+from agent.agent_functions.function_ops import (
+    AddFunction,
+    DeleteFunction,
+    ModifyFunction,
+)
 from agent.agent_functions.class_ops import AddClass, DeleteClass, ModifyClass
 from agent.agent_functions.method_ops import AddMethod, DeleteMethod, ModifyMethod
 from agent.agent_functions.import_ops import AddImport, DeleteImport, ModifyImport
+
 
 class VariableNameChange(OpenAISchema):
     """
@@ -17,6 +22,7 @@ class VariableNameChange(OpenAISchema):
     def to_string(self):
         out = dict(original_name=self.original_name, new_name=self.new_name)
         return "\n\n```json\n" + json.dumps(out) + "\n```\n"
+
 
 _OP_LIST = [
     AddImport,
