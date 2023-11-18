@@ -189,6 +189,7 @@ class CodingAgent:
                         completed_op = self.function_map[0][function_name](**data)
                         self.ops_to_execute.append(completed_op)
                         return_string = completed_op.to_json()
+                        print(return_string)
                         yield return_string
                     except json.JSONDecodeError as e:
                         print(f"JSON decode error: {e}")
@@ -199,7 +200,7 @@ class CodingAgent:
     def execute_ops(self, ops: List[dict]):
         diffs = []  # List to store the diffs for each operation
 
-        for op in ops:
+        for op in self.ops_to_execute:
             print(f"Executing operation: {op.to_json()}")
             # Read the existing code from the file
             with open(op.file_name, "r") as file:
