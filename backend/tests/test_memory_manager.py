@@ -15,7 +15,7 @@ class TestMemoryManager:
 
         # Create an instance of MemoryManager with the mock connection
         self.memory_manager = MemoryManager(
-            model="gpt-3.5-turbo",
+            model="gpt-3.5-turbo-16k",
             table_name="test",
             db_connection=conn,
         )

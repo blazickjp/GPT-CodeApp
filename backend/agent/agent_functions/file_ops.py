@@ -8,7 +8,7 @@ from agent.agent_functions.import_ops import AddImport, DeleteImport, ModifyImpo
 
 class VariableNameChange(OpenAISchema):
     """
-    Represents a request to change the name of a variable. Changes take place over the entire codebase.
+    Represents a request to change the name of a variable throughout the entire codebase. This operation replaces all instances of the original variable name with a new name.
     """
 
     original_name: str = Field(..., description="The original name of the variable.")
