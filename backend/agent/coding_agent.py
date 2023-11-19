@@ -172,10 +172,10 @@ class CodingAgent:
                 # Process normal text response
                 yield chunk.choices[0].delta.content
 
-    def execute_ops(self):
+    def execute_ops(self, ops: List[dict]):
         diffs = []  # List to store the diffs for each operation
 
-        for op in self.ops_to_execute:
+        for op in ops:
             print(f"Executing operation: {op.to_json()}")
             # Read the existing code from the file
             with open(op.file_name, "r") as file:
