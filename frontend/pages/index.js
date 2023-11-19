@@ -13,6 +13,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { addMessage, addAIPartResponse, fetchMessages } from '../store/messages/messagesSlice';
 import { toggleSidebar } from '../store/sidebar/sidebarSlice';
 
+
 const encoding = get_encoding("cl100k_base");
 Modal.setAppElement('#__next');
 
@@ -22,6 +23,7 @@ const Chat = () => {
   const isSidebarOpen = useSelector(state => state.sidebar.isOpen);
   const [sidebarKey, setSidebarKey] = useState(0);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
+
 
   // Add a function to toggle the left sidebar
   const toggleLeftSidebar = () => {
@@ -85,6 +87,10 @@ const Chat = () => {
     }
   };
 
+
+
+
+
   useEffect(() => {
     const fetchHistoricalMessages = async () => {
       console.log(`${process.env.NEXT_PUBLIC_API_URL}`)
@@ -103,7 +109,7 @@ const Chat = () => {
     };
     // Call the function to fetch historical messages
     fetchHistoricalMessages();
-  }, []); // Empty dependency array causes this effect to run only once
+  }, []);
 
 
   return (
@@ -137,5 +143,4 @@ const Chat = () => {
     </div>
   );
 };
-
 export default Chat;

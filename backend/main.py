@@ -73,8 +73,10 @@ async def message_streaming(request: Request) -> StreamingResponse:
 async def system_prompt():
     if AGENT.GPT_MODEL.startswith("gpt"):
         return {"system_prompt": AGENT.memory_manager.prompt_handler.system}
-    elif AGENT.GPT_MODEL == 'anthropic':
-        return {"system_prompt": AGENT.generate_anthropic_prompt(include_messages=False)}
+    elif AGENT.GPT_MODEL == "anthropic":
+        return {
+            "system_prompt": AGENT.generate_anthropic_prompt(include_messages=False)
+        }
 
 
 @app.post("/update_system")
@@ -291,3 +293,26 @@ async def set_max_message_tokens(input: dict):
     )
     AGENT.memory_manager.max_tokens = max_message_tokens
     return JSONResponse(status_code=200, content={})
+
+
+@app.get("/get_ops")
+async def get_ops():
+    # print("Ops to execute: ", AGENT.ops_to_execute)
+    # Check if ops_to_execute is empty
+    if len(AGENT.ops_to_execute) > 0:
+        ops = AGENT.ops_to_execute
+        AGENT.ops_to_execute = []
+        return {"ops": ops}
+    else:
+        return {"ops": []}
+
+
+@app.post("/execute_ops")
+async def execute_ops(input: dict):
+    ops = input.get("ops")
+    ops_to_execute = [_ops for _ops in AGENT.ops_to_execute if _ops.__name__ in ops]
+    if len(ops_to_execute) > 0:
+        AGENT.execute_ops(ops_to_execute)
+        return JSONResponse(status_code=200, content={})
+    else:
+        return JSONResponse(status_code=400, content={"error": "No ops to execute"})

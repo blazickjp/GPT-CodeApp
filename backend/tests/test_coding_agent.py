@@ -47,7 +47,7 @@ class TestCodingAgent(unittest.TestCase):
 
     def test_execute_ops(self):
         # Call the method to test
-        diffs = self.agent.execute_ops()
+        diffs = self.agent.execute_ops(self.agent.ops_to_execute)
         print("Diff: ", diffs)
 
         # We expect two diffs: one for the addition and one for the deletion

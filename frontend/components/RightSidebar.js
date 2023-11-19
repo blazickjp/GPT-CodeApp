@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { AiOutlineMinus } from "react-icons/ai";
+import OperationCard from './OperationCard';
 
 const CodeBlock = ({ node, inline, className, children }) => {
     const match = /language-(\w+)/.exec(className || '')
@@ -23,6 +24,8 @@ const RightSidebar = ({ isSidebarOpen }) => {
     const [summaries, setSummaries] = useState([]);
     const [maxTokens, setMaxTokens] = useState(1);
     const [filesInPrompt, setFilesInPrompt] = useState([]);  // array of file paths
+    const [operations, setOperations] = useState([]);
+
 
     const fetchSummaries = () => {
         setSummaries([]);
@@ -54,11 +57,25 @@ const RightSidebar = ({ isSidebarOpen }) => {
         }
     }, [isSidebarOpen]);
 
+    useEffect(() => {
+        // TODO: Fetch operations from the backend and set them in state
+        // For now, we'll use a static list
+        setOperations([
+            { id: 1, name: 'Build Project', description: 'Compile and build the project.' },
+            // ... other operations
+        ]);
+    }, []);
+
 
     return (
         <div className={`fixed h-full z-10 w-1/3 right-0 bg-neutral-800 transition-all duration-500 overflow-y-scroll p-6 text-gray-200 transform ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'} overflow-x-visible`}>
             <div className="flex flex-row justify-between items-center mb-2">
                 <h2 className="text-xl font-bold mb-4 text-gray-100">Files and Summaries</h2>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4 max-h-48">
+                {operations.map(operation => (
+                    <OperationCard key={operation.id} operation={operation} className=" invisible" />
+                ))}
             </div>
             {filesInPrompt.map((file, index) => {
                 return (

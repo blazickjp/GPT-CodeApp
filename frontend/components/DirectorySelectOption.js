@@ -74,7 +74,6 @@ const DirectorySelectOption = () => {
     };
 
     const handleKeyDown = (e) => {
-        console.log(e.key, inputRef.current)
         if (e.key === 'Tab' && inputRef.current) {
             e.preventDefault();  // Prevent focus from moving to the next element
             setDirectory(placeholder);
