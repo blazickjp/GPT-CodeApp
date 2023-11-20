@@ -8,10 +8,12 @@ import DirectorySelectOption from './DirectorySelectOption';
 
 
 const LeftSidebar = ({ isLeftSidebarOpen }) => {
-    const dispatch = useDispatch();
     const [prompts, setPrompts] = useState([]);
     const [sidebarKey, setSidebarKey] = useState(0);
-    const promptsRef = useRef([]);
+    const [saving, setSaving] = useState({}); // Track saving status by prompt ID
+    const [deleting, setDeleting] = useState(""); // Track deleting status by prompt ID
+    const dispatch = useDispatch();
+
 
     const fetchPrompts = async () => {
         try {
@@ -21,72 +23,73 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
             }
             const data = await response.json();
             setPrompts(data.prompts);
-            promptsRef.current = response.data;
-
         } catch (error) {
             console.error('Error fetching prompts', error);
         }
-        console.log("Prompts: ", prompts);
     };
 
 
-    const handleDeletePrompt = async (id) => {
-        console.log("Deleting prompt: ", id)
 
+    const handleDeletePrompt = async (id) => {
+        console.log(prompts);
+        console.log("Deleting prompt: ", id);
         try {
-            fetch(`${process.env.NEXT_PUBLIC_API_URL}/delete_prompt`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/delete_prompt`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ "prompt_id": id }),
             });
-            fetchPrompts();
+            if (!response.ok) {
+                throw new Error('Error deleting prompt');
+            }
+            await fetchPrompts();
         } catch (error) {
             console.error('Error deleting prompt', error);
         }
-
     };
-    const savePrompt = async (id, prompt) => {
+
+    const setPrompt = async (id, prompt) => {
+        // Set the saving state to 'pending' for the specific prompt ID
+        setSaving(prev => ({ ...prev, [id]: 'pending' }));
+        console.log("Setting prompt: ", id);
+
         try {
-            await fetch(`${process.env.NEXT_PUBLIC_API_URL}/save_prompt`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/set_prompt`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ "prompt_name": id, "prompt": prompt }),
             });
-            await fetchPrompts();
-            setSidebarKey(prevKey => prevKey + 1);  // Increment the key
+            if (!response.ok) {
+                throw new Error('Error setting prompt');
+            }
+            dispatch(setEditablePrompt(prompt));
+
+            console.log("Setting prompt: ", prompt);
+
+            // After success, update only the status of the specific prompt ID
+            setTimeout(() => {
+                setSaving(prev => ({ ...prev, [id]: 'success' }));
+                setTimeout(() => setSaving(prev => ({ ...prev, [id]: false })), 2000);
+            }, 1000);
+
         } catch (error) {
-            console.error('Error saving prompt', error);
-        }
-    }
-    const fetchMaxMessageTokens = async () => {
-        try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_max_message_tokens`);
-            const data = await response.json();
-            // Assuming you have a state setter like setMaxTokens
-            setMaxTokens(data.max_message_tokens);
-        } catch (error) {
-            console.error('Failed to fetch max message tokens:', error);
+            console.error('Error setting prompt', error);
+            setTimeout(() => {
+                setSaving(prev => ({ ...prev, [id]: 'error' }));
+                setTimeout(() => setSaving(prev => ({ ...prev, [id]: false })), 2000);
+            }, 1000);
         }
     };
-
-    // Call this function on component mount using useEffect
-    useEffect(() => {
-        fetchMaxMessageTokens();
-    }, []);
 
 
     useEffect(() => {
         fetchPrompts();
     }, [sidebarKey, isLeftSidebarOpen]);
 
-    const handlePromptClick = (prompt) => {
-        // dispatch(setEditablePrompt(prompt));
-        // dispatch(setIsModalOpen(true));
-    };
 
 
     return (
@@ -99,11 +102,15 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
             {
                 prompts.map(prompt => (
                     <details key={prompt.id} className="bg-gray-700 rounded p-2 mb-2">
-                        <summary className="text-gray-300 cursor-pointer flex justify-between items-center" onClick={() => handlePromptClick(prompt.prompt)}>
+                        <summary className="text-gray-300 cursor-pointer flex justify-between items-center">
                             <span>{prompt.name}</span>
                             <div className="flex flex-row items-end space-x-4">
-                                <button onClick={() => savePrompt(prompt.name, prompt.prompt)}>
-                                    <HiOutlineCheckCircle className=' text-green-400' />
+                                <button onClick={() => setPrompt(prompt.name, prompt.prompt)}>
+                                    <HiOutlineCheckCircle className={`text-green-400 
+                                            ${saving[prompt.id] === 'pending' ? 'text-yellow-400' :
+                                            saving[prompt.id] === 'success' ? 'text-green-500' :
+                                                saving[prompt.id] === 'error' ? 'text-red-500' :
+                                                    'text-green-400'}`} />
                                 </button>
                                 <button onClick={() => handleDeletePrompt(prompt.name)}>
                                     <FaTrash className=' text-red-400' />
@@ -112,8 +119,7 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
                         </summary>
                         <p className="text-gray-400 pl-4">{prompt.prompt?.substring(0, 200)}</p>
                     </details>
-                ))
-            }
+                ))}
         </div >
     );
 };
