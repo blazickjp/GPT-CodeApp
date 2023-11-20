@@ -2,6 +2,7 @@ from instructor import OpenAISchema
 from pydantic import Field
 import json
 
+
 class AddMethod(OpenAISchema):
     """
     Represents a method to be added to a class.
@@ -22,7 +23,7 @@ class AddMethod(OpenAISchema):
     )
     returns: str | None = Field(None, description="The return type of the method.")
 
-    def to_string(self):
+    def to_json(self):
         out = dict(
             file_name=self.file_name,
             class_name=self.class_name,
@@ -88,7 +89,7 @@ class ModifyMethod(OpenAISchema):
         None, description="The new docstring for the function."
     )
 
-    def to_string(self):
+    def to_json(self):
         out = dict(
             file_name=self.file_name,
             class_name=self.class_name,

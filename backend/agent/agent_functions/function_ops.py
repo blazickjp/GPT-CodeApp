@@ -19,7 +19,7 @@ class AddFunction(OpenAISchema):
     )
     returns: str | None = Field(None, description="The return type of the function.")
 
-    def to_string(self):
+    def to_json(self):
         out = dict(
             file_name=self.file_name,
             function_name=self.function_name,
@@ -41,7 +41,7 @@ class DeleteFunction(OpenAISchema):
     )
     function_name: str = Field(..., description="The name of the function to delete.")
 
-    def to_string(self):
+    def to_json(self):
         out = dict(
             file_name=self.file_name,
             function_name=self.function_name,
@@ -61,6 +61,9 @@ class ModifyFunction(OpenAISchema):
     new_args: str | None = Field(
         None, description="The new arguments for the function."
     )
+    arg_types: list[str] | None = Field(
+        None, description="The types of the new arguments for the function."
+    )
     new_body: str | None = Field(
         None,
         description="The new body of the function. This will overwrite the old body. Always include a full body.",
@@ -76,7 +79,7 @@ class ModifyFunction(OpenAISchema):
         None, description="The new docstring for the function."
     )
 
-    def to_string(self):
+    def to_json(self):
         out = dict(
             file_name=self.file_name,
             function_name=self.function_name,
@@ -87,5 +90,3 @@ class ModifyFunction(OpenAISchema):
             new_name=self.new_name,
         )
         return "\n\n```json\n" + json.dumps(out) + "\n```\n"
-
-

@@ -10,6 +10,23 @@ from agent.agent_functions.class_ops import AddClass, DeleteClass, ModifyClass
 from agent.agent_functions.method_ops import AddMethod, DeleteMethod, ModifyMethod
 from agent.agent_functions.import_ops import AddImport, DeleteImport, ModifyImport
 
+# Export all the entities
+__all__ = [
+    "AddFunction",
+    "DeleteFunction",
+    "ModifyFunction",
+    "AddClass",
+    "DeleteClass",
+    "ModifyClass",
+    "AddMethod",
+    "DeleteMethod",
+    "ModifyMethod",
+    "AddImport",
+    "DeleteImport",
+    "ModifyImport",
+    "VariableNameChange",
+]
+
 
 class VariableNameChange(OpenAISchema):
     """

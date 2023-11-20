@@ -2,6 +2,7 @@ from instructor import OpenAISchema
 from pydantic import Field
 import json
 
+
 class AddImport(OpenAISchema):
     """
     Represents an import statement to be added to a Python file.
@@ -21,7 +22,7 @@ class AddImport(OpenAISchema):
         None, description="The objects to import from the module."
     )
 
-    def to_string(self):
+    def to_json(self):
         out = dict(
             file_name=self.file_name,
             module=self.module,
@@ -53,7 +54,7 @@ class DeleteImport(OpenAISchema):
         None, description="The objects to delete from the module."
     )
 
-    def to_string(self):
+    def to_json(self):
         out = dict(
             file_name=self.file_name,
             module=self.module,
@@ -83,7 +84,7 @@ class ModifyImport(OpenAISchema):
     )
     objects_to_add: list | None = Field(None, description="The new objects to add.")
 
-    def to_string(self):
+    def to_json(self):
         out = dict(
             file_name=self.file_name,
             module=self.module,
