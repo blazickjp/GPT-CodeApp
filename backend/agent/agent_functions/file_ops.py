@@ -36,7 +36,7 @@ class VariableNameChange(OpenAISchema):
     original_name: str = Field(..., description="The original name of the variable.")
     new_name: str = Field(..., description="The new name of the variable.")
 
-    def to_string(self):
+    def to_json(self):
         out = dict(original_name=self.original_name, new_name=self.new_name)
         return "\n\n```json\n" + json.dumps(out) + "\n```\n"
 

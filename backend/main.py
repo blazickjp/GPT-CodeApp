@@ -124,6 +124,8 @@ async def get_summaries(reset: bool | None = None):
     cur = CODEBASE.conn.cursor()
     cur.execute("SELECT DISTINCT file_path, summary, token_count FROM files")
     results = cur.fetchall()
+    if len(results) == 0:
+        return JSONResponse(status_code=400, content={"error": "No summaries found"})
     root_path = CODEBASE.directory
     result = [
         {
@@ -281,17 +283,22 @@ async def get_home():
 async def set_max_message_tokens(input: dict):
     max_message_tokens = input.get("max_message_tokens")
     # Update config
-    AGENT.memory_manager.cur.execute(
-        """
-        INSERT INTO config (field, value, last_updated)
-        VALUES (?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(field)
-        DO UPDATE SET value = excluded.value, last_updated = excluded.last_updated
-        WHERE field = 'max_message_tokens';
-        """,
-        ("max_message_tokens", json.dumps(max_message_tokens)),
-    )
-    AGENT.memory_manager.max_tokens = max_message_tokens
+    try:
+        AGENT.memory_manager.cur.execute(
+            """
+            INSERT INTO config (field, value, last_updated)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(field)
+            DO UPDATE SET value = excluded.value, last_updated = excluded.last_updated
+            WHERE field = 'max_message_tokens';
+            """,
+            ("max_message_tokens", max_message_tokens),
+        )
+        AGENT.memory_manager.conn.commit()
+        AGENT.memory_manager.max_tokens = max_message_tokens
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return JSONResponse(status_code=400, content={"error": str(e)})
     return JSONResponse(status_code=200, content={})
 
 

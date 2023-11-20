@@ -60,7 +60,7 @@ class DeleteMethod(OpenAISchema):
 
 class ModifyMethod(OpenAISchema):
     """
-    Represents a method modification operation. Modifications will override the existing method.
+    Represents a method modification operation. Modifications will override the existing method, do not provide Partial values.
     """
 
     file_name: str = Field(

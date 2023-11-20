@@ -5,7 +5,7 @@ import json
 
 class AddFunction(OpenAISchema):
     """
-    Represents a function to be added to a Python file.
+    Represents a function to be added to a Python file. Do not provide Partial values.
     """
 
     file_name: str = Field(
@@ -51,7 +51,7 @@ class DeleteFunction(OpenAISchema):
 
 class ModifyFunction(OpenAISchema):
     """
-    A class representing modifications to a function. Modifications will override the existing function.
+    A class representing modifications to a function. All new values must be complete and will override the existing values. Do not provide Partial values.
     """
 
     file_name: str = Field(
@@ -60,9 +60,6 @@ class ModifyFunction(OpenAISchema):
     function_name: str = Field(..., description="The name of the function to modify.")
     new_args: str | None = Field(
         None, description="The new arguments for the function."
-    )
-    arg_types: list[str] | None = Field(
-        None, description="The types of the new arguments for the function."
     )
     new_body: str | None = Field(
         None,

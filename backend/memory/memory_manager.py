@@ -146,12 +146,13 @@ class MemoryManager:
             self.summarize(content) if message_tokens > float("inf") else (None, None)
         )
         is_function_call = command is not None
+        # Function response can be determined by lag is_function_call
         try:
             self.cur.execute(
                 f"""
                 INSERT INTO {self.memory_table_name}
-                (interaction_index, role, content, content_tokens, summarized_message, summarized_message_tokens, project_directory, is_function_call, function_response)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                (interaction_index, role, content, content_tokens, summarized_message, summarized_message_tokens, project_directory, is_function_call)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?);
                 """,
                 (
                     timestamp,
@@ -162,7 +163,6 @@ class MemoryManager:
                     summary_tokens,
                     self.project_directory,
                     is_function_call,
-                    function_response,
                 ),
             )
             self.conn.commit()

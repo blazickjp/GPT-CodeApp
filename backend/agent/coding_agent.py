@@ -9,6 +9,8 @@ import instructor
 from openai import OpenAI
 from pydantic import BaseModel
 from typing import List, Optional
+from types import SimpleNamespace
+
 from agent.agent_functions.ast_ops import ASTChangeApplicator
 
 from database.my_codebase import MyCodebase
@@ -32,6 +34,25 @@ class Message(BaseModel):
             "content": self.content,
         }
 
+
+class NestedNamespace(SimpleNamespace):
+    def __init__(self, dictionary, **kwargs):
+        if not isinstance(dictionary, dict):
+            raise ValueError("Input must be a dictionary")
+        super().__init__(**kwargs)
+        for key, value in dictionary.items():
+            if isinstance(value, dict):
+                self.__setattr__(key, NestedNamespace(value))
+            elif isinstance(value, list) and all(isinstance(i, dict) for i in value):
+                self.__setattr__(key, [NestedNamespace(i) for i in value])
+            else:
+                self.__setattr__(key, value)
+
+    def __getattr__(self, name):
+        if name in self.__dict__:
+            return self.__dict__[name]
+        else:
+            return None
 
 class CodingAgent:
     """
@@ -126,6 +147,9 @@ class CodingAgent:
         # Call the model
         print(f"Calling model: {self.GPT_MODEL}")
         for i, chunk in enumerate(self.call_model_streaming(command, **keyword_args)):
+            if isinstance(chunk, dict):
+                chunk = NestedNamespace(chunk)
+                
             delta = chunk.choices[0].delta
             if delta.tool_calls:
                 # print("Processing function call")
@@ -164,7 +188,6 @@ class CodingAgent:
                         completed_op = self.function_map[0][function_name](**data)
                         self.ops_to_execute.append(completed_op)
                         return_string = completed_op.to_json()
-                        print(return_string)
                         yield return_string
                     except json.JSONDecodeError as e:
                         print(f"JSON decode error: {e}")
@@ -327,7 +350,7 @@ class CodingAgent:
                     print("UnboundLocalError")
                     break
 
-    def generate_anthropic_prompt(self, include_messages=None) -> str:
+    def generate_anthropic_prompt(self, include_messages=True) -> str:
         """
         Generates a prompt for the Gaive model.
 
@@ -340,14 +363,8 @@ class CodingAgent:
         conversation_history = "The following is a portion of your conversation history with the human, truncated to save token space, inside the <conversation-history></conversation-history> XML tags.\n\n<conversation-history>\n"
         messages = self.memory_manager.get_messages()
         # Extract the last User messages
-        print(messages)
-        last_user_message = (
-            "\n\nThe most recent message from the human is tagged below in the <last-message></last-message> XML tags. Your response should ALWAYS adress this question or request from the human.\n<last-message>\n"
-            + [message["content"] for message in messages if message["role"] == "user"][
-                -1
-            ]
-            + "\n</last-message>"
-        )
+        last_user_message = "Human: " + [message["content"] for message in messages if message["role"] == "user"][-1]
+        print("Last Message: ", last_user_message)
 
         for idx, message in enumerate(messages):
             if message["role"].lower() == "user":
@@ -385,5 +402,5 @@ class CodingAgent:
             prompt = "\n\nHuman: " + self.memory_manager.identity + tree + file_context
 
         return (
-            prompt + last_user_message + "\n\nPlease respond accordingly.\n\nAssistant:"
+            prompt + last_user_message + "\n\nAssistant:"
         )
