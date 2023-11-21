@@ -31,16 +31,32 @@ const CodeBlock = React.memo(({ node, inline, className, children }) => {
     );
 });
 
+// const renderers = {
+//     listItem: (props) => {
+//         // Use a different className for top-level and nested list items if needed
+//         const className = props.checked !== null ? "task-list-item" : "list-item";
+//         return <li className={className}>{props.children}</li>;
+//     },
+//     // ... other renderers
+// };
+
+
+
+function CustomUnorderedListItem({ node, ...props }) {
+    return (
+        <ul {...props} className=' whitespace-normal list-inside indent-0 ' />
+    )
+}
 
 function CustomListItem({ node, ...props }) {
     return (
-        <ul {...props} className=' whitespace-normal list-disc list-inside' />
+        <li {...props} className=' whitespace-nowrap list-disc' />
     )
 }
 
 function CustomOrderedList({ node, ...props }) {
     return (
-        <ol {...props} className=' whitespace-normal' />
+        <ol {...props} className=' ' />
     )
 }
 
@@ -56,7 +72,7 @@ const Chatbox = ({ messages }) => {
         return (
             <div className={message.user === 'human' ? "bg-gray-700 text-white p-5" : "bg-gray-600 p-5 text-white"}>
                 <div className='flex flex-row w-1/2 mx-auto whitespace-pre-wrap'>
-                    <ReactMarkdown children={message.text} className='flex-grow overflow-x-auto' components={{ code: CodeBlock, ol: CustomOrderedList, ul: CustomListItem }} />
+                    <ReactMarkdown children={message.text} className='flex-grow overflow-x-auto' components={{ code: CodeBlock, ol: CustomOrderedList, ul: CustomUnorderedListItem, li: CustomListItem }} />
                 </div>
             </div>
         );

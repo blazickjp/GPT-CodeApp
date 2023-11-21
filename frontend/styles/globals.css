@@ -23,13 +23,18 @@ body {
       rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
 }
 
-ol {
+/* ol {
   @apply list-decimal list-inside;
 }
-
+*/
 li {
-  @apply pt-3;
+  @apply pt-1;
 }
+
+ul>li {
+  margin-left: 15px;
+}
+
 
 p {
   @apply !inline;

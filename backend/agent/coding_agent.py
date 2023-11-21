@@ -368,7 +368,7 @@ class CodingAgent:
 
         for idx, message in enumerate(messages):
             if message["role"].lower() == "user":
-                conversation_history += f"Human: {message['content']}\n\n"
+                conversation_history += f"Human: {message['content']}\n\n" 
             if message["role"].lower() == "assistant":
                 conversation_history += f"Assistant: {message['content']}\n\n"
         conversation_history += "\n</conversation-history>\n\n"
@@ -394,9 +394,9 @@ class CodingAgent:
             prompt = (
                 "\n\nHuman: "
                 + self.memory_manager.identity
+                + conversation_history
                 + tree
                 + file_context
-                + conversation_history
             )
         else:
             prompt = "\n\nHuman: " + self.memory_manager.identity + tree + file_context
