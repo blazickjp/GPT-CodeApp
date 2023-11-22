@@ -32,14 +32,14 @@ const OperationCard = ({ operation }) => {
   };
 
   return (
-    <div className="bg-neutral-700 shadow-md rounded-lg p-4 max-w-sm w-full mx-auto my-4 text-gray-200">
-      <div>
+    <div className="bg-neutral-700 shadow-md rounded-lg p-4 max-w-sm w-full mx-auto my-4 text-gray-200 flex flex-col max-h-56"> {/* Added flex and flex-col */}
+      <div className="flex-grow overflow-y-auto max-h-[200px]"> {/* Adjust the max height as needed */}
         <h3 className="text-lg font-bold mb-2">{operation.type}</h3>
-        <p className="text-sm mb-1">File: <span className="font-medium">{operation.file_name}</span></p>
+        <p className="text-sm mb-2 font-bold">File: <pre className="font-medium inline">{operation.file_name}</pre></p>
         {/* Display relevant operation details based on the operation type */}
-        {operation.function_name && <p className="text-sm mb-1">Function: <span className="font-medium">{operation.function_name}</span></p>}
-        {operation.class_name && <p className="text-sm mb-1">Class: <span className="font-medium">{operation.class_name}</span></p>}
-        {operation.method_name && <p className="text-sm mb-1">Method: <span className="font-medium">{operation.method_name}</span></p>}
+        {operation.function_name && <p className="text-sm mb-2 font-bold">Function: <pre className="font-medium inline">{operation.function_name}</pre></p>}
+        {operation.class_name && <p className="text-sm mb-2 font-bold">Class: <pre className="font-medium inline">{operation.class_name}</pre></p>}
+        {operation.method_name && <p className="text-sm mb-2 font-bold">Method: <pre className="font-medium inline">{operation.method_name}</pre></p>}
         {operation.body && (
           <div className="mt-2">
             <SyntaxHighlighter language="python" style={oneDark}>
@@ -49,12 +49,11 @@ const OperationCard = ({ operation }) => {
         )}
         {/* Add other details as necessary */}
       </div>
-      <div className="flex justify-between mt-4">
-        <button
-          className={`p-2 rounded-full transition-colors duration-200 ease-in-out ${isLoading ? 'bg-blue-300' : 'bg-blue-500 hover:bg-blue-600'
-            }`}
+      <div className="flex justify-between mt-4"> {/* This is your footer area where the buttons are */}
+        <button className={`p-2 rounded-full transition-colors duration-200 ease-in-out ${isLoading ? 'text-purple-300' : 'text-purple-500 hover:text-pruple-600'
+          }`}
           onClick={handleExecute}
-          title="Execute"
+          title="Click to Execute Op" // Tooltip for execute button
           disabled={isLoading}
         >
           {isLoading ? (
@@ -66,15 +65,15 @@ const OperationCard = ({ operation }) => {
           )}
         </button>
         <button
-          className="p-2 bg-gray-600 hover:bg-gray-700 rounded-full transition-colors duration-200 ease-in-out"
+          className="p-2 text-gray-200 hover:text-gray-400 rounded-full transition-colors duration-200 ease-in-out"
           onClick={handleDetails}
-          title="Details"
+          title="Refine Op - Not yet implemented" // Tooltip for details button
         >
           <FiInfo className="text-xl" />
         </button>
       </div>
       {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-    </div>
+    </div >
 
   );
 };

@@ -60,7 +60,6 @@ const CodeBlock = ({ node, inline, className, children }) => {
 const RightSidebar = ({ isSidebarOpen }) => {
     const [summaries, setSummaries] = useState([]);
     const [maxTokens, setMaxTokens] = useState(1);
-    const [filesInPrompt, setFilesInPrompt] = useState([]);  // array of file paths
     const [OpsToExecute, setOpsToExecute] = useState(mockOperations);
 
     const fetchSummaries = () => {
@@ -132,19 +131,10 @@ const RightSidebar = ({ isSidebarOpen }) => {
                     ))
                 }
             </div>
-
-
-            {filesInPrompt.map((file, index) => {
-                return (
-                    <div className="flex justify-between items-center mb-1">
-                        <p className=" mb-1 text-gray-100">{file}</p>
-                        <AiOutlineMinus onClick={() => removeFile(file)} />
-                    </div>
-                )
-            })}
+            <hr className="border-gray-600 my-4" />
 
             <div className="flex flex-row justify-between items-center mb-2">
-                <h2 className="text-xl font-bold mb-4 text-gray-100">Files and Summaries</h2>
+                <h2 className="text-xl font-bold mb-4 text-gray-100">File Token Counts</h2>
             </div>
             <hr className="border-gray-600 mb-4" />
             {summaries.map((summary, index) => {
