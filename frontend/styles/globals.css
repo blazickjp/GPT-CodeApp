@@ -27,9 +27,9 @@ body {
   @apply list-decimal list-inside;
 }
 */
-li {
+/* li {
   @apply pt-1;
-}
+} */
 
 ul>li {
   margin-left: 15px;
