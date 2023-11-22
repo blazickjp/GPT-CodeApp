@@ -124,14 +124,13 @@ const RightSidebar = ({ isSidebarOpen }) => {
                 <h2 className="text-xl font-bold mb-4 text-gray-100">Available Ops</h2>
             </div>
             <hr className="border-gray-600 mb-4" />
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-2 gap-4 pb-10">
                 {
                     mockOperations.map((operation, index) => (
                         <OperationCard key={index} operation={operation} />
                     ))
                 }
             </div>
-            <hr className="border-gray-600 my-4" />
 
             <div className="flex flex-row justify-between items-center mb-2">
                 <h2 className="text-xl font-bold mb-4 text-gray-100">File Token Counts</h2>
