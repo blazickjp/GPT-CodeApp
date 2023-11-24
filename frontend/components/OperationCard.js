@@ -1,5 +1,5 @@
 // OperationCard.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiPlayCircle, FiInfo, FiLoader } from 'react-icons/fi'; // Example icons
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
@@ -7,6 +7,8 @@ import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 const OperationCard = ({ operation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isClient, setIsClient] = useState(false);
+
 
   const handleExecute = async () => {
     setIsLoading(true);
@@ -31,20 +33,27 @@ const OperationCard = ({ operation }) => {
     console.log(`Showing details for operation: ${operation.function_name || operation.class_name || operation.method_name}`);
   };
 
+  useEffect(() => {
+    // Once the component mounts, we know it's client-side
+    setIsClient(true);
+  }, []);
+
   return (
     <div className="bg-neutral-700 shadow-md rounded-lg p-4 max-w-sm w-full mx-auto my-4 text-gray-200 flex flex-col max-h-56"> {/* Added flex and flex-col */}
       <div className="flex-grow overflow-y-auto max-h-[200px]"> {/* Adjust the max height as needed */}
         <h3 className="text-lg font-bold mb-2">{operation.type}</h3>
-        <p className="text-sm mb-2 font-bold">File: <pre className="font-medium inline">{operation.file_name}</pre></p>
+        <div className="text-sm mb-2 font-bold">File: <pre className="font-medium inline">{operation.file_name}</pre></div>
         {/* Display relevant operation details based on the operation type */}
-        {operation.function_name && <p className="text-sm mb-2 font-bold">Function: <pre className="font-medium inline">{operation.function_name}</pre></p>}
-        {operation.class_name && <p className="text-sm mb-2 font-bold">Class: <pre className="font-medium inline">{operation.class_name}</pre></p>}
-        {operation.method_name && <p className="text-sm mb-2 font-bold">Method: <pre className="font-medium inline">{operation.method_name}</pre></p>}
+        {operation.function_name && <div className="text-sm mb-2 font-bold">Function: <pre className="font-medium inline">{operation.function_name}</pre></div>}
+        {operation.class_name && <div className="text-sm mb-2 font-bold">Class: <pre className="font-medium inline">{operation.class_name}</pre></div>}
+        {operation.method_name && <div className="text-sm mb-2 font-bold">Method: <pre className="font-medium inline">{operation.method_name}</pre></div>}
         {operation.body && (
           <div className="mt-2">
-            <SyntaxHighlighter language="python" style={oneDark}>
-              {operation.body}
-            </SyntaxHighlighter>
+            {isClient && (
+              <SyntaxHighlighter language="python" style={oneDark}>
+                {operation.body}
+              </SyntaxHighlighter>
+            )}
           </div>
         )}
         {/* Add other details as necessary */}

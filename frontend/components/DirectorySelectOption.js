@@ -8,6 +8,7 @@ const DirectorySelectOption = () => {
     const [actualTokens, setActualTokens] = useState(1000);
     const [displayTokens, setDisplayTokens] = useState('1000');
     const inputRef = useRef(null);
+    const inputRefTokens = useRef(null);
 
 
     useEffect(() => {
@@ -136,9 +137,10 @@ const DirectorySelectOption = () => {
             </form>
             {/* Input for Max token */}
             <div className='flex flex-row items-center mt-4 ml-4 space-x-4'>
-                <text className=' whitespace-nowrap'>Msg Tokens</text>
+                <span className=' whitespace-nowrap'>Msg Tokens</span>
                 <form onSubmit={handleSubmitTokens} className='flex items-center'>
                     <input
+                        ref={inputRefTokens}
                         type="text"
                         value={displayTokens}
                         onChange={handleMaxTokensChange}
