@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaArrowRight } from 'react-icons/fa';  // Importing an icon from react-icons
+import { useDispatch } from 'react-redux';
+import { setMessageTokens, } from '../store/modal_bar_modals/messageHistorySlice';
+import { setDirectory, } from '@/store/sidebar/sidebarSlice';
+
+
 
 const DirectorySelectOption = () => {
-    const [directory, setDirectory] = useState('');
     const [placeholder, setPlaceholder] = useState('Loading...');
-    const [tokens, setTokens] = useState(1000);
+    const [tempDirectory, setTempDirectory] = useState('');
     const [actualTokens, setActualTokens] = useState(1000);
     const [displayTokens, setDisplayTokens] = useState('1000');
-    const inputRef = useRef(null);
-    const inputRefTokens = useRef(null);
+    const inputRef = useRef(0);
+    const dispatch = useDispatch();
 
 
     useEffect(() => {
@@ -48,24 +52,26 @@ const DirectorySelectOption = () => {
 
 
     const handleInputChange = (e) => {
-        setDirectory(e.target.value);
+        setTempDirectory(e.target.value);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log("Submitting directory: ", directory);
+        console.log("Submitting directory: ", tempDirectory);
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/set_directory`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ "directory": directory }),
+                body: JSON.stringify({ "directory": tempDirectory }),
             });
 
             if (response.ok) {
+                dispatch(setDirectory(tempDirectory));
                 console.log('Directory submitted successfully');
                 window.location.reload();
+
             } else {
                 console.error('Error submitting directory: ', response.statusText);
             }
@@ -98,6 +104,7 @@ const DirectorySelectOption = () => {
             });
 
             if (response.ok) {
+                dispatch(setMessageTokens(maxTokens));
                 console.log('Max message tokens set successfully');
             } else {
                 console.error('Error setting max message tokens: ', response.statusText);
@@ -116,38 +123,38 @@ const DirectorySelectOption = () => {
 
 
     return (
-        <div>
+        <div className='overflow-x-scroll'>
             <h3 className='text-lg'>Config</h3>
-            {/* <hr className='my-2 text-gray-300 mx-2' /> */}
             <form onSubmit={handleSubmit} className="p-2">
-                <div className="flex space-x-4 items-center border-b border-gray-400 overflow-hidden text-gray-200">
+                <div className="flex space-x-2 items-center border-b border-gray-400 text-gray-200">
                     <input
                         ref={inputRef}
+                        id={'directory'}
                         type="text"
-                        value={directory}
+                        value={tempDirectory}
                         onChange={handleInputChange}
                         placeholder={placeholder}
                         onKeyDown={handleKeyDown}
                         className="flex-grow p-2 text-sm bg-transparent outline-none"
                     />
-                    <button type="submit" className="p-3">
+                    <button type="submit" className="p-2">
                         <FaArrowRight className='text-purple-600' />
                     </button>
                 </div>
             </form>
             {/* Input for Max token */}
-            <div className='flex flex-row items-center mt-4 ml-4 space-x-4'>
+            <div className='flex flex-row items-center mt-4 ml-4 space-y-2 sm:space-y-0'>
                 <span className=' whitespace-nowrap'>Msg Tokens</span>
                 <form onSubmit={handleSubmitTokens} className='flex items-center'>
                     <input
-                        ref={inputRefTokens}
                         type="text"
+                        id={'maxTokens'}
                         value={displayTokens}
                         onChange={handleMaxTokensChange}
                         placeholder="2,000"
                         className='flex-grow p-2 text-sm items-end outline-none bg-transparent text-right'
                     />
-                    <button type="submit" className="px-4 py-2 ">
+                    <button type="submit" className="px-2 py-1">
                         <FaArrowRight className='text-purple-600' />
                     </button>
                 </form>

@@ -11,7 +11,6 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
     const [prompts, setPrompts] = useState([]);
     const [sidebarKey, setSidebarKey] = useState(0);
     const [saving, setSaving] = useState({}); // Track saving status by prompt ID
-    const [deleting, setDeleting] = useState(""); // Track deleting status by prompt ID
     const dispatch = useDispatch();
 
 
@@ -76,6 +75,9 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
                 setTimeout(() => setSaving(prev => ({ ...prev, [id]: false })), 2000);
             }, 1000);
 
+            fetchPrompts();
+
+
         } catch (error) {
             console.error('Error setting prompt', error);
             setTimeout(() => {
@@ -88,12 +90,16 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
 
     useEffect(() => {
         fetchPrompts();
-    }, [sidebarKey, isLeftSidebarOpen]);
+    }, [sidebarKey, isLeftSidebarOpen, prompts]);
 
 
 
     return (
-        <div className={`fixed h-full w-1/5 left-0 bg-neutral-800 transition-all duration-500 overflow-y-scroll p-6 text-gray-200 transform ${isLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full'} overflow-x-hidden`}>
+        <div className={`fixed h-full bg-neutral-800 transition-all duration-500 overflow-y-scroll p-6 text-gray-200 transform ${isLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            } ${
+            // Here we define different widths for different screen sizes
+            'w-full sm:w-4/5 md:w-3/5 lg:w-2/5 xl:w-1/5'
+            } overflow-x-hidden`}>
             <div className="flex flex-row justify-between items-center mb-2">
                 <DirectorySelectOption />
             </div>

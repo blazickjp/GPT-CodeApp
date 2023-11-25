@@ -42,15 +42,15 @@ const CodeBlock = React.memo(({ node, inline, className, children }) => {
 
 
 
-function CustomUnorderedListItem({ node, ...props }) {
+function CustomUnorderedListItem({ node, ordered, ...rest }) {
     return (
-        <ul {...props} className=' whitespace-normal list-inside list-disc' />
+        <ul {...rest} ordered={ordered.toString()} className=' whitespace-normal list-inside list-disc' />
     )
 }
 
-function CustomListItem({ node, ...props }) {
+function CustomListItem({ node, ordered, ...rest }) {
     return (
-        <li {...props} className=' whitespace-normal list-disc flex-wrap' />
+        <li {...rest} ordered={ordered.toString()} className=' whitespace-normal list-disc flex-wrap' />
     )
 }
 
