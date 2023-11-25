@@ -47,7 +47,7 @@ const DirectorySelectOption = () => {
         };
         fetchHomeDirectory();
         fetchSavedDirectory();
-    }, []);
+    }, [placeholder]);
 
 
 

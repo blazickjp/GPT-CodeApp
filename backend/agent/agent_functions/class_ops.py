@@ -1,6 +1,8 @@
 from instructor import OpenAISchema
 from pydantic import Field
 import json
+import uuid
+
 
 class AddClass(OpenAISchema):
     """Represents a class to be added to a file."""
@@ -12,9 +14,11 @@ class AddClass(OpenAISchema):
     decorator_list: list[str] = Field(
         [], description="The list of decorators to be applied to the class."
     )
+    id: str = str(uuid.uuid4())
 
-    def to_string(self):
+    def to_json(self):
         out = dict(
+            id=self.id,
             file_name=self.file_name,
             class_name=self.class_name,
             bases=self.bases,
@@ -22,6 +26,7 @@ class AddClass(OpenAISchema):
             decorator_list=self.decorator_list,
         )
         return "\n\n```json\n" + json.dumps(out) + "\n```\n"
+
 
 class DeleteClass(OpenAISchema):
     """Represents a class to be deleted.
@@ -35,6 +40,15 @@ class DeleteClass(OpenAISchema):
         ..., description="The name of the file containing the class to delete."
     )
     class_name: str = Field(..., description="The name of the class to delete.")
+    id: str = str(uuid.uuid4())
+
+    def to_json(self):
+        out = dict(
+            id=self.id,
+            file_name=self.file_name,
+            class_name=self.class_name,
+        )
+        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
 
 
 class ModifyClass(OpenAISchema):
@@ -59,9 +73,11 @@ class ModifyClass(OpenAISchema):
     new_docstring: str | None = Field(
         None, description="The new docstring for the function."
     )
+    id: str = str(uuid.uuid4())
 
-    def to_string(self):
+    def to_json(self):
         out = dict(
+            id=self.id,
             file_name=self.file_name,
             class_name=self.class_name,
             new_bases=self.new_bases,

@@ -1,6 +1,7 @@
 from instructor import OpenAISchema
 from pydantic import Field
 import json
+import uuid
 
 
 class AddMethod(OpenAISchema):
@@ -25,6 +26,7 @@ class AddMethod(OpenAISchema):
 
     def to_json(self):
         out = dict(
+            id=str(uuid.uuid4()),
             file_name=self.file_name,
             class_name=self.class_name,
             method_name=self.method_name,
@@ -51,6 +53,7 @@ class DeleteMethod(OpenAISchema):
 
     def to_string(self):
         out = dict(
+            id=str(uuid.uuid4()),
             file_name=self.file_name,
             class_name=self.class_name,
             method_name=self.method_name,
@@ -91,6 +94,7 @@ class ModifyMethod(OpenAISchema):
 
     def to_json(self):
         out = dict(
+            id=str(uuid.uuid4()),
             file_name=self.file_name,
             class_name=self.class_name,
             method_name=self.method_name,

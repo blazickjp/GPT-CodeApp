@@ -1,4 +1,5 @@
 import json
+import uuid
 from instructor import OpenAISchema
 from pydantic import Field
 from agent.agent_functions.function_ops import (
@@ -35,9 +36,10 @@ class VariableNameChange(OpenAISchema):
 
     original_name: str = Field(..., description="The original name of the variable.")
     new_name: str = Field(..., description="The new name of the variable.")
+    id: str = str(uuid.uuid4())
 
     def to_json(self):
-        out = dict(original_name=self.original_name, new_name=self.new_name)
+        out = dict(id=self.id, original_name=self.original_name, new_name=self.new_name)
         return "\n\n```json\n" + json.dumps(out) + "\n```\n"
 
 

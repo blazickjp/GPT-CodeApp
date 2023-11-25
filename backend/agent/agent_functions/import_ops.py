@@ -1,6 +1,7 @@
 from instructor import OpenAISchema
 from pydantic import Field
 import json
+import uuid
 
 
 class AddImport(OpenAISchema):
@@ -21,9 +22,11 @@ class AddImport(OpenAISchema):
     objects: list | None = Field(
         None, description="The objects to import from the module."
     )
+    id: str = str(uuid.uuid4())
 
     def to_json(self):
         out = dict(
+            id=self.id,
             file_name=self.file_name,
             module=self.module,
             names=self.names,
@@ -53,9 +56,11 @@ class DeleteImport(OpenAISchema):
     objects: list | None = Field(
         None, description="The objects to delete from the module."
     )
+    id: str = str(uuid.uuid4())
 
     def to_json(self):
         out = dict(
+            id=self.id,
             file_name=self.file_name,
             module=self.module,
             names=self.names,
@@ -83,9 +88,11 @@ class ModifyImport(OpenAISchema):
         None, description="The old objects to remove."
     )
     objects_to_add: list | None = Field(None, description="The new objects to add.")
+    id: str = str(uuid.uuid4())
 
     def to_json(self):
         out = dict(
+            id=self.id,
             file_name=self.file_name,
             module=self.module,
             new_names=self.new_names,

@@ -5,6 +5,8 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { AiOutlineMinus } from "react-icons/ai";
 import OperationCard from './OperationCard';
+import { useSelector } from 'react-redux';
+
 
 
 const mockOperations = [
@@ -60,7 +62,13 @@ const CodeBlock = ({ node, inline, className, children }) => {
 const RightSidebar = ({ isSidebarOpen }) => {
     const [summaries, setSummaries] = useState([]);
     const [maxTokens, setMaxTokens] = useState(1);
-    const [OpsToExecute, setOpsToExecute] = useState(mockOperations);
+    const opList = useSelector(state => state.sidebar.opList);
+    const [OpsToExecute, setOpsToExecute] = useState([]);
+
+    const updateList = () => {
+        setOpsToExecute(opList);
+    };
+
 
     const fetchSummaries = () => {
         setSummaries([]);
@@ -76,46 +84,41 @@ const RightSidebar = ({ isSidebarOpen }) => {
             .catch(console.error);
     };
 
+    const fetchSystemState = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_ops`);
+            console.log("Resp: ", response);
+            const data = await response.json();
+            setOpsToExecute(data.ops);
+        } catch (error) {
+            console.error('Error fetching system state:', error);
+        }
+    };
+
+
     const removeFile = (file_path) => {
         setFilesInPrompt(prevFiles => {
             return prevFiles.filter(file => file !== file_path);
         });
     };
 
-
     const colorScale = scaleLinear()
         .domain([0, maxTokens / 2, maxTokens])
         .range(['green', 'yellow', 'red']);
 
+
     useEffect(() => {
         if (isSidebarOpen) {
             fetchSummaries();
+            fetchSystemState();
         }
     }, [isSidebarOpen]);
 
     useEffect(() => {
-        // TODO: Fetch operations from the backend and set them in state
-        // For now, we'll use a static list
-        // setOperations([
-        //     { id: 1, name: 'Build Project', description: 'Compile and build the project.' },
-        //     // ... other operations
-        // ]);
-    }, []);
-
-    useEffect(() => {
-        const fetchSystemState = async () => {
-            try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_ops`);
-                console.log(response);
-                const data = await response.json();
-                setOpsToExecute(data.ops);
-            } catch (error) {
-                console.error('Error fetching system state:', error);
-            }
-        };
-
-        fetchSystemState();
-    }, []);
+        if (isSidebarOpen) {
+            updateList();
+        }
+    }, [opList]);
 
 
     return (
@@ -126,7 +129,7 @@ const RightSidebar = ({ isSidebarOpen }) => {
             <hr className="border-gray-600 mb-4" />
             <div className="grid md:grid-cols-2 gap-4 pb-10">
                 {
-                    mockOperations.map((operation, index) => (
+                    OpsToExecute?.map((operation, index) => (
                         <OperationCard key={index} operation={operation} />
                     ))
                 }

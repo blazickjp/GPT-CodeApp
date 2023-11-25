@@ -3,28 +3,54 @@ import React, { useState, useEffect } from 'react';
 import { FiPlayCircle, FiInfo, FiLoader } from 'react-icons/fi'; // Example icons
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+import { setOpList } from '../store/sidebar/sidebarSlice';
+import { useDispatch, useSelector } from 'react-redux';
+
 
 const OperationCard = ({ operation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isClient, setIsClient] = useState(false);
+  const dispatch = useDispatch();
+
+  const executeOperation = async (operationId) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/execute_ops`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ op_id: operationId })
+      });
+      if (!response.ok) {
+        throw new Error('Operation failed to execute');
+      }
+      const result = await response.json();
+      // set op list
+      dispatch(setOpList(result.ops));
+      return result;
+    } catch (error) {
+      console.error('There was an error executing the operation:', error);
+      throw error;
+    }
+  };
 
 
   const handleExecute = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      // Replace the following console.log with your actual execution logic
-      console.log(`Executing operation: ${operation.function_name || operation.class_name || operation.method_name}`);
-      // Simulate an async operation; remove setTimeout in your actual implementation
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      // Operation succeeded
-      setIsLoading(false);
+      console.log('Executing operation: ', operation.id)
+      let result = await executeOperation(operation.id); // Pass the operation ID instead of the type and details
+      console.log('Operation executed successfully');
+      console.log('Result: ', result);
+
+      // Handle success state here, maybe refresh data or provide user feedback
     } catch (err) {
-      // Operation failed: Handle error
       setError('Failed to execute operation');
-      setIsLoading(false);
+      console.error(err);
     }
+    setIsLoading(false);
   };
 
 
@@ -68,7 +94,7 @@ const OperationCard = ({ operation }) => {
           {isLoading ? (
             <FiLoader className="animate-spin text-xl" />
           ) : error ? (
-            <FiXCircle className="text-xl text-red-500" />
+            <FiInfo className="text-xl text-red-500" />
           ) : (
             <FiPlayCircle className="text-xl" />
           )}

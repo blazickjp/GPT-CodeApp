@@ -5,10 +5,7 @@ import tiktoken
 from fastapi import Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from app_setup import setup_app, app
-
-# import openai
-# openai.api_base = "http://127.0.0.1:5001/v1"
-
+from agent.agent_functions.file_ops import _OP_LIST
 
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 AGENT, CODEBASE = setup_app()
@@ -22,25 +19,18 @@ async def startup_event():
         """
     ).fetchall()
     config = {field: value for field, value in config}
-    # Set the model
     if config.get("model"):
         print("Model", config["model"])
         AGENT.GPT_MODEL = config["model"]
-
-    # Set the max message tokens
     if config.get("max_message_tokens"):
         print("Max Message Tokens", config["max_message_tokens"])
         AGENT.memory_manager.max_tokens = int(config["max_message_tokens"])
-
-    # Set the directory in prompt
     if config.get("directory"):
         print("Dir", config["directory"])
         CODEBASE.set_directory(config["directory"])
         AGENT.memory_manager.prompt_handler.tree = CODEBASE.tree()
         AGENT.memory_manager.prompt_handler.set_system()
         AGENT.memory_manager.project_directory = config["directory"]
-
-    # Set the files in prompt
     if config.get("files"):
         print("Files", config["files"])
         AGENT.memory_manager.prompt_handler.files_in_prompt = json.loads(
@@ -48,7 +38,6 @@ async def startup_event():
         )
         AGENT.memory_manager.prompt_handler.set_files_in_prompt()
         AGENT.memory_manager.prompt_handler.set_system()
-
     print("Starting up...")
 
 
@@ -63,7 +52,6 @@ async def message_streaming(request: Request) -> StreamingResponse:
             if content is not None:
                 accumulated_messages[id] += content
                 yield json.dumps({"id": id, "content": content}) + "@@"
-
         AGENT.memory_manager.add_message("assistant", accumulated_messages[id])
 
     return StreamingResponse(stream(), media_type="text/event-stream")
@@ -100,7 +88,6 @@ async def get_functions():
                 for cls in AGENT.function_map[0].values()
             ]
         }
-
         on_demand_functions = {
             "on_demand_functions": [
                 {"name": cls.__name__, "description": cls.__doc__}
@@ -111,16 +98,15 @@ async def get_functions():
 
 
 @app.get("/get_messages")
-async def get_messages(chatbox: bool | None = None):
+async def get_messages(chatbox: (bool | None) = None):
     return {"messages": AGENT.memory_manager.get_messages(chat_box=chatbox)[1:]}
 
 
 @app.get("/get_summaries")
-async def get_summaries(reset: bool | None = None):
+async def get_summaries(reset: (bool | None) = None):
     if reset:
         print("Refreshing Data")
         CODEBASE._update_files_and_embeddings()
-
     cur = CODEBASE.conn.cursor()
     cur.execute("SELECT DISTINCT file_path, summary, token_count FROM files")
     results = cur.fetchall()
@@ -149,7 +135,6 @@ async def generate_readme():
 @app.post("/set_files_in_prompt")
 async def set_files_in_prompt(input: dict):
     files = [file for file in input.get("files", None)]
-    # First update the config table
     AGENT.memory_manager.cur.execute(
         """
         INSERT INTO config (field, value, last_updated)
@@ -163,7 +148,6 @@ async def set_files_in_prompt(input: dict):
     AGENT.memory_manager.prompt_handler.files_in_prompt = files
     AGENT.memory_manager.prompt_handler.set_files_in_prompt()
     AGENT.memory_manager.prompt_handler.set_system()
-
     return JSONResponse(status_code=200, content={})
 
 
@@ -177,7 +161,6 @@ async def set_model(input: dict):
     model = input.get("model")
     print(f"Current model: {AGENT.GPT_MODEL}")
     print(f"Received model: {model}")
-    # Update config table
     if model:
         AGENT.memory_manager.cur.execute(
             """
@@ -210,7 +193,6 @@ async def save_prompt(input: dict):
     prompt = input.get("prompt")
     prompt_name = input.get("prompt_name")
     print(prompt_name)
-    # Create or update prompt
     if AGENT.memory_manager.prompt_handler.read_prompt(prompt_name):
         AGENT.memory_manager.prompt_handler.update_prompt(prompt_name, prompt)
     else:
@@ -234,7 +216,6 @@ async def delete_prompt(input: dict):
         AGENT.memory_manager.prompt_handler.delete_prompt(prompt_id)
     except Exception as e:
         return JSONResponse(status_code=400, content={"error": str(e)})
-
     return JSONResponse(status_code=200, content={})
 
 
@@ -268,7 +249,6 @@ async def set_directory(input: dict):
 
 @app.get("/get_directory")
 async def get_directory():
-    # Fetch the directory from the database
     return {"directory": CODEBASE.get_directory()}
 
 
@@ -282,7 +262,6 @@ async def get_home():
 @app.post("/set_max_message_tokens")
 async def set_max_message_tokens(input: dict):
     max_message_tokens = input.get("max_message_tokens")
-    # Update config
     try:
         AGENT.memory_manager.cur.execute(
             """
@@ -304,11 +283,9 @@ async def set_max_message_tokens(input: dict):
 
 @app.get("/get_ops")
 async def get_ops():
-    # print("Ops to execute: ", AGENT.ops_to_execute)
-    # Check if ops_to_execute is empty
+    print("Ops to execute: ", AGENT.ops_to_execute)
     if len(AGENT.ops_to_execute) > 0:
         ops = AGENT.ops_to_execute
-        AGENT.ops_to_execute = []
         return {"ops": ops}
     else:
         return {"ops": []}
@@ -316,10 +293,19 @@ async def get_ops():
 
 @app.post("/execute_ops")
 async def execute_ops(input: dict):
-    ops = input.get("ops")
-    ops_to_execute = [_ops for _ops in AGENT.ops_to_execute if _ops.__name__ in ops]
+    op_id = input.get("op_id")
+    ops_to_execute = [op for op in AGENT.ops_to_execute if op.id in op_id]
     if len(ops_to_execute) > 0:
-        AGENT.execute_ops(ops_to_execute)
+        try:
+            AGENT.execute_ops(ops_to_execute)
+            print("Ops to execute: ", AGENT.ops_to_execute)
+        except Exception as e:
+            return JSONResponse(status_code=400, content={"error": str(e)})
         return JSONResponse(status_code=200, content={})
     else:
         return JSONResponse(status_code=400, content={"error": "No ops to execute"})
+
+
+@app.route("/hello")
+def hello_world() -> str:
+    return "Hello, World!"

@@ -90,7 +90,7 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
 
     useEffect(() => {
         fetchPrompts();
-    }, [sidebarKey, isLeftSidebarOpen, prompts]);
+    }, [sidebarKey, isLeftSidebarOpen]);
 
 
 

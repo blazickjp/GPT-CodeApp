@@ -54,6 +54,7 @@ class NestedNamespace(SimpleNamespace):
         else:
             return None
 
+
 class CodingAgent:
     """
     A class to represent a coding agent that uses OpenAI's GPT-3 model to generate code.
@@ -149,7 +150,7 @@ class CodingAgent:
         for i, chunk in enumerate(self.call_model_streaming(command, **keyword_args)):
             if isinstance(chunk, dict):
                 chunk = NestedNamespace(chunk)
-                
+
             delta = chunk.choices[0].delta
             if delta.tool_calls:
                 # print("Processing function call")
@@ -229,6 +230,8 @@ class CodingAgent:
             # Write the transformed code back to the file
             with open(op.file_name, "w") as file:
                 file.write(transformed_code)
+
+            self.ops_to_execute = [op for op in self.ops_to_execute if op != op]
 
         return diffs
 
@@ -363,12 +366,17 @@ class CodingAgent:
         conversation_history = "The following is a portion of your conversation history with the human, truncated to save token space, inside the <conversation-history></conversation-history> XML tags.\n\n<conversation-history>\n"
         messages = self.memory_manager.get_messages()
         # Extract the last User messages
-        last_user_message = "Human: " + [message["content"] for message in messages if message["role"] == "user"][-1]
+        last_user_message = (
+            "Human: "
+            + [message["content"] for message in messages if message["role"] == "user"][
+                -1
+            ]
+        )
         print("Last Message: ", last_user_message)
 
         for idx, message in enumerate(messages):
             if message["role"].lower() == "user":
-                conversation_history += f"Human: {message['content']}\n\n" 
+                conversation_history += f"Human: {message['content']}\n\n"
             if message["role"].lower() == "assistant":
                 conversation_history += f"Assistant: {message['content']}\n\n"
         conversation_history += "\n</conversation-history>\n\n"
@@ -401,6 +409,4 @@ class CodingAgent:
         else:
             prompt = "\n\nHuman: " + self.memory_manager.identity + tree + file_context
 
-        return (
-            prompt + last_user_message + "\n\nAssistant:"
-        )
+        return prompt + last_user_message + "\n\nAssistant:"

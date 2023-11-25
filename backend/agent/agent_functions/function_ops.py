@@ -1,6 +1,7 @@
 from instructor import OpenAISchema
 from pydantic import Field
 import json
+import uuid
 
 
 class AddFunction(OpenAISchema):
@@ -18,9 +19,11 @@ class AddFunction(OpenAISchema):
         [], description="The list of decorators to be applied to the function."
     )
     returns: str | None = Field(None, description="The return type of the function.")
+    id: str = str(uuid.uuid4())
 
     def to_json(self):
         out = dict(
+            id=self.id,
             file_name=self.file_name,
             function_name=self.function_name,
             args=self.args,
@@ -40,9 +43,11 @@ class DeleteFunction(OpenAISchema):
         ..., description="The name of the file containing the function to delete."
     )
     function_name: str = Field(..., description="The name of the function to delete.")
+    id: str = str(uuid.uuid4())
 
     def to_json(self):
         out = dict(
+            id=self.id,
             file_name=self.file_name,
             function_name=self.function_name,
         )
@@ -75,9 +80,11 @@ class ModifyFunction(OpenAISchema):
     new_docstring: str | None = Field(
         None, description="The new docstring for the function."
     )
+    id: str = str(uuid.uuid4())
 
     def to_json(self):
         out = dict(
+            id=self.id,
             file_name=self.file_name,
             function_name=self.function_name,
             new_args=self.new_args,
