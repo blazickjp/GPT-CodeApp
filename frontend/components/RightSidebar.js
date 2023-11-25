@@ -132,10 +132,10 @@ const RightSidebar = ({ isSidebarOpen }) => {
                 }
             </div>
 
-            <div className="flex flex-row justify-between items-center mb-2">
-                <h2 className="text-xl font-bold mb-4 text-gray-100">File Token Counts</h2>
-            </div>
             <hr className="border-gray-600 mb-4" />
+            <div className="flex flex-row justify-between items-center mb-2">
+                <h2 className="text-lg underline mb-4 text-gray-100">File Token Counts:</h2>
+            </div>
             {summaries.map((summary, index) => {
                 const colorStyle = {
                     color: colorScale(summary.file_token_count)
