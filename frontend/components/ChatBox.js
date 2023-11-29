@@ -54,9 +54,9 @@ function CustomListItem({ node, ordered, ...rest }) {
     )
 }
 
-function CustomOrderedList({ node, ...props }) {
+function CustomOrderedList({ node, ordered, ...rest }) {
     return (
-        <ol {...props} className=' ' />
+        <ol {...rest} ordered={ordered.toString()} className=' whitespace-normal list-inside list-decimal' />
     )
 }
 

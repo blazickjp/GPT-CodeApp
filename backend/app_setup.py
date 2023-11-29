@@ -15,7 +15,7 @@ from pydantic import BaseModel
 # from agent.agent_functions.changes import Changes
 
 IGNORE_DIRS = ["node_modules", ".next", ".venv", "__pycache__", ".git"]
-FILE_EXTENSIONS = [".js", ".py", ".md"]
+FILE_EXTENSIONS = [".js", ".py", ".md", "Dockerfile", '.txt']
 
 
 def create_database_connection() -> connection:

@@ -31,14 +31,18 @@ body {
   @apply pt-1;
 } */
 
+ol>li {
+  @apply !list-decimal;
+}
+
 ul>li {
   margin-left: 15px;
 }
 
 
-/* p {
+li>p {
   @apply !inline;
-} */
+}
 
 .btn-blue {
   @apply bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700;
