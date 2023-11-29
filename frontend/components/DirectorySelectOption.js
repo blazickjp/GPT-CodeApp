@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaArrowRight } from 'react-icons/fa';  // Importing an icon from react-icons
+import { FaArrowRight, FaCog } from 'react-icons/fa';  // Importing an icon from react-icons
 import { useDispatch } from 'react-redux';
 import { setMessageTokens, } from '../store/modal_bar_modals/messageHistorySlice';
 import { setDirectory, } from '@/store/sidebar/sidebarSlice';
@@ -11,8 +11,22 @@ const DirectorySelectOption = () => {
     const [tempDirectory, setTempDirectory] = useState('');
     const [actualTokens, setActualTokens] = useState(1000);
     const [displayTokens, setDisplayTokens] = useState('1000');
-    const inputRef = useRef(0);
+    const [temperature, setTemperature] = useState(0.5);
+    const [showTooltip, setShowTooltip] = useState(false);
+
+
+    const inputRef = useRef(null);
     const dispatch = useDispatch();
+
+    const calculateTooltipPosition = (value) => {
+        const slider = document.querySelector('.temperature-slider');
+        if (slider) {
+            const percent = (value - slider.min) / (slider.max - slider.min);
+            return percent * slider.offsetWidth + 125; // Adjust '- 50' based on your tooltip width
+        }
+        return 0;
+    };
+
 
 
     useEffect(() => {
@@ -81,9 +95,12 @@ const DirectorySelectOption = () => {
     };
 
     const handleKeyDown = (e) => {
+        console.log("Key pressed: ", e.key);
+        console.log("Input ref: ", inputRef);
         if (e.key === 'Tab' && inputRef.current) {
             e.preventDefault();  // Prevent focus from moving to the next element
-            setDirectory(placeholder);
+            // setDirectory(placeholder);
+            setTempDirectory(placeholder);
         }
     };
 
@@ -123,13 +140,14 @@ const DirectorySelectOption = () => {
 
 
     return (
-        <div className='overflow-x-scroll'>
-            <h3 className='text-lg'>Config</h3>
+        <div className='overflow-x-scroll relative'>
+            <FaCog className='text-2xl mb-6 text-yellow-400' />
+            <span className='flex-grow ml-4'>Project Directory:</span>
             <form onSubmit={handleSubmit} className="p-2">
-                <div className="flex space-x-2 items-center border-b border-gray-400 text-gray-200">
+                <div className="flex flex-row items-center space-x-2 border-b border-gray-400 text-green-600">
                     <input
                         ref={inputRef}
-                        id={'directory'}
+                        id="directory"
                         type="text"
                         value={tempDirectory}
                         onChange={handleInputChange}
@@ -137,28 +155,53 @@ const DirectorySelectOption = () => {
                         onKeyDown={handleKeyDown}
                         className="flex-grow p-2 text-sm bg-transparent outline-none"
                     />
-                    <button type="submit" className="p-2">
-                        <FaArrowRight className='text-purple-600' />
-                    </button>
                 </div>
             </form>
             {/* Input for Max token */}
             <div className='flex flex-row items-center mt-4 ml-4 space-y-2 sm:space-y-0'>
-                <span className=' whitespace-nowrap'>Msg Tokens</span>
                 <form onSubmit={handleSubmitTokens} className='flex items-center'>
+                    <label className=' whitespace-nowrap'>Msg Tokens</label>
                     <input
                         type="text"
                         id={'maxTokens'}
                         value={displayTokens}
                         onChange={handleMaxTokensChange}
                         placeholder="2,000"
-                        className='flex-grow p-2 text-sm items-end outline-none bg-transparent text-right'
+                        className='flex-grow text-green-600 p-2 text-sm items-end outline-none bg-transparent text-right'
                     />
-                    <button type="submit" className="px-2 py-1">
-                        <FaArrowRight className='text-purple-600' />
-                    </button>
+
                 </form>
             </div>
+            <div className="flex flex-grow items-center mt-4 mx-4 space-y-2 sm:space-y-0">
+                <label className='flex flex-grow '>Temperature</label>
+                <div onMouseEnter={() => setShowTooltip(true)} onMouseLeave={() => setShowTooltip(false)}>
+                    <input
+                        type="range"
+                        className="bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-green-600 temperature-slider"
+                        min={0}
+                        max={2}
+                        step={0.1}
+                        value={temperature}
+                        onChange={(e) => setTemperature(e.target.value)}
+                    />
+                    {showTooltip && (
+                        <div
+                            className='tooltip text-green-600'
+                            style={{
+                                position: 'absolute',
+                                left: calculateTooltipPosition(temperature) + 'px',
+                                bottom: '20px', // Adjust based on your layout
+                                backgroundColor: 'transparent',
+                                padding: '5px',
+                                borderRadius: '5px',
+                            }}
+                        >
+                            {temperature}
+                        </div>
+                    )}
+                </div>
+            </div>
+
         </div>
     );
 };

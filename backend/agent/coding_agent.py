@@ -280,16 +280,17 @@ class CodingAgent:
         if self.GPT_MODEL == "anthropic":
             print("Calling anthropic")
             try:
-                sm_client = boto3.client("bedrock-runtime")
+                sm_client = boto3.client("bedrock-runtime", region_name="us-west-2")
                 resp = sm_client.invoke_model_with_response_stream(
                     accept="*/*",
                     contentType="application/json",
-                    modelId="anthropic.claude-v2",
+                    modelId="anthropic.claude-v2:1",
                     body=json.dumps(
                         {
                             "prompt": self.generate_anthropic_prompt(),
                             "max_tokens_to_sample": max(kwargs["max_tokens"], 2000),
                             "temperature": self.temperature,
+                            "anthropic_version": "bedrock-2023-05-31",
                         }
                     ),
                 )
@@ -342,16 +343,18 @@ class CodingAgent:
         Returns:
             str: The generated prompt.
         """
-        conversation_history = "The following is a portion of your conversation history with the human, truncated to save token space, inside the <conversation-history></conversation-history> XML tags.\n\n<conversation-history>\n"
+
+        conversation_history = "The following is a portion of your conversation history with the human, truncated to save token space, inside the <conversation-history> XML tags.\n\n<conversation-history>\n"
         messages = self.memory_manager.get_messages()
-        # Extract the last User messages
-        last_user_message = (
-            "Human: "
-            + [message["content"] for message in messages if message["role"] == "user"][
-                -1
-            ]
-        )
-        print("Last Message: ", last_user_message)
+
+        if len(messages) > 1:
+            # Extract the last User messages
+            last_user_message = (
+                "Human: "
+                + [message["content"] for message in messages if message["role"] == "user"][-1]
+            )
+        else:
+            last_user_message = ""
 
         for idx, message in enumerate(messages):
             if message["role"].lower() == "user":
@@ -362,7 +365,7 @@ class CodingAgent:
 
         if self.memory_manager.prompt_handler.system_file_contents:
             file_context = (
-                "The human as loadedd the following files into context to help give you background related to the most recent request. They are contained in the <file-contents></file-contenxt> XML Tags.\n\n<file-contents>\n"
+                "The human as loadedd the following files into context to help give you background related to the most recent request. They are contained in the <file-contents> XML Tags.\n\n<file-contents>\n"
                 + self.memory_manager.prompt_handler.system_file_contents
                 + "\n</file-contents>\n\n"
             )
@@ -370,7 +373,7 @@ class CodingAgent:
             file_context = ""
         if self.memory_manager.prompt_handler.tree:
             tree = (
-                "The working directory of the human is always loaded into context. This information is good background when the human is working on the project, but this may not always be the case. Sometimes the human may ask questions not related to the current project <directory-tree></directory-tree> XML Tags\n<directory-tree>\n"
+                "The working directory of the human is always loaded into context. This information is good background when the human is working on the project, but this may not always be the case. Sometimes the human may ask questions not related to the current project <directory-tree> XML Tags\n<directory-tree>\n"
                 + self.memory_manager.prompt_handler.tree
                 + "\n</directory-tree>\n\n"
             )
@@ -378,14 +381,15 @@ class CodingAgent:
             tree = ""
 
         if include_messages:
-            prompt = (
-                "\n\nHuman: "
-                + self.memory_manager.identity
+            sys_prompt = (
+                self.memory_manager.identity
                 + conversation_history
                 + tree
                 + file_context
             )
+            print(boto3.__version__)
         else:
-            prompt = "\n\nHuman: " + self.memory_manager.identity + tree + file_context
+            sys_prompt = self.memory_manager.identity + '\n\n' + tree + file_context
 
-        return prompt + last_user_message + "\n\nAssistant:"
+        return "\n\nHuman: The folllowing is your system prompt: " + sys_prompt + "\n\nAssistant: Understood\n\n" + last_user_message + "\n\nAssistant:"
+        # return sys_prompt + "\n\n" + last_user_message + "\n\nAssistant: "

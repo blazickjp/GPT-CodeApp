@@ -1,7 +1,6 @@
 # app_setup.py
 import os
 import sqlite3
-from psycopg2.extensions import connection
 from agent.coding_agent import CodingAgent
 from agent.agent_prompts import PROFESSOR_SYNAPSE, DEFAULT_SYSTEM_PROMPT
 from agent.agent_functions.file_ops import _OP_LIST
@@ -18,7 +17,7 @@ IGNORE_DIRS = ["node_modules", ".next", ".venv", "__pycache__", ".git"]
 FILE_EXTENSIONS = [".js", ".py", ".md", "Dockerfile", '.txt']
 
 
-def create_database_connection() -> connection:
+def create_database_connection() -> sqlite3.Connection:
     try:
         conn = sqlite3.connect("database.db", check_same_thread=False)
         print("Successfully connected to database")
