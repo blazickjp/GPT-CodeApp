@@ -33,7 +33,7 @@ class AddImport(OpenAISchema):
             asnames=self.asnames,
             objects=self.objects,
         )
-        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
+        return "\n\n```json\n" + json.dumps(out, indent=4) + "\n```\n"
 
 
 class DeleteImport(OpenAISchema):
@@ -67,7 +67,7 @@ class DeleteImport(OpenAISchema):
             asnames=self.asnames,
             objects=self.objects,
         )
-        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
+        return "\n\n```json\n" + json.dumps(out, indent=4) + "\n```\n"
 
 
 class ModifyImport(OpenAISchema):
@@ -99,4 +99,4 @@ class ModifyImport(OpenAISchema):
             new_asnames=self.new_asnames,
             new_objects=self.new_objects,
         )
-        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
+        return "\n\n```json\n" + json.dumps(out, indent=4) + "\n```\n"

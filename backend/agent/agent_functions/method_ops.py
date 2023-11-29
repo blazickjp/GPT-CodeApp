@@ -23,10 +23,11 @@ class AddMethod(OpenAISchema):
         [], description="The list of decorators to be applied to the method."
     )
     returns: str | None = Field(None, description="The return type of the method.")
+    id: str = str(uuid.uuid4())
 
     def to_json(self):
         out = dict(
-            id=str(uuid.uuid4()),
+            id=self.id,
             file_name=self.file_name,
             class_name=self.class_name,
             method_name=self.method_name,
@@ -50,10 +51,11 @@ class DeleteMethod(OpenAISchema):
         ..., description="The name of the class to delete the method from."
     )
     method_name: str = Field(..., description="The name of the method to delete.")
+    id: str = str(uuid.uuid4())
 
     def to_string(self):
         out = dict(
-            id=str(uuid.uuid4()),
+            id=self.id,
             file_name=self.file_name,
             class_name=self.class_name,
             method_name=self.method_name,
@@ -91,10 +93,11 @@ class ModifyMethod(OpenAISchema):
     new_docstring: str | None = Field(
         None, description="The new docstring for the function."
     )
+    id: str = str(uuid.uuid4())
 
     def to_json(self):
         out = dict(
-            id=str(uuid.uuid4()),
+            id=self.id,
             file_name=self.file_name,
             class_name=self.class_name,
             method_name=self.method_name,

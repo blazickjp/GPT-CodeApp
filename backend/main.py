@@ -298,14 +298,11 @@ async def execute_ops(input: dict):
     if len(ops_to_execute) > 0:
         try:
             AGENT.execute_ops(ops_to_execute)
-            print("Ops to execute: ", AGENT.ops_to_execute)
+            print("Ops to execute: ", AGENT.ops_to_execute[0].to_json())
         except Exception as e:
+            print(f"An error occurred: {e}")
             return JSONResponse(status_code=400, content={"error": str(e)})
         return JSONResponse(status_code=200, content={})
     else:
+        print("No ops to execute")
         return JSONResponse(status_code=400, content={"error": "No ops to execute"})
-
-
-@app.route("/hello")
-def hello_world() -> str:
-    return "Hello, World!"

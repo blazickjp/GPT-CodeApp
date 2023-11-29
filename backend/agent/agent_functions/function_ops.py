@@ -31,7 +31,7 @@ class AddFunction(OpenAISchema):
             decorator_list=self.decorator_list,
             returns=self.returns,
         )
-        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
+        return "\n\n```json\n" + json.dumps(out, indent=4) + "\n```\n"
 
 
 class DeleteFunction(OpenAISchema):
@@ -51,7 +51,7 @@ class DeleteFunction(OpenAISchema):
             file_name=self.file_name,
             function_name=self.function_name,
         )
-        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
+        return "\n\n```json\n" + json.dumps(out, indent=4) + "\n```\n"
 
 
 class ModifyFunction(OpenAISchema):
@@ -93,4 +93,4 @@ class ModifyFunction(OpenAISchema):
             new_returns=self.new_returns,
             new_name=self.new_name,
         )
-        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
+        return "\n\n```json\n" + json.dumps(out, indent=4) + "\n```\n"

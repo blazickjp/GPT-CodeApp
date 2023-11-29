@@ -25,7 +25,7 @@ class AddClass(OpenAISchema):
             body=self.body,
             decorator_list=self.decorator_list,
         )
-        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
+        return "\n\n```json\n" + json.dumps(out, indent=4) + "\n```\n"
 
 
 class DeleteClass(OpenAISchema):
@@ -48,7 +48,7 @@ class DeleteClass(OpenAISchema):
             file_name=self.file_name,
             class_name=self.class_name,
         )
-        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
+        return "\n\n```json\n" + json.dumps(out, indent=4) + "\n```\n"
 
 
 class ModifyClass(OpenAISchema):
@@ -86,4 +86,4 @@ class ModifyClass(OpenAISchema):
             new_name=self.new_name,
             new_args=self.new_args,
         )
-        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
+        return "\n\n```json\n" + json.dumps(out, indent=4) + "\n```\n"

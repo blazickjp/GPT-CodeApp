@@ -40,7 +40,7 @@ class VariableNameChange(OpenAISchema):
 
     def to_json(self):
         out = dict(id=self.id, original_name=self.original_name, new_name=self.new_name)
-        return "\n\n```json\n" + json.dumps(out) + "\n```\n"
+        return "\n\n```json\n" + json.dumps(out, indent=4) + "\n```\n"
 
 
 _OP_LIST = [
