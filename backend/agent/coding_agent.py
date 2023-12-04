@@ -10,6 +10,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 from typing import List, Optional
 from types import SimpleNamespace
+from pathlib import Path
 
 from agent.agent_functions.ast_ops import ASTChangeApplicator
 
@@ -171,8 +172,7 @@ class CodingAgent:
                                 return_string = completed_op.to_json()
                                 yield return_string
                             except json.JSONDecodeError as e:
-                                print(f"JSON decode error: {e}")
-
+                                pass
                         # Now reset for the new call
                         idx = call.index
                         json_accumulator = call.function.arguments
@@ -180,6 +180,7 @@ class CodingAgent:
                         print(f"Function Name: {function_name}")
                     else:
                         # Continue accumulating JSON string for the current function call
+                        yield call.function.arguments
                         json_accumulator += call.function.arguments
                         # print(f"JSON Accumulator (continued): {json_accumulator}")
 
@@ -201,23 +202,27 @@ class CodingAgent:
         diffs = []  # List to store the diffs for each operation
 
         for op in self.ops_to_execute:
-            print(f"Executing operation: {op.to_json()}")
+            print(f"Executing operation: {op.id}")
+            if "backend" in op.file_name:
+                op.file_name = op.file_name.replace("backend/", "")
+            op.file_name = self.normalize_path(op.file_name)
 
             # Read the existing code from the file
-            with open(op.file_name, "r") as file:
-                original_code = file.read()
+            try:
+                with open(op.file_name, "r") as file:
+                    original_code = file.read()
+            except FileNotFoundError:
+                print(f"File not found: {op.file_name}")
+                continue
 
             # Parse the original code into an AST
             ast_tree = ast.parse(original_code)
-            print(f"Original Code: {original_code[:-50]}")
-            print(f"AST Tree: {ast_tree}")
 
             # Create an ASTChangeApplicator to apply the changes
             applicator = ASTChangeApplicator(ast_tree)
 
             # Apply the operation to the AST tree
             transformed_code = applicator.apply_changes([op])
-            print(f"Transformed Code: {transformed_code[:-50]}")
 
             # Compute the diff
             diff = difflib.unified_diff(
@@ -234,7 +239,7 @@ class CodingAgent:
             with open(op.file_name, "w") as file:
                 file.write(transformed_code)
 
-            self.ops_to_execute = [op for op in self.ops_to_execute if op != op]
+            # self.ops_to_execute = [op for op in self.ops_to_execute if op != op]
 
         return diffs
 
@@ -351,7 +356,11 @@ class CodingAgent:
             # Extract the last User messages
             last_user_message = (
                 "Human: "
-                + [message["content"] for message in messages if message["role"] == "user"][-1]
+                + [
+                    message["content"]
+                    for message in messages
+                    if message["role"] == "user"
+                ][-1]
             )
         else:
             last_user_message = ""
@@ -389,7 +398,32 @@ class CodingAgent:
             )
             print(boto3.__version__)
         else:
-            sys_prompt = self.memory_manager.identity + '\n\n' + tree + file_context
+            sys_prompt = self.memory_manager.identity + "\n\n" + tree + file_context
 
-        return "\n\nHuman: The folllowing is your system prompt: " + sys_prompt + "\n\nAssistant: Understood\n\n" + last_user_message + "\n\nAssistant:"
+        return (
+            "\n\nHuman: The folllowing is your system prompt: "
+            + sys_prompt
+            + "\n\nAssistant: Understood\n\n"
+            + last_user_message
+            + "\n\nAssistant:"
+        )
         # return sys_prompt + "\n\n" + last_user_message + "\n\nAssistant: "
+
+    @staticmethod
+    def normalize_path(input_path):
+        # Get the current working directory as a Path object
+        working_directory = Path.cwd()
+
+        # Create a Path object from the input path
+        input_path_obj = Path(input_path)
+
+        # Resolve the input path (make it absolute and resolve any symlinks)
+        resolved_input_path = input_path_obj.resolve()
+
+        # Make the path relative to the working directory, if possible
+        try:
+            relative_path = resolved_input_path.relative_to(working_directory)
+            return str(relative_path)
+        except ValueError:
+            # The input path is not a subpath of the working directory
+            return str(resolved_input_path)

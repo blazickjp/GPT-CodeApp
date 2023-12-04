@@ -6,6 +6,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from app_setup import setup_app, app
 from agent.agent_functions.file_ops import _OP_LIST
+import traceback
 
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 AGENT, CODEBASE = setup_app()
@@ -301,6 +302,7 @@ async def execute_ops(input: dict):
             print("Ops to execute: ", AGENT.ops_to_execute[0].to_json())
         except Exception as e:
             print(f"An error occurred: {e}")
+            traceback.print_exc()
             return JSONResponse(status_code=400, content={"error": str(e)})
         return JSONResponse(status_code=200, content={})
     else:

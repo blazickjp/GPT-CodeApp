@@ -14,7 +14,7 @@ class AddClass(OpenAISchema):
     decorator_list: list[str] = Field(
         [], description="The list of decorators to be applied to the class."
     )
-    id: str = str(uuid.uuid4())
+    id: str | None = str(uuid.uuid4())
 
     def to_json(self):
         out = dict(
@@ -40,7 +40,7 @@ class DeleteClass(OpenAISchema):
         ..., description="The name of the file containing the class to delete."
     )
     class_name: str = Field(..., description="The name of the class to delete.")
-    id: str = str(uuid.uuid4())
+    id: str | None = str(uuid.uuid4())
 
     def to_json(self):
         out = dict(
@@ -61,7 +61,7 @@ class ModifyClass(OpenAISchema):
     new_bases: list[str] | None = Field(
         None, description="The new base classes for the class."
     )
-    new_body: list | None = Field(
+    new_body: str | None = Field(
         None,
         description="The new body of the class as a list of statements or a string. This will replace the entire existing body of the class.",
     )
@@ -73,7 +73,7 @@ class ModifyClass(OpenAISchema):
     new_docstring: str | None = Field(
         None, description="The new docstring for the function."
     )
-    id: str = str(uuid.uuid4())
+    id: str | None = str(uuid.uuid4())
 
     def to_json(self):
         out = dict(
