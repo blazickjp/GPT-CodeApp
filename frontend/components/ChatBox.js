@@ -31,16 +31,32 @@ const CodeBlock = React.memo(({ node, inline, className, children }) => {
     );
 });
 
+// const renderers = {
+//     listItem: (props) => {
+//         // Use a different className for top-level and nested list items if needed
+//         const className = props.checked !== null ? "task-list-item" : "list-item";
+//         return <li className={className}>{props.children}</li>;
+//     },
+//     // ... other renderers
+// };
 
-function CustomListItem({ node, ...props }) {
+
+
+function CustomUnorderedListItem({ node, ordered, ...rest }) {
     return (
-        <ul {...props} className=' whitespace-normal list-disc list-inside' />
+        <ul {...rest} ordered={ordered.toString()} className=' whitespace-normal list-inside list-disc' />
     )
 }
 
-function CustomOrderedList({ node, ...props }) {
+function CustomListItem({ node, ordered, ...rest }) {
     return (
-        <ol {...props} className=' whitespace-normal' />
+        <li {...rest} ordered={ordered.toString()} className=' whitespace-normal list-disc flex-wrap' />
+    )
+}
+
+function CustomOrderedList({ node, ordered, ...rest }) {
+    return (
+        <ol {...rest} ordered={ordered.toString()} className=' whitespace-normal list-inside list-decimal' />
     )
 }
 
@@ -56,7 +72,7 @@ const Chatbox = ({ messages }) => {
         return (
             <div className={message.user === 'human' ? "bg-gray-700 text-white p-5" : "bg-gray-600 p-5 text-white"}>
                 <div className='flex flex-row w-1/2 mx-auto whitespace-pre-wrap'>
-                    <ReactMarkdown children={message.text} className='flex-grow overflow-x-auto' components={{ code: CodeBlock, ol: CustomOrderedList, ul: CustomListItem }} />
+                    <ReactMarkdown children={message.text} className='flex-grow overflow-x-auto' components={{ code: CodeBlock, ol: CustomOrderedList, ul: CustomUnorderedListItem, li: CustomListItem }} />
                 </div>
             </div>
         );

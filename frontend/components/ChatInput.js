@@ -30,6 +30,7 @@ const ChatInput = ({ onSubmit }) => {
                 <Hint options={commands} allowTabFill>
                     <input
                         type="text"
+                        id='message-input'
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="Type a message..."
@@ -37,6 +38,7 @@ const ChatInput = ({ onSubmit }) => {
                     />
                 </Hint>
                 <button
+                    id='message-submit'
                     type="submit"
                     className="absolute right-0 top-0 bottom-0 m-auto text-purple-700 font-bold py-2 px-4 rounded text-xl"
                 >

@@ -150,8 +150,8 @@ class MemoryManager:
             self.cur.execute(
                 f"""
                 INSERT INTO {self.memory_table_name}
-                (interaction_index, role, content, content_tokens, summarized_message, summarized_message_tokens, project_directory, is_function_call, function_response)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                (interaction_index, role, content, content_tokens, summarized_message, summarized_message_tokens, project_directory, is_function_call)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?);
                 """,
                 (
                     timestamp,
@@ -162,7 +162,6 @@ class MemoryManager:
                     summary_tokens,
                     self.project_directory,
                     is_function_call,
-                    function_response,
                 ),
             )
             self.conn.commit()

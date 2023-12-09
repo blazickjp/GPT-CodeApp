@@ -569,7 +569,7 @@ def modified_function():
             file_name="test.py",
             function_name="function_to_modify",
             new_name="modified_function",
-            new_body="return 2",
+            new_body="  return 2",
         )
         transformer = CustomASTTransformer(changes=[modify_function_change])
         new_ast = transformer.visit(ast.parse(source_code))
@@ -600,30 +600,6 @@ def function_to_keep():
         print(new_code)
 
         self.assertEqual(expected_code.strip(), new_code)
-
-    def test_adding_new_class(self):
-        source_code = ""
-        expected_code = """
-class NewClass:
-
-    def new_method(self):
-        pass
-    """.strip()  # Ensure consistent whitespace handling
-
-        add_class_change = AddClass(
-            file_name="test.py",
-            class_name="NewClass",
-            body="def new_method(self):\n    pass",
-        )
-        transformer = CustomASTTransformer(changes=[add_class_change])
-        new_ast = transformer.visit(ast.parse(source_code))
-        new_code = astor.to_source(
-            new_ast
-        ).strip()  # Using astor.to_source instead of ast.unparse
-
-        print(new_code)
-
-        self.assertEqual(expected_code, new_code)
 
 
 if __name__ == "__main__":

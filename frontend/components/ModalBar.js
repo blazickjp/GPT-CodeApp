@@ -10,6 +10,7 @@ import { setFunctionTokens, setIsFunctionModalOpen, setAgentFunctions, setAgentT
 import { setMessageHistory, setMessageTokens, setIsMessageModalOpen } from '../store/modal_bar_modals/messageHistorySlice';
 
 
+
 ReactModal.setAppElement('#__next');
 
 const encoding = get_encoding("cl100k_base");
@@ -19,6 +20,10 @@ const ModalBar = () => {
     const systemTokens = useSelector(state => state.systemPrompt.systemTokens);
     const functionTokens = useSelector(state => state.functions.functionTokens);
     const messageTokens = useSelector(state => state.messageHistory.messageTokens);
+    const editablePrompt = useSelector(state => state.systemPrompt.editablePrompt);
+    const files = useSelector(state => state.sidebar.files);
+    // const currentDirectory = useSelector(state => state.sidebar.currentDirectory);
+
 
     const fetchSystemPromptAndOpenModal = (modal = true) => {
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/system_prompt`)
@@ -85,6 +90,13 @@ const ModalBar = () => {
         fetchFunctionsAndOpenModal(false);
         fetchMessagesAndOpenModal(false);
     }, []); //
+
+    useEffect(() => {
+        fetchSystemPromptAndOpenModal(false);
+        fetchFunctionsAndOpenModal(false);
+        fetchMessagesAndOpenModal(false);
+    }, [editablePrompt, messageTokens]);
+
     return (
         <div className='flex flex-row mx-auto pb-3'>
             <div>
