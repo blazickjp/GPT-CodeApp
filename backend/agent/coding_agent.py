@@ -204,7 +204,10 @@ class CodingAgent:
         for op in self.ops_to_execute:
             print(f"Executing operation: {op.id}")
             if "backend" in op.file_name:
-                op.file_name = op.file_name.replace("backend/", "")
+                op.file_name = Path(self.codebase.directory).join(
+                    op.file_name.replace("backend/", "")
+                )
+
             op.file_name = self.normalize_path(op.file_name)
 
             # Read the existing code from the file
