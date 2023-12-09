@@ -50,4 +50,3 @@ li>p {
 
 .btn-gray {
   @apply bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700;
-}

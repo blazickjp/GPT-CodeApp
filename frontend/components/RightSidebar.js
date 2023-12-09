@@ -5,45 +5,6 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { AiOutlineMinus } from "react-icons/ai";
 import OperationCard from './OperationCard';
-import { useSelector } from 'react-redux';
-
-
-
-const mockOperations = [
-    {
-        "type": "AddFunction",
-        "file_name": "utils.py",
-        "function_name": "calculate_sum",
-        "args": "a, b",
-        "body": "return a + b",
-        "decorator_list": ["@staticmethod"],
-        "returns": "int"
-    },
-    {
-        "type": "DeleteClass",
-        "file_name": "models.py",
-        "class_name": "OldModel"
-    },
-    {
-        "type": "ModifyMethod",
-        "file_name": "services.py",
-        "class_name": "PaymentService",
-        "method_name": "process_payment",
-        "new_args": "payment_info",
-        "new_body": "if payment_info.valid: process_payment()",
-        "new_decorator_list": ["@transaction.atomic"],
-        "new_returns": "bool"
-    },
-    {
-        "type": "AddClass",
-        "file_name": "models.py",
-        "class_name": "NewModel",
-        "bases": ["BaseModel"],
-        "body": "name = models.CharField(max_length=100)\ndef __str__(self):\n    return self.name",
-        "decorator_list": ["@dataclass"]
-    }
-]
-
 
 const CodeBlock = ({ node, inline, className, children }) => {
     const match = /language-(\w+)/.exec(className || '')
