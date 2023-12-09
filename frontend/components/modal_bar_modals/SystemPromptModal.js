@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import ReactModal from 'react-modal';
 import { useDispatch, useSelector } from 'react-redux';
 import { setSystemPrompt, setIsModalOpen, setEditablePrompt, setPromptName } from '../../store/modal_bar_modals/systemPromptSlice';
@@ -26,6 +26,7 @@ const SystemPromptModal = () => {
         })
             .then(response => {
                 if (!response.ok) throw new Error('Network response was not ok');
+
                 setSystemPrompt(editablePrompt); // Update original systemPrompt
             })
             .catch(console.error);
@@ -33,6 +34,10 @@ const SystemPromptModal = () => {
         dispatch(setIsModalOpen(false));
 
     }
+
+    // useEffect(() => {
+    //     saveSystemPrompt();
+    // }, []);
 
     return (
         <div>

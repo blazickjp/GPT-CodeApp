@@ -23,11 +23,11 @@ const FunctionsModal = () => {
             <div className="relative bg-slate-600 rounded p-4 w-full h-full text-gray-200 overflow-scroll">
                 <h2 className="text-xl pb-2">Agent Functions: {agentTokens} Tokens</h2>
                 <hr />
-                <p className='text-gray-400'>
+                <div className='text-gray-400'>
                     Agent functions are automatically called by the agent when needed (like OpenAI indended).
                     You may create new functions in the <pre className='inline-block'>agent_functions.py</pre> file and add them to
                     the agent in the <pre className='inline-block'>setup_app.py</pre> file.
-                </p>
+                </div>
                 <br />
                 {agentFunctions?.map((f) => (
                     <div key={f?.name} className='pt-2'>

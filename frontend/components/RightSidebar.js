@@ -23,8 +23,12 @@ const CodeBlock = ({ node, inline, className, children }) => {
 const RightSidebar = ({ isSidebarOpen }) => {
     const [summaries, setSummaries] = useState([]);
     const [maxTokens, setMaxTokens] = useState(1);
-    const [filesInPrompt, setFilesInPrompt] = useState([]);  // array of file paths
-    const [operations, setOperations] = useState([]);
+    const opList = useSelector(state => state.sidebar.opList);
+    const [OpsToExecute, setOpsToExecute] = useState([]);
+
+    const updateList = () => {
+        setOpsToExecute(opList);
+    };
 
 
     const fetchSummaries = () => {
@@ -41,6 +45,18 @@ const RightSidebar = ({ isSidebarOpen }) => {
             .catch(console.error);
     };
 
+    const fetchSystemState = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_ops`);
+            console.log("Resp: ", response);
+            const data = await response.json();
+            setOpsToExecute(data.ops);
+        } catch (error) {
+            console.error('Error fetching system state:', error);
+        }
+    };
+
+
     const removeFile = (file_path) => {
         setFilesInPrompt(prevFiles => {
             return prevFiles.filter(file => file !== file_path);
@@ -51,41 +67,39 @@ const RightSidebar = ({ isSidebarOpen }) => {
         .domain([0, maxTokens / 2, maxTokens])
         .range(['green', 'yellow', 'red']);
 
+
     useEffect(() => {
         if (isSidebarOpen) {
             fetchSummaries();
+            fetchSystemState();
         }
     }, [isSidebarOpen]);
 
     useEffect(() => {
-        // TODO: Fetch operations from the backend and set them in state
-        // For now, we'll use a static list
-        setOperations([
-            { id: 1, name: 'Build Project', description: 'Compile and build the project.' },
-            // ... other operations
-        ]);
-    }, []);
+        if (isSidebarOpen) {
+            updateList();
+        }
+    }, [opList]);
 
 
     return (
         <div className={`fixed h-full z-10 w-1/3 right-0 bg-neutral-800 transition-all duration-500 overflow-y-scroll p-6 text-gray-200 transform ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'} overflow-x-visible`}>
             <div className="flex flex-row justify-between items-center mb-2">
-                <h2 className="text-xl font-bold mb-4 text-gray-100">Files and Summaries</h2>
+                <h2 className="text-xl font-bold mb-4 text-gray-100">Available Ops</h2>
             </div>
-            <div className="grid md:grid-cols-2 gap-4 max-h-48">
-                {operations.map(operation => (
-                    <OperationCard key={operation.id} operation={operation} className=" invisible" />
-                ))}
-            </div>
-            {filesInPrompt.map((file, index) => {
-                return (
-                    <div className="flex justify-between items-center mb-1">
-                        <p className=" mb-1 text-gray-100">{file}</p>
-                        <AiOutlineMinus onClick={() => removeFile(file)} />
-                    </div>
-                )
-            })}
             <hr className="border-gray-600 mb-4" />
+            <div className="grid md:grid-cols-2 gap-4 pb-10">
+                {
+                    OpsToExecute?.map((operation, index) => (
+                        <OperationCard key={index} operation={operation} />
+                    ))
+                }
+            </div>
+
+            <hr className="border-gray-600 mb-4" />
+            <div className="flex flex-row justify-between items-center mb-2">
+                <h2 className="text-lg underline mb-4 text-gray-100">File Token Counts:</h2>
+            </div>
             {summaries.map((summary, index) => {
                 const colorStyle = {
                     color: colorScale(summary.file_token_count)
