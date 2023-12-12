@@ -2,7 +2,7 @@
 import os
 import sqlite3
 from agent.coding_agent import CodingAgent
-from agent.agent_prompts import PROFESSOR_SYNAPSE, DEFAULT_SYSTEM_PROMPT
+from agent.agent_prompts import PROFESSOR_SYNAPSE, DEFAULT_SYSTEM_PROMPT, LSA
 from agent.agent_functions.file_ops import _OP_LIST
 from memory.memory_manager import MemoryManager
 from database.my_codebase import MyCodebase
@@ -11,10 +11,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Any, Callable
 from pydantic import BaseModel
 
+
 # from agent.agent_functions.changes import Changes
 
 IGNORE_DIRS = ["node_modules", ".next", ".venv", "__pycache__", ".git"]
-FILE_EXTENSIONS = [".js", ".py", ".md", "Dockerfile", '.txt']
+FILE_EXTENSIONS = [".js", ".py", ".md", "Dockerfile", ".txt"]
 
 
 def create_database_connection() -> sqlite3.Connection:
@@ -69,7 +70,7 @@ def setup_codebase() -> MyCodebase:
 def setup_app() -> CodingAgent:
     print("Setting up app")
     codebase = setup_codebase()
-    memory = setup_memory_manager(tree=codebase.tree(), identity=DEFAULT_SYSTEM_PROMPT)
+    memory = setup_memory_manager(tree=codebase.tree(), identity=LSA)
     agent = CodingAgent(
         memory_manager=memory, function_map=[_OP_LIST], codebase=codebase
     )
