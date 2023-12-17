@@ -2,7 +2,7 @@ import json
 import os
 from uuid import uuid4
 import tiktoken
-from fastapi import Request
+from fastapi import Request, BackgroundTasks
 from fastapi.responses import JSONResponse, StreamingResponse
 from app_setup import setup_app, app
 from agent.agent_functions.file_ops import _OP_LIST
@@ -31,7 +31,8 @@ async def startup_event():
         CODEBASE.set_directory(config["directory"])
         AGENT.memory_manager.prompt_handler.tree = CODEBASE.tree()
         AGENT.memory_manager.prompt_handler.set_system()
-        AGENT.memory_manager.project_directory = config["directory"]
+        # AGENT.memory_manager.project_directory = config["directory"]
+        AGENT.memory_manager.set_directory(config["directory"])
     if config.get("files"):
         print("Files", config["files"])
         AGENT.memory_manager.prompt_handler.files_in_prompt = json.loads(
@@ -43,7 +44,9 @@ async def startup_event():
 
 
 @app.post("/message_streaming")
-async def message_streaming(request: Request) -> StreamingResponse:
+async def message_streaming(
+    request: Request, background_tasks: BackgroundTasks
+) -> StreamingResponse:
     data = await request.json()
 
     def stream():
@@ -54,6 +57,7 @@ async def message_streaming(request: Request) -> StreamingResponse:
                 accumulated_messages[id] += content
                 yield json.dumps({"id": id, "content": content}) + "@@"
         AGENT.memory_manager.add_message("assistant", accumulated_messages[id])
+        background_tasks.add_task(AGENT.memory_manager.update_context)
 
     return StreamingResponse(stream(), media_type="text/event-stream")
 
@@ -308,3 +312,10 @@ async def execute_ops(input: dict):
     else:
         print("No ops to execute")
         return JSONResponse(status_code=400, content={"error": "No ops to execute"})
+
+
+@app.get("/get_context")
+async def get_context():
+    # Your logic to retrieve and return the context goes here
+    context = AGENT.memory_manager.working_context.get_context()
+    return JSONResponse(status_code=200, content={"context": context})

@@ -6,7 +6,7 @@ import os
 
 
 class SystemPromptHandler:
-    def __init__(self, db_connection, identity=None, tree=None):
+    def __init__(self, db_connection, identity=None, tree=None, working_context=None):
         self.conn = db_connection
         self.cur = self.conn.cursor()
         self.system_file_summaries = None
@@ -17,6 +17,7 @@ class SystemPromptHandler:
         self.files_in_prompt = None
         self.system = self.identity
         self.tree = tree
+        self.working_context = working_context
         self.create_tables()
         self.directory = self.get_directory()
 
@@ -49,6 +50,14 @@ class SystemPromptHandler:
                 self.system += (
                     "Related File Contents:\n" + self.system_file_contents + "\n\n"
                 )
+            if self.working_context.get_context():
+                self.system += (
+                    "Short-Term Memory:\n" + self.working_context.get_context() + "\n\n"
+                )
+                print("Working Context: ", self.working_context.get_context())
+
+            else:
+                print("No working context")
 
         self.cur.execute(f"DELETE FROM {self.system_table_name}")
         self.cur.execute(

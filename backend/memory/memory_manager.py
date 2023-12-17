@@ -1,9 +1,111 @@
+from turtle import up
 import tiktoken
-
 from typing import Optional, List
 from datetime import datetime
 from dotenv import load_dotenv
 from memory.system_prompt_handler import SystemPromptHandler
+from pydantic import BaseModel, Field
+import instructor
+from instructor import OpenAISchema
+from openai import OpenAI, AsyncOpenAI
+
+CLIENT = instructor.patch(AsyncOpenAI())
+
+
+class WorkingContext:
+    def __init__(self, db_connection, project_directory) -> None:
+        self.context = "The user is named Joe"
+        self.conn = db_connection
+        self.cur = self.conn.cursor()
+        self.client = CLIENT
+        self.project_directory = project_directory
+        self.create_tables()
+
+    def create_tables(self) -> None:
+        try:
+            self.cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS working_context
+                (
+                    context TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    project_directory TEXT
+                );
+                """
+            )
+        except Exception as e:
+            print("Failed to create tables: ", str(e))
+        return
+
+    def add_context(self, context: str) -> None:
+        self.context += "\n" + context
+
+        self.cur.execute(
+            """
+            INSERT INTO working_context
+            (context, created_at, project_directory)
+            VALUES (?, ?, ?);
+            """,
+            (context, datetime.now().isoformat(), self.project_directory),
+        )
+        self.conn.commit()
+
+    def get_context(self) -> str:
+        self.cur.execute(
+            """
+            SELECT context, created_at
+            FROM working_context
+            where project_directory = ?
+            """,
+            (self.project_directory,),
+        )
+        results = self.cur.fetchall()
+        self.context = ""
+        for result in results:
+            self.context += "\n" + result[0]
+
+        print(self.project_directory)
+        return self.context
+
+    def remove_context(self, context: str) -> None:
+        self.context = self.context.replace(context, "")
+        self.cur.execute(
+            """
+            DELETE FROM working_context
+            WHERE context = ?
+            and project_directory = ?
+            """,
+            (context, self.project_directory),
+        )
+        self.conn.commit()
+
+    def __str__(self) -> str:
+        return self.context
+
+
+class ContextUpdate(BaseModel):
+    """
+    Data class to add or remove information from the working context.
+    """
+
+    thought: str = Field(
+        default=...,
+        description="Always think first and document your thought process here.",
+    )
+    new_context: List[str] | None = Field(
+        default=None,
+        description="Valuable information from the conversation you want to keep in working context. Should be in the form of a statement.",
+    )
+
+    def execute(self, working_context: WorkingContext) -> None:
+        if self.old_context:
+            for context in self.old_context:
+                working_context.remove_context(context)
+        if self.new_context:
+            for context in self.new_context:
+                working_context.add_context(context)
+
+        return working_context
 
 
 class MemoryManager:
@@ -30,14 +132,21 @@ class MemoryManager:
         self.system_file_contents = None
         self.conn = db_connection
         self.cur = self.conn.cursor()
+        self.working_context = WorkingContext(
+            db_connection=db_connection, project_directory=self.project_directory
+        )
         self.prompt_handler = SystemPromptHandler(
-            db_connection=self.conn, tree=tree, identity=self.identity
+            db_connection=self.conn,
+            tree=tree,
+            identity=self.identity,
+            working_context=self.working_context,
         )
         self.memory_table_name = f"{table_name}_memory"
         self.prompt_handler.system_table_name = f"{table_name}_system_prompt"
         self.system_table_name = f"{table_name}_system_prompt"
         self.create_tables()
         self.prompt_handler.set_system()
+        self.background_tasks = None
 
     def get_messages(self, chat_box: Optional[bool] = None) -> List[dict]:
         self.cur.execute(
@@ -125,8 +234,6 @@ class MemoryManager:
                 ),
             )
         results = self.cur.fetchall()
-        # print(results, self.project_directory, max_tokens, self.memory_table_name)
-        # print([char for char in self.project_directory])
         for result in results[::-1]:
             messages.append(
                 {"role": result[0], "content": result[2], "full_content": result[1]}
@@ -196,4 +303,58 @@ class MemoryManager:
             )
         except Exception as e:
             print("Failed to create tables: ", str(e))
+        return
+
+    async def update_context(self):
+        ctx = self.working_context.get_context()
+        prompt = f"""
+You are monitoring a conversation between an engineer and their AI Assistant.
+Your mission is to manage the working memory for the AI Assistant. 
+You do this by adding and removing information from the working context based on the conversation history.
+
+
+## Guidelines
+- Your insertions should be short, concise, and relevant to the future of the conversation.
+- Keep track of facts, ideas, and concepts that are important to the conversation.
+- Remove information that is no longer relevant or important to where you think the conversation is going.
+- In your thoughts, justify why you are adding or removing information from the working context.
+
+You can see the current working context below.
+
+Working Context:
+{ctx}
+
+Please make any updates accordingly. Be sure the think step by step as you work.
+"""
+        print("Updating context")
+        messages = [
+            {"role": item["role"], "content": item["content"]}
+            for item in self.get_messages()
+        ]
+
+        for message in messages:
+            if message["role"] == "system":
+                message["content"] = prompt
+
+        update = await self.working_context.client.chat.completions.create(
+            model="gpt-4-1106-preview",
+            response_model=ContextUpdate,
+            messages=messages,
+        )
+
+        self.working_context = update.execute(self.working_context)
+        print("Updated context")
+        print(update.thought)
+        print(update.new_context)
+
+        self.prompt_handler.set_system()
+
+        return
+
+    def set_directory(self, directory: str) -> None:
+        self.project_directory = directory
+        self.working_context.project_directory = directory
+        self.prompt_handler.directory = directory
+        self.prompt_handler.set_system()
+        print("Set directory to: ", directory)
         return
