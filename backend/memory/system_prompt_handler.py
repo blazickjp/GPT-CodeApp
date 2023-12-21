@@ -35,7 +35,6 @@ class SystemPromptHandler:
         self.directory = self.get_directory()
         # print(input)
         if input.get("system_prompt") is not None:
-            print("Updating system prompt")
             self.system = input.get("system_prompt")
         else:
             self.system = (
@@ -54,8 +53,6 @@ class SystemPromptHandler:
                 self.system += (
                     "Short-Term Memory:\n" + self.working_context.get_context() + "\n\n"
                 )
-                print("Working Context: ", self.working_context.get_context())
-
             else:
                 print("No working context")
 
@@ -167,7 +164,6 @@ class SystemPromptHandler:
 
     def update_prompt(self, prompt_id, new_prompt):
         """Update a system prompt by ID."""
-        print(prompt_id)
         self.cur.execute(
             """
             UPDATE system_prompts
@@ -209,5 +205,4 @@ class SystemPromptHandler:
         for prompt in self.cur.fetchall():
             output.append({"name": prompt[0], "prompt": prompt[1]})
 
-        print(self.cur.fetchall())
         return output

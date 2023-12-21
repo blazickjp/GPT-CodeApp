@@ -5,6 +5,7 @@ import systemPromptReducer from './modal_bar_modals/systemPromptSlice';
 import functionsReducer from './modal_bar_modals/functionsSlice';
 import messageHistoryReducer from './modal_bar_modals/messageHistorySlice';
 import contextViewerReducer from './modal_bar_modals/contextViewerSlice';
+import logMessagesReducer from './messages/logMessagesSlice';
 
 export default configureStore({
     reducer: {
@@ -13,6 +14,7 @@ export default configureStore({
         systemPrompt: systemPromptReducer,
         functions: functionsReducer,
         messageHistory: messageHistoryReducer,
+        logMessages: logMessagesReducer,
         contextViewer: contextViewerReducer,
     },
 });

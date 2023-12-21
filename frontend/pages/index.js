@@ -11,6 +11,7 @@ import ChatInput from '../components/ChatInput';  // adjust this path to point t
 import ModelSelector from '../components/ModelSelector';
 import { useDispatch, useSelector } from 'react-redux';
 import { addMessage, addAIPartResponse, fetchMessages } from '../store/messages/messagesSlice';
+import { setLogMessages } from '../store/messages/logMessagesSlice';
 import { toggleSidebar } from '../store/sidebar/sidebarSlice';
 
 
@@ -25,11 +26,29 @@ const Chat = () => {
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
 
 
+
   // Add a function to toggle the left sidebar
   const toggleLeftSidebar = () => {
     setIsLeftSidebarOpen(!isLeftSidebarOpen);
     console.log(isLeftSidebarOpen);
   };
+
+  const fetchLogMessages = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs/errors`); // Adjust the endpoint as necessary
+      if (response.ok) {
+        const logs = await response.json();
+        console.log("Logs:")
+        console.log(logs);
+        dispatch(setLogMessages(logs.error_logs)); // Update the state with the fetched log messages
+      } else {
+        console.error('Failed to fetch log messages:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching log messages:', error);
+    }
+  };
+
 
 
   const submitMessage = async (input, command = null) => {
@@ -109,6 +128,7 @@ const Chat = () => {
     };
     // Call the function to fetch historical messages
     fetchHistoricalMessages();
+    fetchLogMessages();
   }, []);
 
 

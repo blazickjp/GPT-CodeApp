@@ -167,7 +167,6 @@ class MyCodebase:
                     (file_path,),
                 )
                 self.conn.commit()
-                print(f"****    Removed file {file_path} from the database    *****")
 
     def _update_files_and_embeddings(self) -> None:
         for root, dirs, files in os.walk(self.directory):

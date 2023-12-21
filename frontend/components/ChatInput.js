@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { AiOutlineSend } from 'react-icons/ai';
 import { Hint } from 'react-autocomplete-hint';
+import { useSelector } from 'react-redux';
 
 
 const ChatInput = ({ onSubmit }) => {
     const [input, setInput] = useState('');
     const commands = ['/CommandPlan', '/Changes'];
+    const logMessages = useSelector(state => state.logMessages.logMessages);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -26,6 +28,11 @@ const ChatInput = ({ onSubmit }) => {
 
     return (
         <div className="flex flex-row bg-gray-800 text-center justify-center items-center w-full text-black pb-5">
+            {/* {logMessages.map((log, index) => (
+                <div key={index} className="log-message">
+                    {log}
+                </div>
+            ))} */}
             <form onSubmit={handleSubmit} className="relative w-1/2">
                 <Hint options={commands} allowTabFill>
                     <input

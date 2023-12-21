@@ -21,26 +21,20 @@ async def startup_event():
     ).fetchall()
     config = {field: value for field, value in config}
     if config.get("model"):
-        print("Model", config["model"])
         AGENT.GPT_MODEL = config["model"]
     if config.get("max_message_tokens"):
-        print("Max Message Tokens", config["max_message_tokens"])
         AGENT.memory_manager.max_tokens = int(config["max_message_tokens"])
     if config.get("directory"):
-        print("Dir", config["directory"])
         CODEBASE.set_directory(config["directory"])
         AGENT.memory_manager.prompt_handler.tree = CODEBASE.tree()
         AGENT.memory_manager.prompt_handler.set_system()
-        # AGENT.memory_manager.project_directory = config["directory"]
         AGENT.memory_manager.set_directory(config["directory"])
     if config.get("files"):
-        print("Files", config["files"])
         AGENT.memory_manager.prompt_handler.files_in_prompt = json.loads(
             config["files"]
         )
         AGENT.memory_manager.prompt_handler.set_files_in_prompt()
         AGENT.memory_manager.prompt_handler.set_system()
-    print("Starting up...")
 
 
 @app.post("/message_streaming")
@@ -110,7 +104,6 @@ async def get_messages(chatbox: (bool | None) = None):
 @app.get("/get_summaries")
 async def get_summaries(reset: (bool | None) = None):
     if reset:
-        print("Refreshing Data")
         CODEBASE._update_files_and_embeddings()
     cur = CODEBASE.conn.cursor()
     cur.execute("SELECT DISTINCT file_path, summary, token_count FROM files")
@@ -164,8 +157,6 @@ async def get_files_in_prompt():
 @app.post("/set_model")
 async def set_model(input: dict):
     model = input.get("model")
-    print(f"Current model: {AGENT.GPT_MODEL}")
-    print(f"Received model: {model}")
     if model:
         AGENT.memory_manager.cur.execute(
             """
@@ -197,7 +188,6 @@ async def get_max_message_tokens():
 async def save_prompt(input: dict):
     prompt = input.get("prompt")
     prompt_name = input.get("prompt_name")
-    print(prompt_name)
     if AGENT.memory_manager.prompt_handler.read_prompt(prompt_name):
         AGENT.memory_manager.prompt_handler.update_prompt(prompt_name, prompt)
     else:
@@ -214,9 +204,7 @@ async def list_prompts():
 
 @app.post("/delete_prompt")
 async def delete_prompt(input: dict):
-    print(input)
     prompt_id = input.get("prompt_id", None)
-    print(prompt_id)
     try:
         AGENT.memory_manager.prompt_handler.delete_prompt(prompt_id)
     except Exception as e:
@@ -228,8 +216,6 @@ async def delete_prompt(input: dict):
 async def set_prompt(input: dict):
     prompt_id = input.get("prompt_id")
     prompt = input.get("prompt")
-    print(prompt_id)
-    print(prompt)
     AGENT.memory_manager.prompt_handler.update_prompt(prompt_id, prompt)
     AGENT.memory_manager.prompt_handler.set_system({"system_prompt": prompt})
     return JSONResponse(status_code=200, content={})
@@ -239,13 +225,11 @@ async def set_prompt(input: dict):
 async def set_directory(input: dict):
     directory = input.get("directory")
     try:
-        print(f"Received directory: {directory}")
         CODEBASE.set_directory(directory)
         AGENT.memory_manager.project_directory = directory
         AGENT.memory_manager.prompt_handler.tree = CODEBASE.tree()
         AGENT.memory_manager.prompt_handler.directory = directory
         AGENT.memory_manager.prompt_handler.set_system()
-        print("OK!")
         return JSONResponse(status_code=200, content={"message": "Success"})
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -319,3 +303,16 @@ async def get_context():
     # Your logic to retrieve and return the context goes here
     context = AGENT.memory_manager.working_context.get_context()
     return JSONResponse(status_code=200, content={"context": context})
+
+
+@app.get("/logs/errors")
+def get_error_logs():
+    # Security checks to ensure only authorized access
+
+    # Read the log file and return the last N lines of errors
+    with open("logs/backend.log", "r") as log_file:
+        log_lines = log_file.readlines()
+        # Filter or process the log lines to retrieve only errors
+        error_logs = [line for line in log_lines if "INFO" in line]
+
+    return JSONResponse(status_code=200, content={"error_logs": error_logs})

@@ -1,4 +1,3 @@
-from turtle import up
 import tiktoken
 from typing import Optional, List
 from datetime import datetime
@@ -14,6 +13,20 @@ CLIENT = instructor.patch(AsyncOpenAI())
 
 class WorkingContext:
     def __init__(self, db_connection, project_directory) -> None:
+        """Initializes the WorkingContext class.
+
+        Args:
+          db_connection: The database connection object.
+          project_directory: The path to the project directory.
+
+        Attributes:
+          context: The working context string.
+          conn: The database connection.
+          cur: The database cursor.
+          client: The OpenAI API client.
+          project_directory: The project directory path.
+
+        """
         self.context = "The user is named Joe"
         self.conn = db_connection
         self.cur = self.conn.cursor()
@@ -64,7 +77,6 @@ class WorkingContext:
         for result in results:
             self.context += "\n" + result[0]
 
-        print(self.project_directory)
         return self.context
 
     def remove_context(self, context: str) -> None:
@@ -109,6 +121,10 @@ class ContextUpdate(BaseModel):
 
 
 class MemoryManager:
+    # MemoryManager class manages interactions with the memory database
+    # including initializing connections, creating tables, and
+    # delegating to other classes that interact with the database.
+
     def __init__(
         self,
         model: str = "gpt-3.5-turbo-16k",
@@ -159,7 +175,6 @@ class MemoryManager:
         messages = [{"role": result[0], "content": result[1]} for result in results]
 
         max_tokens = 30000 if chat_box else self.max_tokens
-        print(chat_box, max_tokens)
         if chat_box:
             self.cur.execute(
                 f"""
@@ -310,13 +325,14 @@ class MemoryManager:
         prompt = f"""
 You are monitoring a conversation between an engineer and their AI Assistant.
 Your mission is to manage the working memory for the AI Assistant. 
-You do this by adding and removing information from the working context based on the conversation history.
+You do this by adding information to the working context (short-term memory) based on the conversation history.
 
 
 ## Guidelines
 - Your insertions should be short, concise, and relevant to the future of the conversation.
 - Keep track of facts, ideas, and concepts that are important to the conversation.
-- Remove information that is no longer relevant or important to where you think the conversation is going.
+- Monitor the personality of the person you're speaking with and adjust your responses accordingly.
+- Keep track of things that the user appeared to like or dislike.
 - In your thoughts, justify why you are adding or removing information from the working context.
 
 You can see the current working context below.
@@ -326,7 +342,6 @@ Working Context:
 
 Please make any updates accordingly. Be sure the think step by step as you work.
 """
-        print("Updating context")
         messages = [
             {"role": item["role"], "content": item["content"]}
             for item in self.get_messages()
@@ -343,9 +358,6 @@ Please make any updates accordingly. Be sure the think step by step as you work.
         )
 
         self.working_context = update.execute(self.working_context)
-        print("Updated context")
-        print(update.thought)
-        print(update.new_context)
 
         self.prompt_handler.set_system()
 
@@ -356,5 +368,4 @@ Please make any updates accordingly. Be sure the think step by step as you work.
         self.working_context.project_directory = directory
         self.prompt_handler.directory = directory
         self.prompt_handler.set_system()
-        print("Set directory to: ", directory)
         return
