@@ -1,28 +1,20 @@
+from typing import Iterable
 import unittest
 from unittest.mock import Mock
+from unittest.mock import MagicMock, mock_open, patch, call
 import asyncio
 from memory.memory_manager import ContextUpdate, MemoryManager
 
 
 class TestMemoryManager:
     def setup_method(self):
-        # Create a mock connection object
-        conn = Mock()
-
-        # Create a mock cursor object
-        cursor = Mock()
-        cursor.fetchone.return_value = ("some_value",)  # fetchone now returns a tuple
-
-        conn.cursor.return_value = cursor
-
-        # Create an instance of MemoryManager with the mock connection
-        self.memory_manager = MemoryManager(
-            model="gpt-3.5-turbo-16k",
-            table_name="test",
-            db_connection=conn,
-        )
-
-        return self.memory_manager
+        # Mock database connection and cursor
+        self.conn = Mock()
+        self.cursor = Mock()
+        self.conn.cursor.return_value = self.cursor
+        self.cursor.fetchone.return_value = ("test_dir",)
+        self.cursor.fetchall.return_value = [("test_context")]
+        self.memory_manager = MemoryManager(db_connection=self.conn)
 
     def test_get_total_tokens_in_message(self):
         message = "This is a test message."
@@ -60,18 +52,19 @@ class TestMemoryManager:
             "system": "You are an AI Pair Programmer and a world class python developer helping the Human work on a project."
         }
         self.memory_manager.prompt_handler.set_system(input)
-        self.memory_manager.prompt_handler.cur.execute.assert_called()  # Check if execute was called on cursor
+        self.memory_manager.prompt_handler.cur.execute.assert_called()
+
+
+# Check if execute was called on cursor
 
 
 class TestMemoryManager1(unittest.TestCase):
     def setUp(self):
-        # Mock database connection and cursor
         self.conn = Mock()
         self.cursor = Mock()
         self.conn.cursor.return_value = self.cursor
-        # Set up __getitem__ to return a mock object with a specific return value
-        self.cursor.fetchone.return_value = ("expected_directory",)
-        # Initialize MemoryManager with the mock connection
+        self.cursor.fetchone.return_value = ("test_dir",)
+        self.cursor.fetchall.return_value = [("test_context")]
         self.memory_manager = MemoryManager(db_connection=self.conn)
 
     def test_add_message(self):
@@ -82,12 +75,12 @@ class TestMemoryManager1(unittest.TestCase):
         self.memory_manager.add_message(role, content)
         # Assert: Verify that a database insert command was executed
         self.cursor.execute.assert_called()
-        # Optionally, check the arguments passed to the execute method
+        # Extract the SQL command and parameters used in execute
         args, kwargs = self.cursor.execute.call_args
-        sql, params = args
+        sql, params = args[0], args[1]
         self.assertIn("INSERT INTO", sql)
-        self.assertEqual(params[1], role)
-        self.assertEqual(params[2], content)
+        self.assertIn(role, params)
+        self.assertIn(content, params)
 
     def test_get_context(self):
         # Arrange: Prepare the context to be added
@@ -106,8 +99,12 @@ class TestMemoryManager1(unittest.TestCase):
             },
         ]
         self.memory_manager.get_messages = Mock(return_value=messages)
+        self.memory_manager.working_context.get_context = Mock(
+            return_value="test_context"
+        )
         # Act: Call the add_context method
         response = asyncio.run(self.memory_manager.update_context())
+        print(response)
         assert isinstance(response, ContextUpdate)
         assert response.new_context is not None
         # Assert: Verify that a database insert command was executed

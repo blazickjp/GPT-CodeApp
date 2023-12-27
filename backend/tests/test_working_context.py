@@ -5,6 +5,7 @@ from memory.memory_manager import WorkingContext
 class TestWorkingContext(unittest.TestCase):
     def test_add_context(self):
         # Test adding context
+        print(self)
         working_context = WorkingContext(None, None)
         working_context.add_context("New context")
         self.assertIn("New context", working_context.context)

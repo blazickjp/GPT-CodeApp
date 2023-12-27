@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 import instructor
 from instructor import OpenAISchema
 from openai import OpenAI, AsyncOpenAI
+import logging
 
 CLIENT = instructor.patch(AsyncOpenAI())
 
@@ -110,9 +111,6 @@ class ContextUpdate(BaseModel):
     )
 
     def execute(self, working_context: WorkingContext) -> None:
-        if self.old_context:
-            for context in self.old_context:
-                working_context.remove_context(context)
         if self.new_context:
             for context in self.new_context:
                 working_context.add_context(context)
@@ -152,7 +150,7 @@ class MemoryManager:
             db_connection=db_connection, project_directory=self.project_directory
         )
         self.prompt_handler = SystemPromptHandler(
-            db_connection=self.conn,
+            db_connection=db_connection,
             tree=tree,
             identity=self.identity,
             working_context=self.working_context,
@@ -350,6 +348,8 @@ Please make any updates accordingly. Be sure the think step by step as you work.
         for message in messages:
             if message["role"] == "system":
                 message["content"] = prompt
+
+        print(messages)
 
         update = await self.working_context.client.chat.completions.create(
             model="gpt-4-1106-preview",

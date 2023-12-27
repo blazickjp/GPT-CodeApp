@@ -3,6 +3,41 @@ Methods and CRUD operations for managing system prompts.
 """
 from typing import Optional, Dict
 import os
+import logging
+import datetime
+
+
+class RelevantLogHandler:
+    def __init__(self, capacity=50):
+        self.capacity = capacity
+        self.relevant_logs = []
+        self.log_file = os.path.join(os.getcwd(), "logs", "backend.log")
+
+    def read(self):
+        print(self.log_file)
+        with open(self.log_file) as f:
+            # Seek to end of file
+            f.seek(0, os.SEEK_END - self.capacity)
+
+            # Read last capacity lines
+            for line in f.readlines():
+                if self.is_relevant(line):
+                    self.relevant_logs.append(line)
+
+    def is_relevant(self, log_line):
+        # Filter logic to check if log line is relevant
+        if "ERROR" in log_line:
+            return True
+        else:
+            return False
+
+    def get_relevant_logs(self):
+        # self.read()
+        print(self.relevant_logs)
+        return self.relevant_logs
+
+
+relevant_logger = RelevantLogHandler()
 
 
 class SystemPromptHandler:
@@ -20,6 +55,7 @@ class SystemPromptHandler:
         self.working_context = working_context
         self.create_tables()
         self.directory = self.get_directory()
+        self.relevant_log_handler = relevant_logger
 
     def get_directory(self) -> str:
         self.cur.execute(
@@ -55,6 +91,16 @@ class SystemPromptHandler:
                 )
             else:
                 print("No working context")
+
+            if self.relevant_log_handler:
+                relevant_logs = self.relevant_log_handler.get_relevant_logs()
+                if len(relevant_logs) > 0:
+                    self.system += (
+                        "Relevant Logs:\n" + "\n".join(relevant_logs) + "\n\n"
+                    )  # noqa 503
+                    print(relevant_logs)
+            else:
+                logging.warning("No relevant logs")
 
         self.cur.execute(f"DELETE FROM {self.system_table_name}")
         self.cur.execute(
