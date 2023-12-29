@@ -1,8 +1,10 @@
 # app_setup.py
 import os
 import sqlite3
+import sys
+
 from agent.coding_agent import CodingAgent
-from agent.agent_prompts import PROFESSOR_SYNAPSE, DEFAULT_SYSTEM_PROMPT
+from agent.agent_prompts import PROFESSOR_SYNAPSE, DEFAULT_SYSTEM_PROMPT, LSA
 from agent.agent_functions.file_ops import _OP_LIST
 from memory.memory_manager import MemoryManager
 from database.my_codebase import MyCodebase
@@ -10,20 +12,80 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Any, Callable
 from pydantic import BaseModel
+import logging
+
+logger = logging.getLogger("logger")
+logger.setLevel(logging.INFO)  # Adjust to the appropriate log level
+
+# Create a file handler which logs even debug messages
+if not os.path.exists("logs"):
+    os.makedirs("logs")
+
+formatter = logging.Formatter(
+    "%(asctime)s - [%(filename)s:%(lineno)d] - %(levelname)s - %(message)s"
+)
+
+# Create a file handler which logs even debug messages
+fh = logging.FileHandler("logs/backend.log")
+fh.setLevel(logging.INFO)  # File handler level to capture all messages
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+
+# Create console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.ERROR)  # Console handler level
+ch.setFormatter(formatter)
+logger.addHandler(ch)
+
+# Add the handlers to the logger
+logger.addHandler(fh)
+logger.addHandler(ch)
+
+
+# Stream handler for stdout/stderr
+stream_handler = logging.StreamHandler(stream=sys.stdout)  # Redirects stdout
+stream_handler.setLevel(
+    logging.INFO
+)  # Set the level if you want to filter out messages
+stream_handler.setFormatter(formatter)
+logger.addHandler(stream_handler)
+
+
+class StreamToLogger(object):
+    """
+    Fake file-like stream object that redirects writes to a logger instance.
+    """
+
+    def __init__(self, logger, log_level=logging.INFO):
+        self.logger = logger
+        self.log_level = log_level
+        self.linebuf = ""
+
+    def write(self, buf):
+        for line in buf.rstrip().splitlines():
+            self.logger.log(self.log_level, line.rstrip())
+
+    def flush(self):
+        pass
+
+
+sys.stdout = StreamToLogger(logger, logging.INFO)
+sys.stderr = StreamToLogger(logger, logging.ERROR)
+
 
 # from agent.agent_functions.changes import Changes
 
 IGNORE_DIRS = ["node_modules", ".next", ".venv", "__pycache__", ".git"]
-FILE_EXTENSIONS = [".js", ".py", ".md", "Dockerfile", '.txt']
+FILE_EXTENSIONS = [".js", ".py", ".md", "Dockerfile", ".txt"]
 
 
 def create_database_connection() -> sqlite3.Connection:
     try:
         conn = sqlite3.connect("database.db", check_same_thread=False)
-        print("Successfully connected to database")
+        logger.info("Successfully connected to database")
         return conn
     except Exception as e:
-        print(e)
+        logger.info(e)
         raise e
 
 
@@ -69,7 +131,7 @@ def setup_codebase() -> MyCodebase:
 def setup_app() -> CodingAgent:
     print("Setting up app")
     codebase = setup_codebase()
-    memory = setup_memory_manager(tree=codebase.tree(), identity=DEFAULT_SYSTEM_PROMPT)
+    memory = setup_memory_manager(tree=codebase.tree(), identity=LSA)
     agent = CodingAgent(
         memory_manager=memory, function_map=[_OP_LIST], codebase=codebase
     )

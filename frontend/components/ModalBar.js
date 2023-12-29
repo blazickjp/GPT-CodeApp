@@ -4,10 +4,14 @@ import ReactModal from 'react-modal';
 import FunctionsModal from './modal_bar_modals/FunctionsModal';
 import SystemPromptModal from './modal_bar_modals/SystemPromptModal';
 import MessageHistoryModal from './modal_bar_modals/MessageHistoryModal';
+import ContextViewerModal from './modal_bar_modals/ContextViewerModal';
 import { useDispatch, useSelector } from 'react-redux';
 import { setSystemPrompt, setSystemTokens, setIsModalOpen, setEditablePrompt } from '../store/modal_bar_modals/systemPromptSlice';
 import { setFunctionTokens, setIsFunctionModalOpen, setAgentFunctions, setAgentTokens, setOnDemandFunctions, setOnDemandTokens } from '../store/modal_bar_modals/functionsSlice';
 import { setMessageHistory, setMessageTokens, setIsMessageModalOpen } from '../store/modal_bar_modals/messageHistorySlice';
+import { setWorkingContext, setIsContextModalOpen } from '../store/modal_bar_modals/contextViewerSlice';
+
+
 
 
 
@@ -22,7 +26,6 @@ const ModalBar = () => {
     const messageTokens = useSelector(state => state.messageHistory.messageTokens);
     const editablePrompt = useSelector(state => state.systemPrompt.editablePrompt);
     const files = useSelector(state => state.sidebar.files);
-    // const currentDirectory = useSelector(state => state.sidebar.currentDirectory);
 
 
     const fetchSystemPromptAndOpenModal = (modal = true) => {
@@ -126,6 +129,13 @@ const ModalBar = () => {
                 </button>
                 <MessageHistoryModal />
             </div>
+            <div className='px-5'>
+                <button onClick={() => dispatch(setIsContextModalOpen(true))}>
+                    Working Context
+                </button>
+                <ContextViewerModal />
+            </div>
+
         </div >
     );
 }

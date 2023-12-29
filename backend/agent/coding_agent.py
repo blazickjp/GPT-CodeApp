@@ -7,7 +7,7 @@ import ast
 
 import instructor
 from openai import OpenAI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from types import SimpleNamespace
 from pathlib import Path
@@ -20,9 +20,6 @@ from agent.agent_prompts import (  # noqa
     DEFAULT_SYSTEM_PROMPT,
     PROFESSOR_SYNAPSE,
 )
-
-# client = instructor.patch(OpenAI())
-client = instructor.patch(OpenAI())
 
 
 class Message(BaseModel):
@@ -37,6 +34,10 @@ class Message(BaseModel):
 
 
 class NestedNamespace(SimpleNamespace):
+    """
+    A class to convert a dictionary into a nested namespace.
+    """
+
     def __init__(self, dictionary, **kwargs):
         if not isinstance(dictionary, dict):
             raise ValueError("Input must be a dictionary")
@@ -91,6 +92,7 @@ class CodingAgent:
         self.tool_choice = "auto"
         self.function_to_call = None
         self.ops_to_execute = []
+        self.client = instructor.patch(OpenAI())
         if function_map:
             self.tools = [
                 {"type": "function", "function": op.openai_schema}
@@ -155,10 +157,8 @@ class CodingAgent:
 
             delta = chunk.choices[0].delta
             if delta.tool_calls:
-                # print("Processing function call")
                 # Initialize json_accumulator and idx outside the loop
                 for call in delta.tool_calls:
-                    # print("Call:", call.index, "Index:", idx)
                     # Check if we have started a new function call
                     if call.index != idx:
                         # Process the previous function call if any
@@ -283,7 +283,7 @@ class CodingAgent:
         print(kwargs["model"])
         if self.GPT_MODEL.startswith("gpt"):
             print("Calling OpenAI")
-            for chunk in client.chat.completions.create(**kwargs):
+            for chunk in self.client.chat.completions.create(**kwargs):
                 yield chunk
 
         if self.GPT_MODEL == "anthropic":
@@ -400,7 +400,7 @@ class CodingAgent:
                 + tree
                 + file_context
             )
-            print(boto3.__version__)
+
         else:
             sys_prompt = self.memory_manager.identity + "\n\n" + tree + file_context
 
