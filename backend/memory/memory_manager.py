@@ -1,3 +1,4 @@
+from turtle import up
 import tiktoken
 from typing import Optional, List
 from datetime import datetime
@@ -98,7 +99,7 @@ class WorkingContext:
 
 class ContextUpdate(BaseModel):
     """
-    Data class to add or remove information from the working context.
+    API to add information from the working context.
     """
 
     thought: str = Field(
@@ -107,7 +108,7 @@ class ContextUpdate(BaseModel):
     )
     new_context: List[str] | None = Field(
         default=None,
-        description="Valuable information from the conversation you want to keep in working context. Should be in the form of a statement.",
+        description="Valuable information from the conversation you want to keep in working context. ",
     )
 
     def execute(self, working_context: WorkingContext) -> None:
@@ -320,6 +321,7 @@ class MemoryManager:
 
     async def update_context(self):
         ctx = self.working_context.get_context()
+        print("Working Context: ", ctx)
         prompt = f"""
 You are monitoring a conversation between an engineer and their AI Assistant.
 Your mission is to manage the working memory for the AI Assistant. 
@@ -356,6 +358,8 @@ Please make any updates accordingly. Be sure the think step by step as you work.
             response_model=ContextUpdate,
             messages=messages,
         )
+
+        print(update)
 
         self.working_context = update.execute(self.working_context)
 
