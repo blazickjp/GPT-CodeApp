@@ -9,6 +9,7 @@ import instructor
 from instructor import OpenAISchema
 from openai import OpenAI, AsyncOpenAI
 import logging
+from gensim.summarize import summarize
 
 CLIENT = instructor.patch(AsyncOpenAI())
 
@@ -34,6 +35,7 @@ class WorkingContext:
         self.cur = self.conn.cursor()
         self.client = CLIENT
         self.project_directory = project_directory
+        self.turn_counter = 0
         self.create_tables()
 
     def create_tables(self) -> None:
@@ -92,6 +94,9 @@ class WorkingContext:
             (context, self.project_directory),
         )
         self.conn.commit()
+
+    def summarize_context(self):
+        return summarize(self.context)
 
     def __str__(self) -> str:
         return self.context
@@ -321,6 +326,10 @@ class MemoryManager:
 
     async def update_context(self):
         ctx = self.working_context.get_context()
+        self.turn_counter += 1
+        if self.turn_counter == 5:
+            self.context = self.summarize_context()
+            self.turn_counter = 0
         print("Working Context: ", ctx)
         prompt = f"""
 You are monitoring a conversation between an engineer and their AI Assistant.
