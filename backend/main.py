@@ -29,6 +29,7 @@ async def startup_event():
         AGENT.memory_manager.prompt_handler.tree = CODEBASE.tree()
         AGENT.memory_manager.prompt_handler.set_system()
         AGENT.memory_manager.set_directory(config["directory"])
+
     if config.get("files"):
         AGENT.memory_manager.prompt_handler.files_in_prompt = json.loads(
             config["files"]
@@ -157,6 +158,7 @@ async def get_files_in_prompt():
 @app.post("/set_model")
 async def set_model(input: dict):
     model = input.get("model")
+
     if model:
         AGENT.memory_manager.cur.execute(
             """
@@ -188,6 +190,7 @@ async def get_max_message_tokens():
 async def save_prompt(input: dict):
     prompt = input.get("prompt")
     prompt_name = input.get("prompt_name")
+
     if AGENT.memory_manager.prompt_handler.read_prompt(prompt_name):
         AGENT.memory_manager.prompt_handler.update_prompt(prompt_name, prompt)
     else:
@@ -316,3 +319,4 @@ def get_error_logs():
         error_logs = [line for line in log_lines if "INFO" in line]
 
     return JSONResponse(status_code=200, content={"error_logs": error_logs})
+

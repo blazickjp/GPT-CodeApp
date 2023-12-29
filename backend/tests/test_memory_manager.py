@@ -16,6 +16,7 @@ class TestMemoryManager:
         self.cursor.fetchall.return_value = [("test_context")]
         self.memory_manager = MemoryManager(db_connection=self.conn)
 
+
     def test_get_total_tokens_in_message(self):
         message = "This is a test message."
         tokens = self.memory_manager.get_total_tokens_in_message(message)

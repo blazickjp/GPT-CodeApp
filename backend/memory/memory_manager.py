@@ -267,7 +267,7 @@ class MemoryManager:
             self.summarize(content) if message_tokens > float("inf") else (None, None)
         )
         is_function_call = command is not None
-        # Function response can be determined by lag is_function_call
+
         try:
             self.cur.execute(
                 f"""

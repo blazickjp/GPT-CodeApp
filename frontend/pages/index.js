@@ -26,7 +26,6 @@ const Chat = () => {
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
 
 
-
   // Add a function to toggle the left sidebar
   const toggleLeftSidebar = () => {
     setIsLeftSidebarOpen(!isLeftSidebarOpen);
@@ -129,6 +128,7 @@ const Chat = () => {
     // Call the function to fetch historical messages
     fetchHistoricalMessages();
     fetchLogMessages();
+
   }, []);
 
 

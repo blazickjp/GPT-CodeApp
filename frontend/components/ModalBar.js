@@ -14,6 +14,7 @@ import { setWorkingContext, setIsContextModalOpen } from '../store/modal_bar_mod
 
 
 
+
 ReactModal.setAppElement('#__next');
 
 const encoding = get_encoding("cl100k_base");
@@ -25,6 +26,7 @@ const ModalBar = () => {
     const messageTokens = useSelector(state => state.messageHistory.messageTokens);
     const editablePrompt = useSelector(state => state.systemPrompt.editablePrompt);
     const files = useSelector(state => state.sidebar.files);
+
 
     const fetchSystemPromptAndOpenModal = (modal = true) => {
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/system_prompt`)

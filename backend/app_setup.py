@@ -2,6 +2,7 @@
 import os
 import sqlite3
 import sys
+
 from agent.coding_agent import CodingAgent
 from agent.agent_prompts import PROFESSOR_SYNAPSE, DEFAULT_SYSTEM_PROMPT, LSA
 from agent.agent_functions.file_ops import _OP_LIST
