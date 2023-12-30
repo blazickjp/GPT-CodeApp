@@ -36,6 +36,23 @@ Setting up GPT-CodeApp is as easy as 1, 2, 3! Our application consists of a fron
 
 ### Backend Setup
 
+## 🏗️ Sandbox Setup
+
+GPT-CodeApp uses a sandboxed environment to validate code changes after every edit, ensuring the code remains pristine. The following commands referenced in the `sweep.yaml` file are used to manage this environment:
+
+### Install Commands
+
+- `trunk init`: This command initializes the sandboxed environment.
+- `pip install -r requirements.txt`: This command installs the necessary Python dependencies in the sandboxed environment.
+
+### Check Commands
+
+- `trunk fmt {file_path} || return 0`: This command formats the code in the specified file. If the formatting fails, it returns 0 to prevent the command from failing.
+- `trunk check --fix --print-failures {file_path}`: This command checks the code in the specified file for errors. If any errors are found, it attempts to fix them and prints the failures.
+- `pytest`: This command runs tests to ensure that code changes do not break existing functionality.
+
+For the complete set of commands and additional details, users can refer to the `sweep.yaml` file.
+
 The backend is a Python application that uses FastAPI. Here's how to set it up:
 
 
