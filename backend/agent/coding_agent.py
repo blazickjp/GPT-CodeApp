@@ -115,6 +115,9 @@ class CodingAgent:
         print(f"Input Text: {input}\nCommand: {command}")
         self.memory_manager.add_message("user", input)
 
+        if self.memory_manager.working_context.turn_counter == 0:
+            print("Summarized Context: ", self.memory_manager.working_context.context)
+
         message_history = [
             {"role": i["role"], "content": i["content"]}
             for i in self.memory_manager.get_messages()

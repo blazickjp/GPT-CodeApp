@@ -9,6 +9,7 @@ import instructor
 from instructor import OpenAISchema
 from openai import OpenAI, AsyncOpenAI
 import logging
+# OpenAI summarization model import # Placeholder for actual OpenAI import statement
 
 CLIENT = instructor.patch(AsyncOpenAI())
 
@@ -34,6 +35,7 @@ class WorkingContext:
         self.cur = self.conn.cursor()
         self.client = CLIENT
         self.project_directory = project_directory
+        self.turn_counter = 0
         self.create_tables()
 
     def create_tables(self) -> None:
@@ -93,6 +95,18 @@ class WorkingContext:
         )
         self.conn.commit()
 
+    def summarize_context(self):
+        # Call OpenAI API to get the summary
+        # Call OpenAI API to get the summary with improved quality
+        response = self.client.create_completion(
+            prompt=self.context,
+            model='text-davinci-003',
+            max_length=150,
+            temperature=0.5,
+            top_p=1.0
+        )
+        return response.choices[0].text.strip()
+
     def __str__(self) -> str:
         return self.context
 
@@ -131,8 +145,10 @@ class MemoryManager:
         tree: str = None,
         max_tokens: int = 1000,
         table_name: str = "default",
+        summary_interval: int = 5,
         db_connection=None,
     ) -> None:
+        self.summary_interval = summary_interval
         load_dotenv()
         self.project_directory = None
         self.model = model
@@ -321,6 +337,10 @@ class MemoryManager:
 
     async def update_context(self):
         ctx = self.working_context.get_context()
+        self.turn_counter += 1
+        if self.turn_counter == self.summary_interval:
+            self.context = self.summarize_context()
+            self.turn_counter = 0
         print("Working Context: ", ctx)
         prompt = f"""
 You are monitoring a conversation between an engineer and their AI Assistant.
