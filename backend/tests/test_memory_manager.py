@@ -68,6 +68,14 @@ class TestMemoryManager1(unittest.TestCase):
         self.cursor.fetchall.return_value = [("test_context",)]
         self.memory_manager = MemoryManager(db_connection=self.conn)
 
+    def test_summarize_context_handles_empty_string(self):
+        # Arrange: Set context to an empty string
+        self.memory_manager.working_context.context = ''
+        # Act: Call summarize_context method
+        summary = self.memory_manager.working_context.summarize_context()
+        # Assert: Check that the summary is an empty string
+        assert summary == '', 'Summary should be an empty string for empty context'
+
     def test_summarize_context_shortens_long_context(self):
         # Arrange: Create a context to be summarized
         context = 'A very long repetitive context ' * 30
@@ -76,6 +84,18 @@ class TestMemoryManager1(unittest.TestCase):
         summary = self.memory_manager.working_context.summarize_context()
         # Assert: Check that the summary is valid
         assert isinstance(summary, str) and len(summary) > 0, 'Summary is not a non-empty string'
+
+    def test_summarize_context_called_at_correct_interval(self):
+        # Arrange: Mock summarize_context to keep track of calls
+        self.memory_manager.working_context.summarize_context = MagicMock()
+        # Act & Assert: Call update_context and check if summarize_context is called
+        for i in range(10):
+            asyncio.run(self.memory_manager.update_context())
+            if (i + 1) % self.memory_manager.summary_interval == 0:
+                self.memory_manager.working_context.summarize_context.assert_called_once_with()
+                self.memory_manager.working_context.summarize_context.reset_mock()
+            else:
+                self.memory_manager.working_context.summarize_context.assert_not_called()
 
     def test_turn_counter_reset_after_5th_update(self):
         # Arrange: Reset the turn counter to 0
