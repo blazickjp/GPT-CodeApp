@@ -1,3 +1,8 @@
+## 2023-12-30
+
+### Changed
+- Updated `sweep.yaml` by modifying commands in the `sandbox.install` section to improve installation process.
+
 ## 2023-11-16
 
 ### Added
