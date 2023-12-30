@@ -9,7 +9,7 @@ import instructor
 from instructor import OpenAISchema
 from openai import OpenAI, AsyncOpenAI
 import logging
-from gensim.summarize import summarize
+# OpenAI summarization model import # Placeholder for actual OpenAI import statement
 
 CLIENT = instructor.patch(AsyncOpenAI())
 
@@ -96,7 +96,9 @@ class WorkingContext:
         self.conn.commit()
 
     def summarize_context(self):
-        return summarize(self.context)
+        # Call OpenAI API to get the summary
+        response = self.client.create_summary(self.context, max_tokens=100)
+        return response.choices[0].text.strip()
 
     def __str__(self) -> str:
         return self.context
