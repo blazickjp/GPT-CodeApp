@@ -97,7 +97,7 @@ class WorkingContext:
 
     def summarize_context(self):
         # Call OpenAI API to get the summary
-        response = self.client.create_summary(self.context, max_tokens=100)
+        response = self.client.create_summary(self.context)
         return response.choices[0].text.strip()
 
     def __str__(self) -> str:
