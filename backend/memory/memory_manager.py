@@ -138,8 +138,10 @@ class MemoryManager:
         tree: str = None,
         max_tokens: int = 1000,
         table_name: str = "default",
+        summary_interval: int = 5,
         db_connection=None,
     ) -> None:
+        self.summary_interval = summary_interval
         load_dotenv()
         self.project_directory = None
         self.model = model
@@ -329,7 +331,7 @@ class MemoryManager:
     async def update_context(self):
         ctx = self.working_context.get_context()
         self.turn_counter += 1
-        if self.turn_counter == 5:
+        if self.turn_counter == self.summary_interval:
             self.context = self.summarize_context()
             self.turn_counter = 0
         print("Working Context: ", ctx)
