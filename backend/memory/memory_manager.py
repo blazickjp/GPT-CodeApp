@@ -1,4 +1,3 @@
-from turtle import up
 import tiktoken
 from typing import Optional, List
 from datetime import datetime
