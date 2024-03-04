@@ -29,22 +29,24 @@ class TestMemoryManager:
         cursor.fetchall.side_effect = [
             [("role1", "system_prompt")],  # First call to fetchall
             [  # Second call to fetchall
-                ("user", "full_user_message", "user_message", 10),
                 ("assistant", "full_assistant_message", "assistant_message", 20),
+                ("user", "full_user_message", "user_message", 10),
             ],
         ]
+        messages = self.memory_manager.get_messages()
+        print(messages)
 
-        assert self.memory_manager.get_messages() == [
+        assert messages == [
             {"role": "role1", "content": "system_prompt"},
-            {
-                "role": "assistant",
-                "content": "assistant_message",
-                "full_content": "full_assistant_message",
-            },
             {
                 "role": "user",
                 "content": "user_message",
                 "full_content": "full_user_message",
+            },
+            {
+                "role": "assistant",
+                "content": "assistant_message",
+                "full_content": "full_assistant_message",
             },
         ]
 

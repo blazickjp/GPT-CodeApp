@@ -197,35 +197,6 @@ class MemoryManager:
             )
         else:
             self.cur.execute(
-                # f"""
-                # WITH Exclude AS (
-                #     SELECT interaction_index, last_idx
-                #     FROM (
-                #         select lag(interaction_index,1) over (order by interaction_index desc) as last_idx, *
-                #         from {self.memory_table_name}
-                #         )
-                #     WHERE (content LIKE '/%' AND role = 'user')
-                # ),
-                # Filtered AS (
-                #     SELECT *
-                #     FROM {self.memory_table_name}
-                #     WHERE interaction_index NOT IN (SELECT interaction_index FROM Exclude)
-                #     and interaction_index NOT IN (SELECT last_idx FROM Exclude)
-                # ),
-                # t1 AS (
-                #     SELECT role,
-                #         content as full_content,
-                #         COALESCE(summarized_message, content) as content,
-                #         COALESCE(summarized_message_tokens, content_tokens) as tokens,
-                #         SUM(COALESCE(summarized_message_tokens, content_tokens)) OVER (ORDER BY interaction_index DESC) as token_cum_sum
-                #     FROM Filtered
-                #     WHERE project_directory = ?
-                #     ORDER BY interaction_index DESC
-                # )
-                # SELECT role, full_content, content, tokens
-                # FROM t1
-                # WHERE token_cum_sum <= ?;
-                # """,
                 f"""
                 with t1 as (
                     SELECT role,
@@ -247,10 +218,14 @@ class MemoryManager:
                 ),
             )
         results = self.cur.fetchall()
+        prev_role = 'assistant'
         for result in results[::-1]:
+            if prev_role == result[0]:
+                continue
             messages.append(
                 {"role": result[0], "content": result[2], "full_content": result[1]}
             )
+            prev_role = result[0]
         return messages
 
     def add_message(
