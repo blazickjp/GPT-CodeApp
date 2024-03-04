@@ -82,9 +82,10 @@ class CodingAgent:
             functions (Optional[List[dict]]): A list of functions that the agent can call.
             callables (Optional[List[Callable]]): A list of callable functions.
         """
+        # TODO Fix model saying it's checking systems when its not
         self.memory_manager = memory_manager
         self.function_map = function_map
-        self.GPT_MODEL = None
+        self.GPT_MODEL = 'gpt-4-0125-preview'
         self.codebase = codebase
         self.max_tokens = 4000
         self.temperature = 0.75

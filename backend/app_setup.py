@@ -129,7 +129,7 @@ def setup_codebase() -> MyCodebase:
 def setup_app() -> CodingAgent:
     print("Setting up app")
     codebase = setup_codebase()
-    memory = setup_memory_manager(tree=codebase.tree(), identity=LSA)
+    memory = setup_memory_manager(tree=codebase.tree(), identity=DEFAULT_SYSTEM_PROMPT)
     agent = CodingAgent(
         memory_manager=memory, function_map=[_OP_LIST], codebase=codebase
     )
