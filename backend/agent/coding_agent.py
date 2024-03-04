@@ -293,12 +293,13 @@ class CodingAgent:
                 resp = sm_client.invoke_model_with_response_stream(
                     accept="*/*",
                     contentType="application/json",
-                    modelId="anthropic.claude-v2:1",
+                    modelId="anthropic.claude-3-sonnet-20240229-v1:0",
                     body=json.dumps(
                         {
-                            "prompt": self.generate_anthropic_prompt(),
-                            "max_tokens_to_sample": max(kwargs["max_tokens"], 2000),
-                            "temperature": self.temperature,
+                            "messages": kwargs["messages"][1:],
+                            "system": kwargs["messages"][0]["content"],
+                            "max_tokens": max(kwargs["max_tokens"], 2000),
+                            "temperature": kwargs["temperature"],
                             "anthropic_version": "bedrock-2023-05-31",
                         }
                     ),
@@ -319,16 +320,17 @@ class CodingAgent:
                     chunk = next(iter((resp["body"])))
                     bytes_to_send = chunk["chunk"]["bytes"]
                     decoded_str = json.loads(bytes_to_send.decode("utf-8"))
-                    content = decoded_str["completion"]
-                    stop_reason = decoded_str["stop_reason"]
-                    if stop_reason == "stop_sequence":
+                    print(decoded_str)
+                    event_type = decoded_str["type"]
+                    if event_type == "message_stop":
                         yield {
                             "choices": [
-                                {"finish_reason": "stop", "delta": {"content": content}}
+                                {"finish_reason": "stop", "delta": {"content": ""}}
                             ]
                         }
                         break
-                    else:
+                    elif event_type == "content_block_delta":
+                        content = decoded_str["delta"]["text"]
                         yield {
                             "choices": [
                                 {"finish_reason": None, "delta": {"content": content}}
