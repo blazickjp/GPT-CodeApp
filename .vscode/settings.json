@@ -14,4 +14,11 @@
         "--max-line-length=150",
         "--ignore=E203,F841,F401,E302,E305,W503",
     ],
+    "cody.codebase": "/Users/josephblazick/Documents/GPT-CodeApp",
+    "cody.commandCodeLenses": true,
+    "cody.debug.verbose": true,
+    "cody.debug.enable": true,
+    "cody.autocomplete.advanced.accessToken": "sgp_636f79ad2075640f_90dd54be0113cebe3b4d1ba45efed2b60ecd3f73",
+    "cody.autocomplete.completeSuggestWidgetSelection": true,
+    "cody.autocomplete.formatOnAccept": true,
 }

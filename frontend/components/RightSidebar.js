@@ -6,7 +6,6 @@ import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import OperationCard from './OperationCard';
 import { useSelector } from 'react-redux';
 
-
 const CodeBlock = ({ node, inline, className, children }) => {
     const match = /language-(\w+)/.exec(className || '')
     const lang = match && match[1] ? match[1] : ''
@@ -54,7 +53,7 @@ const RightSidebar = ({ isSidebarOpen }) => {
             setOpsToExecute(data.ops);
         } catch (error) {
             console.error('Error fetching system state:', error);
-        }
+
     };
 
     const colorScale = scaleLinear()

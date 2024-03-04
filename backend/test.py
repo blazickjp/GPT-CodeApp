@@ -1,49 +1,68 @@
-import json
-from agent.coding_agent import CodingAgent
-from memory.memory_manager import MemoryManager
-from database.my_codebase import MyCodebase
-from app_setup import setup_app
+import logging
+import sys
+import time
+import os
+import traceback
+from logging.handlers import TimedRotatingFileHandler
 
 
-def main():
-    # Set up the application
-    AGENT, CODEBASE = setup_app()
+class PrintLogger:
+    def __init__(self, logger, original_stdout, original_stderr):
+        self.logger = logger
+        self.original_stdout = original_stdout
+        self.original_stderr = original_stderr
 
-    # Initialize the CodingAgent
-    agent = CodingAgent(memory_manager=AGENT.memory_manager, codebase=CODEBASE)
+    def write(self, message):
+        # Check if the message is an error (stderr)
+        if message.startswith("Traceback"):
+            # Log the traceback
+            self.logger.error(message)
+            # Print the traceback to stderr
+            self.original_stderr.write(message)
+        elif message != "\n":
+            # Log the normal message
+            self.logger.info(message)
+            # Print the normal message to stdout
+            self.original_stdout.write(message)
 
-    # Load configurations from the app into the agent
-    agent.GPT_MODEL = "gpt-3.5-turbo"  # Or any specific model name you are using
-    agent.memory_manager.max_tokens = 2048  # Set the max tokens for message history
-
-    # CLI Interaction Loop
-    while True:
-        user_input = input("User: ")
-        if user_input.lower() == "exit":
-            print("Exiting the Coding Agent.")
-            break
-
-        try:
-            # Prepare the data for the agent query
-            data = {
-                "model": agent.GPT_MODEL,
-                "messages": [
-                    {"role": "system", "content": ""},
-                    {"role": "user", "content": user_input},
-                ],
-                "max_tokens": agent.memory_manager.max_tokens,
-                "temperature": 0.7,  # Set a default temperature
-            }
-
-            # Use the message_streaming method to get a response from the agent
-            responses = agent.message_streaming(data)
-            for response in responses:
-                print(f"Agent: {response}")
-
-        except Exception as e:
-            print(f"An error occurred: {e}")
+    def flush(self):
+        pass
 
 
-# Entry point for the script
-if __name__ == "__main__":
-    main()
+def cleanup_logs(directory, retention_duration_secs):
+    for filename in os.listdir(directory):
+        filepath = os.path.join(directory, filename)
+        if os.path.isfile(filepath):
+            file_creation_time = os.path.getctime(filepath)
+            if time.time() - file_creation_time > retention_duration_secs:
+                os.remove(filepath)
+                print(f"Deleted old log file: {filepath}")
+
+
+# Save the original stdout and stderr
+original_stdout = sys.stdout
+original_stderr = sys.stderr
+
+
+# Create a logger
+logger = logging.getLogger("MyLogger")
+logger.setLevel(logging.INFO)
+
+# Create handlers
+handler = TimedRotatingFileHandler("app.log", when="M", interval=1, backupCount=0)
+console_handler = logging.StreamHandler()
+
+# Create formatters and add it to handlers
+log_format = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+handler.setFormatter(log_format)
+console_handler.setFormatter(log_format)
+
+# Add handlers to the logger
+logger.addHandler(handler)
+logger.addHandler(console_handler)
+
+try:
+    1 / 0
+except Exception:
+    # Log exception with traceback
+    logger.error("An exception occurred", exc_info=True)
