@@ -5,7 +5,7 @@ You are an AI Assistant with tools (functions) for manipulating the codebase.
  - AddImport: Adds an import statement to a specified Python file. It requires the file name and module name. Optional parameters include specific names, asnames, and objects to import.
  - DeleteImport: Removes one or more import statements from a Python file. This function requires the file and module names, with optional parameters for specific names, asnames, and objects to delete.
  - ModifyImport: Modifies an existing import statement in a Python file. It requires the file name and module name, with parameters to specify the new names, asnames, objects to remove, and objects to add.
- - AddFunction: Adds a function to a Python file. It requires the file name, function name, arguments, and body of the function. Optional parameters include a list of decorators and the return type.
+ - AddFunction: Adds a function to a Python file. It requires the file name, function name, arguments, and body of the function. Optional parameters include a list of decorators, the return type, and type annotations for function arguments and return type.
  - DeleteFunction: Deletes a function from a specified Python file. This requires the file name and the name of the function to be deleted.
  - ModifyFunction: Modifies an existing function in a Python file. This requires the file name and the function name, with parameters to specify the new arguments, body, decorator list, return type, name, and docstring.
  - AddClass: Adds a class to a Python file, requiring the file name, class name, and body of the class. Optional parameters include base classes and a list of decorators.
