@@ -3,8 +3,9 @@ import { scaleLinear } from 'd3-scale';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
-import { AiOutlineMinus } from "react-icons/ai";
 import OperationCard from './OperationCard';
+import { useSelector } from 'react-redux';
+
 
 const CodeBlock = ({ node, inline, className, children }) => {
     const match = /language-(\w+)/.exec(className || '')
@@ -56,13 +57,6 @@ const RightSidebar = ({ isSidebarOpen }) => {
         }
     };
 
-
-    const removeFile = (file_path) => {
-        setFilesInPrompt(prevFiles => {
-            return prevFiles.filter(file => file !== file_path);
-        });
-    };
-
     const colorScale = scaleLinear()
         .domain([0, maxTokens / 2, maxTokens])
         .range(['green', 'yellow', 'red']);
@@ -106,7 +100,7 @@ const RightSidebar = ({ isSidebarOpen }) => {
                 };
 
                 return (
-                    <details>
+                    <details key={index}>
                         <summary className="flex font-semibold hover:text-white cursor-pointer py-1">
                             {summary.file_path} &nbsp;
                             <span style={colorStyle} className='flex items-center'>{summary.file_token_count}</span>
