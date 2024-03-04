@@ -16,7 +16,7 @@ class AddClass(OpenAISchema):
     )
     id: str | None = str(uuid.uuid4())
 
-    def to_json(self):
+    def to_json(self) -> str:
         out = dict(
             id=self.id,
             file_name=self.file_name,
@@ -75,7 +75,7 @@ class ModifyClass(OpenAISchema):
     )
     id: str | None = str(uuid.uuid4())
 
-    def to_json(self):
+    def to_json(self) -> str:
         out = dict(
             id=self.id,
             file_name=self.file_name,
