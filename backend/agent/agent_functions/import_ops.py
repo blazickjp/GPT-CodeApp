@@ -9,20 +9,12 @@ class AddImport(OpenAISchema):
     Represents an import statement to be added to a Python file.
     """
 
-    file_name: str = Field(
-        ..., description="The name of the file to add the import to."
-    )
-    module: str = Field(..., description="The name of the module to import.")
-    names: list | None = Field(
-        None, description="The names to import from the module. Defaults to None."
-    )
-    asnames: list | None = Field(
-        None, description="The names to import from the module with an alias."
-    )
-    objects: list | None = Field(
-        None, description="The objects to import from the module."
-    )
-    id: str = str(uuid.uuid4())
+    file_name: str
+    module: str
+    names: list | None
+    asnames: list | None
+    objects: list | None
+    id: str
 
     def to_json(self):
         out = dict(
@@ -57,8 +49,7 @@ class DeleteImport(OpenAISchema):
         None, description="The objects to delete from the module."
     )
     id: str = str(uuid.uuid4())
-
-    def to_json(self):
+    def to_json(self) -> str:
         out = dict(
             id=self.id,
             file_name=self.file_name,
@@ -91,6 +82,18 @@ class ModifyImport(OpenAISchema):
     id: str = str(uuid.uuid4())
 
     def to_json(self):
+        out = dict(
+    def to_json(self) -> str:
+        out = dict(
+            id=self.id,
+            file_name=self.file_name,
+            module=self.module,
+            names=self.names,
+            asnames=self.asnames,
+            objects=self.objects,
+        )
+        return "\n\n```json\n" + json.dumps(out, indent=4) + "\n```\n"
+    def to_json(self) -> str:
         out = dict(
             id=self.id,
             file_name=self.file_name,
