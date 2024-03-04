@@ -1,7 +1,7 @@
 import ast
 import difflib
 import astor
-from typing import List
+from typing import List, Union, Dict, Any, Tuple
 import textwrap  # Import textwrap at the top of your file
 from pathlib import Path
 
@@ -24,7 +24,7 @@ from agent.agent_functions.file_ops import (
 ASTNode = ast.AST
 
 
-def adjust_indentation(code, level=4):
+def adjust_indentation(code: str, level: int = 4) -> str:
     # Split the code into lines
     lines = code.splitlines()
 
