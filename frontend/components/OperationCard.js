@@ -85,7 +85,8 @@ const OperationCard = ({ operation }) => {
         {/* Add other details as necessary */}
       </div>
       <div className="flex justify-between mt-4"> {/* This is your footer area where the buttons are */}
-        <button className={"p-2 rounded-full transition-colors duration-200 ease-in-out ${isLoading ? 'text-purple-300' : 'text-purple-500 hover:text-pruple-600'}"}
+        <button className={`p-2 rounded-full transition-colors duration-200 ease-in-out ${isLoading ? 'text-purple-300' : 'text-purple-500 hover:text-pruple-600'
+          }`}
           onClick={handleExecute}
           title="Click to Execute Op" // Tooltip for execute button
           disabled={isLoading}
