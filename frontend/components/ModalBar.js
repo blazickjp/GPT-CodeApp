@@ -15,6 +15,7 @@ import { setWorkingContext, setIsContextModalOpen } from '../store/modal_bar_mod
 
 
 
+
 ReactModal.setAppElement('#__next');
 
 const encoding = get_encoding("cl100k_base");

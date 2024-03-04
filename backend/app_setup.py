@@ -2,7 +2,6 @@
 import os
 import sqlite3
 import sys
-
 from agent.coding_agent import CodingAgent
 from agent.agent_prompts import PROFESSOR_SYNAPSE, DEFAULT_SYSTEM_PROMPT, LSA
 from agent.agent_functions.file_ops import _OP_LIST
@@ -76,8 +75,7 @@ sys.stderr = StreamToLogger(logger, logging.ERROR)
 # from agent.agent_functions.changes import Changes
 
 IGNORE_DIRS = ["node_modules", ".next", ".venv", "__pycache__", ".git"]
-FILE_EXTENSIONS = [".js", ".py", ".md", "Dockerfile", ".txt"]
-
+FILE_EXTENSIONS = [".js", ".py", ".md", "Dockerfile", '.txt']
 
 def create_database_connection() -> sqlite3.Connection:
     try:
