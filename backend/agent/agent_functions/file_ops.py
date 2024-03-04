@@ -1,6 +1,7 @@
 import json
 import uuid
 from instructor import OpenAISchema
+from typing import List, Union
 from pydantic import Field
 from agent.agent_functions.function_ops import (
     AddFunction,
@@ -11,7 +12,9 @@ from agent.agent_functions.class_ops import AddClass, DeleteClass, ModifyClass
 from agent.agent_functions.method_ops import AddMethod, DeleteMethod, ModifyMethod
 from agent.agent_functions.import_ops import AddImport, DeleteImport, ModifyImport
 
-# Export all the entities
+# Import necessary modules for type hints
+from pydantic import Field, BaseModel
+from typing import Dict
 __all__ = [
     "AddFunction",
     "DeleteFunction",
@@ -38,7 +41,7 @@ class VariableNameChange(OpenAISchema):
     new_name: str = Field(..., description="The new name of the variable.")
     id: str = str(uuid.uuid4())
 
-    def to_json(self):
+    def to_json(self) -> str:
         out = dict(id=self.id, original_name=self.original_name, new_name=self.new_name)
         return "\n\n```json\n" + json.dumps(out, indent=4) + "\n```\n"
 
