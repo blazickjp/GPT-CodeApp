@@ -53,7 +53,7 @@ const RightSidebar = ({ isSidebarOpen }) => {
             setOpsToExecute(data.ops);
         } catch (error) {
             console.error('Error fetching system state:', error);
-
+        }
     };
 
     const colorScale = scaleLinear()
@@ -113,8 +113,9 @@ const RightSidebar = ({ isSidebarOpen }) => {
                 );
             })}
         </div>
-
     );
-};
+}
+
+
 
 export default RightSidebar;
