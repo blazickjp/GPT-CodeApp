@@ -22,7 +22,7 @@ class AddMethod(OpenAISchema):
     decorator_list: list[str] = Field(
         [], description="The list of decorators to be applied to the method."
     )
-    returns: str | None = Field(None, description="The return type of the method.")
+    returns: str | None = Field(None, description="The return type of the method.", type=str)
     id: str = str(uuid.uuid4())
 
     def to_json(self):
