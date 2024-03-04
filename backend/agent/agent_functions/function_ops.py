@@ -81,6 +81,16 @@ class ModifyFunction(OpenAISchema):
         None, description="The new docstring for the function."
     )
     id: str = str(uuid.uuid4())
+        None, description="The new list of decorators for the function."
+    )
+    new_returns: str | None = Field(
+        None, description="The new return type for the function."
+    )
+    new_name: str | None = Field(None, description="The new name for the function.")
+    new_docstring: str | None = Field(
+        None, description="The new docstring for the function."
+    )
+    id: str = str(uuid.uuid4())
 
     def to_json(self):
         out = dict(
