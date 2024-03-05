@@ -75,7 +75,7 @@ sys.stderr = StreamToLogger(logger, logging.ERROR)
 # from agent.agent_functions.changes import Changes
 
 IGNORE_DIRS = ["node_modules", ".next", ".venv", "__pycache__", ".git"]
-FILE_EXTENSIONS = [".js", ".py", ".md", "Dockerfile", '.txt']
+FILE_EXTENSIONS = [".js", ".py", ".md", "Dockerfile", '.txt', '.ts', '.yaml']
 
 def create_database_connection() -> sqlite3.Connection:
     try:
