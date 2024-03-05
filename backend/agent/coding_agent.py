@@ -82,9 +82,10 @@ class CodingAgent:
             functions (Optional[List[dict]]): A list of functions that the agent can call.
             callables (Optional[List[Callable]]): A list of callable functions.
         """
+        # TODO Fix model saying it's checking systems when its not
         self.memory_manager = memory_manager
         self.function_map = function_map
-        self.GPT_MODEL = None
+        self.GPT_MODEL = 'gpt-4-0125-preview'
         self.codebase = codebase
         self.max_tokens = 4000
         self.temperature = 0.75
@@ -295,8 +296,9 @@ class CodingAgent:
                     modelId="anthropic.claude-3-sonnet-20240229-v1:0",
                     body=json.dumps(
                         {
+
                             "messages": kwargs["messages"][1:],
-                            "system": kwargs["messages"][0]["content"],
+                            "system": self.generate_anthropic_prompt(sys_only=True),
                             "max_tokens": max(kwargs["max_tokens"], 2000),
                             "temperature": kwargs["temperature"],
                             "anthropic_version": "bedrock-2023-05-31",
@@ -343,7 +345,7 @@ class CodingAgent:
                     print("UnboundLocalError")
                     break
 
-    def generate_anthropic_prompt(self, include_messages=True) -> str:
+    def generate_anthropic_prompt(self, include_messages: Optional[bool]=True, sys_only: Optional[bool]=None) -> str:
         """
         Generates a prompt for the Gaive model.
 
@@ -405,6 +407,9 @@ class CodingAgent:
         else:
             sys_prompt = self.memory_manager.identity + "\n\n" + tree + file_context
 
+        if sys_only:
+            return sys_prompt
+        
         return (
             "\n\nHuman: The folllowing is your system prompt: "
             + sys_prompt
