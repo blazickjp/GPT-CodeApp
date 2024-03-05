@@ -128,7 +128,7 @@ class CodingAgent:
             "stream": True,
         }
 
-        print("Message Count: ", len(keyword_args["messages"]))
+        # Removed unnecessary print statement
 
         # Override normal function calling when function_name is providednd}")
         if command and command.lower() == "changes":
@@ -146,7 +146,7 @@ class CodingAgent:
             self.memory_manager.prompt_handler.identity = DEFAULT_SYSTEM_PROMPT
             self.memory_manager.prompt_handler.set_system()
 
-            assert keyword_args["messages"][0]["role"] == "system"
+            # Removed unnecessary print statement
             keyword_args["messages"][0]["content"] = temp_system
 
         # Call the model
@@ -174,7 +174,7 @@ class CodingAgent:
                             except json.JSONDecodeError as e:
                                 pass
                         # Now reset for the new call
-                        idx = call.index
+                        # Removed redundant break statement
                         json_accumulator = call.function.arguments
                         function_name = call.function.name  # Set the new function name
                         print(f"Function Name: {function_name}")
