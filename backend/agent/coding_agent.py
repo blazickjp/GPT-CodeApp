@@ -79,8 +79,8 @@ class CodingAgent:
 
         Args:
             memory_manager (MemoryManager): Manages the memory of the agent.
-            functions (Optional[List[dict]]): A list of functions that the agent can call.
-            callables (Optional[List[Callable]]): A list of callable functions.
+            function_map (Optional[dict]): A dictionary mapping function names to their callable objects.
+            codebase (Optional[MyCodebase]): The codebase associated with the agent.
         """
 
         self.memory_manager = memory_manager
