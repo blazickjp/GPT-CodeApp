@@ -75,7 +75,7 @@ sys.stderr = StreamToLogger(logger, logging.ERROR)
 # from agent.agent_functions.changes import Changes
 
 IGNORE_DIRS = ["node_modules", ".next", ".venv", "__pycache__", ".git"]
-FILE_EXTENSIONS = [".js", ".py", ".md", "Dockerfile", '.txt']
+FILE_EXTENSIONS = [".js", ".py", ".md", "Dockerfile", '.txt', '.ts', '.yaml']
 
 def create_database_connection() -> sqlite3.Connection:
     try:
@@ -129,7 +129,7 @@ def setup_codebase() -> MyCodebase:
 def setup_app() -> CodingAgent:
     print("Setting up app")
     codebase = setup_codebase()
-    memory = setup_memory_manager(tree=codebase.tree(), identity=LSA)
+    memory = setup_memory_manager(tree=codebase.tree(), identity=DEFAULT_SYSTEM_PROMPT)
     agent = CodingAgent(
         memory_manager=memory, function_map=[_OP_LIST], codebase=codebase
     )
