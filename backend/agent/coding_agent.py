@@ -222,7 +222,7 @@ class CodingAgent:
             # Parse the original code into an AST
             ast_tree = ast.parse(original_code)
 
-            # Create an ASTChangeApplicator to apply the changes
+            
             applicator = ASTChangeApplicator(ast_tree)
 
             # Apply the operation to the AST tree
