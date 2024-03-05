@@ -202,7 +202,45 @@ class CodingAgent:
     def execute_ops(self, ops: List[dict]):
         diffs = []  # List to store the diffs for each operation
 
+        # Add necessary implementation for each operation
         for op in self.ops_to_execute:
+            print(f"Executing operation: {op.id}")
+            if "backend" in op.file_name:
+                op.file_name = Path(self.codebase.directory).join(op.file_name.replace("backend/", ""))
+
+            op.file_name = self.normalize_path(op.file_name)
+
+            # Read the existing code from the file
+            try:
+                with open(op.file_name, "r") as file:
+                    original_code = file.read()
+
+                # Parse the original code into an AST
+                ast_tree = ast.parse(original_code)
+
+                # Create an ASTChangeApplicator to apply the changes
+                applicator = ASTChangeApplicator(ast_tree)
+
+                # Apply the operation to the AST tree
+                transformed_code = applicator.apply_changes([op])
+
+                # Compute the diff
+                diff = difflib.unified_diff(
+                    original_code.splitlines(keepends=True),
+                    transformed_code.splitlines(keepends=True),
+                    fromfile="before.py",
+                    tofile="after.py",
+                )
+                diff_string = "".join(diff)
+                diffs.append(diff_string)
+
+                # Write the transformed code back to the file
+                with open(op.file_name, "w") as file:
+                    file.write(transformed_code)
+
+            except FileNotFoundError:
+                print(f"File not found: {op.file_name}")
+                continue
             print(f"Executing operation: {op.id}")
             if "backend" in op.file_name:
                 op.file_name = Path(self.codebase.directory).join(
