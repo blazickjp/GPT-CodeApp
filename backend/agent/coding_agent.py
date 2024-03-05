@@ -396,7 +396,7 @@ class CodingAgent:
         else:
             tree = ""
 
-        if include_messages:
+        if sys_only:
             sys_prompt = (
                 self.memory_manager.identity
                 + conversation_history
