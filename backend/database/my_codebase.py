@@ -1,3 +1,7 @@
+"""
+This module defines the MyCodebase class, which is responsible for managing the database operations related to codebase management. It includes functionalities such as initializing the database connection, setting up the directory to scan for code, creating necessary database tables, updating files and embeddings, and removing old files from the database. The class utilizes an external encoder (tiktoken) for encoding model specifics and interacts with the database to store and manage the codebase information efficiently.
+"""
+
 import os
 import datetime
 import tiktoken
@@ -97,6 +101,9 @@ class MyCodebase:
         self.conn.commit()
 
     def create_tables(self) -> None:
+        """
+        Creates the necessary tables in the database if they don't exist.
+        """
         try:
             self.cur.execute(
                 """
@@ -127,6 +134,18 @@ class MyCodebase:
             print(f"Failed to create tables: {e}")
 
     def tree(self) -> str:
+        """
+        Generates a visual representation of the project's directory structure.
+
+        This method fetches the file paths and summaries from the database, constructs a tree
+        structure representing the directory hierarchy, and then generates a string representation
+        of this tree. Each node in the tree represents a directory or file, with directories containing
+        nested dictionaries of their contents.
+
+        Returns:
+            str: A string representation of the directory tree, with each node prefixed by "+--" and
+                 indented to represent its depth in the hierarchy.
+        """
         tree = {}
         start_from = os.path.basename(self.directory)
         print("Start from: ", start_from)

@@ -1,3 +1,7 @@
+"""
+This module contains the implementation of the memory management system for the backend. It includes the `WorkingContext` class, which is responsible for managing the working context of the user, including the database connection, project directory, and interaction with the OpenAI API client. The module also handles the creation of necessary database tables and provides methods for managing the working context data within the database. Additionally, it integrates with other components such as the system prompt handler and the OpenAI API client to facilitate the generation and management of system prompts and responses.
+"""
+
 import tiktoken
 from typing import Optional, List
 from datetime import datetime
@@ -119,10 +123,6 @@ class ContextUpdate(BaseModel):
 
 
 class MemoryManager:
-    # MemoryManager class manages interactions with the memory database
-    # including initializing connections, creating tables, and
-    # delegating to other classes that interact with the database.
-
     def __init__(
         self,
         model: str = "gpt-3.5-turbo-16k",
@@ -163,6 +163,17 @@ class MemoryManager:
         self.background_tasks = None
 
     def get_messages(self, chat_box: Optional[bool] = None) -> List[dict]:
+        """
+        Fetches messages from the system prompt table.
+
+        This method queries the system prompt table for messages, filtering based on the chat_box flag. If chat_box is True, it fetches messages with a higher token limit to accommodate more verbose interactions typical in a chat interface. Otherwise, it uses the default max_tokens limit defined for the system.
+
+        Args:
+            chat_box (Optional[bool]): A flag indicating whether the messages are being fetched for a chat box interface. Defaults to None.
+
+        Returns:
+            List[dict]: A list of dictionaries, each containing the role and content of a message.
+        """
         self.cur.execute(
             f"""
             SELECT role, content
@@ -218,7 +229,7 @@ class MemoryManager:
                 ),
             )
         results = self.cur.fetchall()
-        prev_role = 'assistant'
+        prev_role = "assistant"
         for result in results[::-1]:
             if prev_role == result[0]:
                 continue
@@ -235,6 +246,20 @@ class MemoryManager:
         command: Optional[str] = None,
         function_response: Optional[str] = None,
     ) -> None:
+        """
+        Adds a message to the memory database.
+
+        This method inserts a new message into the memory database with the provided role, content, and optional command and function response. It also calculates the timestamp, the total number of tokens in the message, and optionally summarizes the message if the number of tokens exceeds a certain threshold.
+
+        Args:
+            role (str): The role of the message sender (e.g., "user" or "assistant").
+            content (str): The content of the message.
+            command (Optional[str]): An optional command associated with the message.
+            function_response (Optional[str]): An optional function response associated with the message.
+
+        Returns:
+            None
+        """
         timestamp = datetime.now().isoformat()
         message_tokens = self.get_total_tokens_in_message(content)
         summary, summary_tokens = (
@@ -266,7 +291,15 @@ class MemoryManager:
         return
 
     def get_total_tokens_in_message(self, message: str) -> int:
-        """Returns the number of tokens in a message."""
+        """
+        Calculates the total number of tokens in a given message using the tiktoken library.
+
+        Args:
+            message (str): The message for which to calculate the total number of tokens.
+
+        Returns:
+            int: The total number of tokens in the message.
+        """
         encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
         num_tokens = len(encoding.encode(message))
         return num_tokens

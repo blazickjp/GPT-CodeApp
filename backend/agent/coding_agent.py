@@ -1,4 +1,8 @@
 # import os
+"""
+This Python module defines the classes and functions used by the coding agent in the backend of an application. The coding agent is responsible for interacting with various components such as the database, memory management system, and external APIs to facilitate code generation, manipulation, and management tasks. It utilizes models for code generation, applies AST (Abstract Syntax Tree) operations to modify code, and manages the working context and system prompts for the user. Additionally, it handles the execution of generated code operations and integrates with external services like OpenAI and AWS for enhanced functionality.
+"""
+
 import re
 import json
 import boto3
@@ -37,6 +41,7 @@ class NestedNamespace(SimpleNamespace):
     """
     A class to convert a dictionary into a nested namespace.
     """
+
     def __init__(self, dictionary, **kwargs):
         if not isinstance(dictionary, dict):
             raise ValueError("Input must be a dictionary")
@@ -85,7 +90,7 @@ class CodingAgent:
 
         self.memory_manager = memory_manager
         self.function_map = function_map
-        self.GPT_MODEL = 'gpt-4-0125-preview'
+        self.GPT_MODEL = "gpt-4-0125-preview"
         self.codebase = codebase
         self.max_tokens = 4000
         self.temperature = 0.75
@@ -200,6 +205,20 @@ class CodingAgent:
                 yield chunk.choices[0].delta.content
 
     def execute_ops(self, ops: List[dict]):
+        """
+        Executes the operations stored in the `ops_to_execute` list.
+
+        This method iterates over each operation in `ops_to_execute`, applying the necessary changes to the
+        corresponding file. It handles file path normalization, reads the original code, applies the AST changes,
+        computes the diff between the original and transformed code, and finally writes the transformed code back to the file.
+        It accumulates and returns a list of diffs for each operation.
+
+        Args:
+            ops (List[dict]): A list of operations to be executed.
+
+        Returns:
+            List[str]: A list of unified diff strings representing the changes made to each file.
+        """
         diffs = []  # List to store the diffs for each operation
 
         for op in self.ops_to_execute:
@@ -279,6 +298,17 @@ class CodingAgent:
             return json.loads(response_str)
 
     def call_model_streaming(self, command: Optional[str] | None = None, **kwargs):
+        if command:
+            kwargs["prompt"] = command
+        else:
+            kwargs["prompt"] = "Please generate code based on the provided context."
+
+        kwargs["stream"] = True
+        kwargs["max_tokens"] = kwargs.get("max_tokens", 256)
+        kwargs["temperature"] = kwargs.get("temperature", 0.5)
+
+        if "model" not in kwargs:
+            raise ValueError("Model not specified in kwargs")
         print("Calling model streaming")
         print(kwargs["model"])
         if self.GPT_MODEL.startswith("gpt"):
@@ -296,7 +326,6 @@ class CodingAgent:
                     modelId="anthropic.claude-3-sonnet-20240229-v1:0",
                     body=json.dumps(
                         {
-
                             "messages": kwargs["messages"][1:],
                             "system": self.generate_anthropic_prompt(sys_only=True),
                             "max_tokens": max(kwargs["max_tokens"], 2000),
@@ -345,7 +374,9 @@ class CodingAgent:
                     print("UnboundLocalError")
                     break
 
-    def generate_anthropic_prompt(self, include_messages: Optional[bool]=True, sys_only: Optional[bool]=None) -> str:
+    def generate_anthropic_prompt(
+        self, include_messages: Optional[bool] = True, sys_only: Optional[bool] = None
+    ) -> str:
         """
         Generates a prompt for the Gaive model.
 
@@ -409,7 +440,7 @@ class CodingAgent:
 
         if sys_only:
             return sys_prompt
-        
+
         return (
             "\n\nHuman: The folllowing is your system prompt: "
             + sys_prompt
@@ -421,6 +452,15 @@ class CodingAgent:
 
     @staticmethod
     def normalize_path(input_path):
+        """
+        Normalizes a path to be relative to the current working directory.
+
+        Args:
+            input_path (str): The path to normalize.
+
+        Returns:
+            str: The normalized path.
+        """
         # Get the current working directory as a Path object
         working_directory = Path.cwd()
 

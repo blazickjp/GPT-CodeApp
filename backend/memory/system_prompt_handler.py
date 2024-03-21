@@ -1,6 +1,7 @@
 """
-Methods and CRUD operations for managing system prompts.
+This module contains classes and methods for handling system prompts and logging relevant information within the backend memory system. It includes a `RelevantLogHandler` class for managing logs relevant to the system's operation, focusing on error logs, and a `SystemPromptHandler` class for managing system prompts, including CRUD operations on system prompts stored in a database. These components are essential for maintaining a responsive and informed system environment, aiding in debugging and user interaction management.
 """
+
 from typing import Optional, Dict
 import os
 import logging
