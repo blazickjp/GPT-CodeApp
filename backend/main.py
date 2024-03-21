@@ -97,12 +97,12 @@ async def get_functions():
 
 
 @app.get("/get_messages")
-async def get_messages(chatbox: (bool | None) = None):
+async def get_messages(chatbox: bool | None = None):
     return {"messages": AGENT.memory_manager.get_messages(chat_box=chatbox)[1:]}
 
 
 @app.get("/get_summaries")
-async def get_summaries(reset: (bool | None) = None):
+async def get_summaries(reset: bool | None = None):
     if reset:
         CODEBASE._update_files_and_embeddings()
     cur = CODEBASE.conn.cursor()
@@ -132,6 +132,18 @@ async def generate_readme():
 
 @app.post("/set_files_in_prompt")
 async def set_files_in_prompt(input: dict):
+    """Sets the files to be included in the prompt.
+
+    This endpoint accepts a JSON input with a key "files", which should contain a list of file names.
+    These files are then stored in the database and updated in the agent's memory manager for use in
+    generating prompts.
+
+    Args:
+        input (dict): A dictionary containing the "files" key with a list of file names as its value.
+
+    Returns:
+        JSONResponse: A response with a 200 status code on success, or an error message on failure.
+    """
     files = [file for file in input.get("files", None)]
     AGENT.memory_manager.cur.execute(
         """
@@ -152,6 +164,16 @@ async def set_files_in_prompt(input: dict):
 @app.get("/get_files_in_prompt")
 async def get_files_in_prompt():
     return {"files": AGENT.memory_manager.prompt_handler.files_in_prompt}
+
+
+async def get_user_directory_tree():
+    """Returns the directory tree of the user's codebase.
+
+    Returns:
+        dict: A dictionary containing the directory tree of the user's codebase.
+
+    """
+    return {"directory_tree": CODEBASE.tree()}
 
 
 @app.post("/set_model")
@@ -316,4 +338,3 @@ def get_error_logs():
         error_logs = [line for line in log_lines if "INFO" in line]
 
     return JSONResponse(status_code=200, content={"error_logs": error_logs})
-

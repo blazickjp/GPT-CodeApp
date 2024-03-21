@@ -52,7 +52,6 @@ const Chat = () => {
 
   const submitMessage = async (input, command = null) => {
     console.log(input);
-    let messageData = null;
     let currentId = null;
     let body = null;
 
@@ -104,10 +103,6 @@ const Chat = () => {
       }
     }
   };
-
-
-
-
 
   useEffect(() => {
     const fetchHistoricalMessages = async () => {

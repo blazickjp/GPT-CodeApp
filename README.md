@@ -3,14 +3,10 @@
 
 ![GitHub stars](https://img.shields.io/github/stars/blazickjp/GPT-CodeApp?style=social) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/blazickjp/GPT-CodeApp) ![GitHub All Releases](https://img.shields.io/github/downloads/blazickjp/GPT-CodeApp/total) [![Run Pytest](https://github.com/blazickjp/GPT-CodeApp/actions/workflows/pytest_ubuntu.yml/badge.svg)](https://github.com/blazickjp/GPT-CodeApp/actions/workflows/pytest_ubuntu.yml) ![GitHub contributors](https://img.shields.io/github/contributors/blazickjp/GPT-CodeApp) ![GitHub](https://img.shields.io/github/license/blazickjp/GPT-CodeApp)
 
-Welcome to GPT-CodeApp, the coding companion you didn't know you needed! 🎉 This project is a clone of Chat-GPT, but with all the features we wish were available. Tired of constantly copying and pasting from VS Code into the UI? Losing context in the conversation memory? Having little visibility into what's going on under the hood? We've got you covered!
-
-GPT-CodeApp started as a tool to better manage the model's conversational memory and context, but we didn't stop there. We're giving the models access to read, write, and edit files, all under your control! We're offloading all the tedious work to the models, so you can focus on what matters. 
-
-We're continuously improving and setting new goals. So, come join us on this exciting journey! 🚀
+Embark on a coding adventure with GPT-CodeApp, your new AI-powered coding companion! 🎉 This isn't just another Chat-GPT clone; it's your gateway to a smoother coding experience, packed with features you've always wished for.
 
 
-![](images/Snip20231015_2.png)
+![](images/Snip20240321_1.png)
 
 ## 📚 Table of Contents
 
@@ -21,65 +17,40 @@ We're continuously improving and setting new goals. So, come join us on this exc
 - [License](#license)
 - [Questions](#questions)
 
-## 🔥 Recent Updates 🔥
-
-- **Bedrock Support:** We've added support for Bedrock, specifically the ClaudEv2 model, allowing you to leverage their AI models in addition to OpenAI's GPT-3.5 and GPT-4 models. 🧠
-- **Sagemaker Endpoint Support:** We're working on adding support for any Sagemaker endpoint. This will allow you to sause any model hosted on Amazon Sagemaker.
-- **Prompt Management:** We've added backend support for prompt management, giving you more control over the prompts that are sent to the AI models.
-- **SQLite Database:** We've moved from Postgres to SQLite for our database needs. This makes setup easier and reduces the resources required to run the application.
-- **UI-Controlled Project Configuration:** You can now control the project configuration directly from the user interface, making it easier to customize the application to your needs.
-
-
 ## 🛠️ Installation and Setup
 
-Setting up GPT-CodeApp is as easy as 1, 2, 3! Our application consists of a frontend and a backend, both of which need to be set up separately. Follow the steps below to get started:
+Setting up GPT-CodeApp is as easy as 1, 2, 3! Our application consists of a frontend and a backend, both of which need to be set up separately. 
 
-### Backend Setup
+Jump straight into action with these simple setup steps for both the frontend and backend. Let's get the engines running!
 
-The backend is a Python application that uses FastAPI. Here's how to set it up:
+### Backend: The Brain 🧠
 
-
-1. Navigate to the backend directory:
-
+1. **Enter the Backend Lair:**
     ```bash
     cd backend
     ```
-
-2. Install the necessary Python dependencies. We recommend doing this in a virtual environment:
-
-
+2. **Summon the Python Dependencies:**
     ```bash
     python3 -m venv env
     source env/bin/activate
     pip install -r requirements.txt
     ```
-
-3. Start the backend server:
-
+3. **Awaken the Backend Beast:**
     ```bash
     uvicorn main:app --reload
     ```
 
-The backend server will start running at `http://localhost:8000`.
+### Frontend: The Face 😎
 
-### Frontend Setup
-
-The frontend is a React application that uses Next.js. To set it up, follow these steps:
-
-1. Navigate to the frontend directory:
-
+1. **Dive into the Frontend Fortress:**
     ```bash
     cd frontend
     ```
-
-2. Install the necessary JavaScript dependencies:
-
+2. **Gather the JavaScript Warriors:**
     ```bash
     npm install
     ```
-
-3. Start the frontend server:
-
+3. **Launch the Visual Vanguard:**
     ```bash
     npm run dev
     ```
@@ -121,82 +92,15 @@ OpenAI uses environment variables for authentication. Follow these steps to set 
 Now you're ready to start using the GPT-CodeApp with Anthropic and OpenAI models!
 
 ## 🎮 Usage
+Dive into the GPT-CodeApp experience with these simple steps:
 
-Now that you've set everything up, you're ready to start using GPT-CodeApp! Open `http://localhost:3000` in your web browser and start exploring. 
+- **Step 1:** Launch your browser and head over to `http://localhost:3000` to greet your new AI coding companion.
 
-Using GPT-CodeApp is as simple as chatting with an AI. Here's how to get started:
+- **Step 3:** Ensure you've setup authentication with either OpenAI (API KEY) or Bedrock (for Anthropic models). With authentication out of the way, you're ready to roll! Look for the sidebar on the main interface. Here, you'll find a spot to input the **full path** to the directory of your project. This is crucial for GPT-CodeApp to understand the context of your work and provide tailored assistance.
+- **Step 4:** Now, it's time to ask away! Load *focus* files into the search bar at the top. Make sure to send them to the backend with the send button. Type your coding queries or dilemmas into the text box and hit submit. GPT-CodeApp will churn through its AI brain to bring you crisp, accurate coding advice or solutions.
+- **Step 5:** Explore the responses, refine your questions for deeper insights, or kick off a new query. The AI is here to assist you through thick and thin code.
+- **Step 6:** Base prompts can be found in the backend/agent/agent_prompts.py file and set to load in the app_setup.py. You can also add your own prompts to the file anytime. 
 
- * Open http://localhost:3000 in your web browser to access the GPT-CodeApp interface.
- * Open the sidebar on the left side of the interface. This is where you'll input the directory of your coding project.
- * Enter the directory of your coding project in the sidebar. This will allow the GPT-CodeApp to access your project files.
-
-Start interacting with the GPT-CodeApp just like you would with ChatGPT. You can ask questions, request code snippets, and more. One of the biggest advantages of GPT-CodeApp is the ability to use the search functionality to locate and add files directly to the system prompt. This is a powerful feature that allows you to quickly and easily reference specific parts of your codebase.
-
-
-Recently, we've also began experiemnting with some cool features like On-Demand Agent Functions that can be called on demand from the user interface (OpenAI Only). They perform specific tasks based on your input and can greatly enhance the functionality and interactivity of the application. To call an On-Demand Agent function, simply prepend the command with a "/".
-
-### On-Demand Agent Function (OpenAI Only)
-This feature is currently being revamped. Stay tuned for exciting updates!
-
-On-Demand Agent functions are special functions that can be called on demand from the user interface differing from typical OpenAI functions in that we're forcing the function call instead of relying on the LLM to recognize when to call the function. They are designed to perform specific tasks based on user input and can greatly enhance the functionality and interactivity of the application. To call an On-Demand Agent function, you simply prepend the command with a "/".
-
-Current On-Demand Agent Functions
-
- - Changes
-   - Edits a file from the repository given a set of instructions. The memory of the conversation is included so you do not need
-   to be overly specific in your instructions. See example below.
-- CommandPlanner
-   - Allows the agent to run a sequence of bash operations in a plan and execute paradigm.
-
-#### Example
-
-Call Agent Function - changes.py needs to be loaded into context
-
-```
-/Changes add docstring to the match_partial function
-```
-
-Function Call response are streamed back into the UI
-
-```json
-{
-  "file_name": "backend/agent/agent_functions/changes.py",
-  "thought": "The user wants to add a docstring to the match_partial function. Docstrings are important for code readability and maintainability, as they explain the purpose of a function, its arguments, and its return value.",
-  "changes": [
-    {
-      "original": "def match_partial(\n        self, original_lines: List[str], partial_lines: List[str]\n    ) -> Tuple[Optional[int], Optional[int], Optional[int]]:",
-      "updated": "def match_partial(\n        self, original_lines: List[str], partial_lines: List[str]\n    ) -> Tuple[Optional[int], Optional[int], Optional[int]]:\n    \"\"\"\n    This function matches a part of the original code with a given part.\n\n    Args:\n        original_lines (List[str]): The original lines of code.\n        partial_lines (List[str]): The lines of code that need to be matched.\n\n    Returns:\n        Tuple[Optional[int], Optional[int], Optional[int]]: The start and end indices of the match in the original code and the number of leading spaces in the matched part.\n    \"\"\""
-    }
-  ]
-}
-```
-
-Then the Agent also responds in the UI with the final diff of changes that were made
-
-```diff
---- a
-
-+++ b
-
-@@ -236,2 +236,12 @@
-
--        self, original_lines: List[str], partial_lines: List[str]
--    ) -> Tuple[Optional[int], Optional[int], Optional[int]]:
-+            self, original_lines: List[str], partial_lines: List[str]
-+        ) -> Tuple[Optional[int], Optional[int], Optional[int]]:
-+        """
-+        This function matches a part of the original code with a given part.
-+    
-+        Args:
-+            original_lines (List[str]): The original lines of code.
-+            partial_lines (List[str]): The lines of code that need to be matched.
-+    
-+        Returns:
-+            Tuple[Optional[int], Optional[int], Optional[int]]: The start and end indices of the match in the original code and the number of leading spaces in the matched part.
-+        """
-```
-
-The changes were automatically saved and can always be un-done with `cntrl + z`
 
 ## 🤝 Contributing
 

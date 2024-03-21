@@ -6,7 +6,6 @@ import tiktoken
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
 
-# new comment
 class MyCodebase:
     UPDATE_FULL = False
 
@@ -27,6 +26,16 @@ class MyCodebase:
         self.remove_old_files()
 
     def set_directory(self, directory: str) -> None:
+        """
+        Sets the root directory to scan for code.
+
+        This updates the 'directory' value in the config table of the database,
+        and triggers a re-scan of all files and embeddings. It also removes any old files that
+        are no longer in the directory.
+
+        Args:
+        directory (str): The path to the new root directory to scan.
+        """
         print(f"Setting directory to {directory}")
         self.directory = directory
         self.cur.execute(
