@@ -319,6 +319,7 @@ class CodingAgent:
         if self.GPT_MODEL == "anthropic":
             print("Calling anthropic")
             try:
+                print(self.generate_anthropic_prompt())
                 sm_client = boto3.client("bedrock-runtime", region_name="us-west-2")
                 resp = sm_client.invoke_model_with_response_stream(
                     accept="*/*",
@@ -327,7 +328,7 @@ class CodingAgent:
                     body=json.dumps(
                         {
                             "messages": kwargs["messages"][1:],
-                            "system": self.generate_anthropic_prompt(sys_only=True),
+                            "system": self.generate_anthropic_prompt(),
                             "max_tokens": max(kwargs["max_tokens"], 2000),
                             "temperature": kwargs["temperature"],
                             "anthropic_version": "bedrock-2023-05-31",
@@ -350,7 +351,6 @@ class CodingAgent:
                     chunk = next(iter((resp["body"])))
                     bytes_to_send = chunk["chunk"]["bytes"]
                     decoded_str = json.loads(bytes_to_send.decode("utf-8"))
-                    print(decoded_str)
                     event_type = decoded_str["type"]
                     if event_type == "message_stop":
                         yield {
@@ -374,9 +374,7 @@ class CodingAgent:
                     print("UnboundLocalError")
                     break
 
-    def generate_anthropic_prompt(
-        self, include_messages: Optional[bool] = True, sys_only: Optional[bool] = None
-    ) -> str:
+    def generate_anthropic_prompt(self) -> str:
         """
         Generates a prompt for the Gaive model.
 
@@ -386,33 +384,13 @@ class CodingAgent:
         Returns:
             str: The generated prompt.
         """
+        
+        self.memory_manager.prompt_handler.set_files_in_prompt(anth=True)
 
-        conversation_history = "The following is a portion of your conversation history with the human, truncated to save token space, inside the <conversation-history> XML tags.\n\n<conversation-history>\n"
-        messages = self.memory_manager.get_messages()
-
-        if len(messages) > 1:
-            # Extract the last User messages
-            last_user_message = (
-                "Human: "
-                + [
-                    message["content"]
-                    for message in messages
-                    if message["role"] == "user"
-                ][-1]
-            )
-        else:
-            last_user_message = ""
-
-        for idx, message in enumerate(messages):
-            if message["role"].lower() == "user":
-                conversation_history += f"Human: {message['content']}\n\n"
-            if message["role"].lower() == "assistant":
-                conversation_history += f"Assistant: {message['content']}\n\n"
-        conversation_history += "\n</conversation-history>\n\n"
 
         if self.memory_manager.prompt_handler.system_file_contents:
             file_context = (
-                "The human as loadedd the following files into context to help give you background related to the most recent request. They are contained in the <file-contents> XML Tags.\n\n<file-contents>\n"
+                "The human as loadedd the following files into context to help give you background related to the most recent request. They are contained in the <file-contents> XML Tags.\n<file-contents>\n"
                 + self.memory_manager.prompt_handler.system_file_contents
                 + "\n</file-contents>\n\n"
             )
@@ -427,27 +405,11 @@ class CodingAgent:
         else:
             tree = ""
 
-        if include_messages:
-            sys_prompt = (
-                self.memory_manager.identity
-                + conversation_history
-                + tree
-                + file_context
-            )
 
-        else:
-            sys_prompt = self.memory_manager.identity + "\n\n" + tree + file_context
+        sys_prompt = tree + file_context + self.memory_manager.identity
 
-        if sys_only:
-            return sys_prompt
-
-        return (
-            "\n\nHuman: The folllowing is your system prompt: "
-            + sys_prompt
-            + "\n\nAssistant: Understood\n\n"
-            + last_user_message
-            + "\n\nAssistant:"
-        )
+        
+        return sys_prompt
         # return sys_prompt + "\n\n" + last_user_message + "\n\nAssistant: "
 
     @staticmethod

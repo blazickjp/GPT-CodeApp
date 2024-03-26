@@ -62,7 +62,7 @@ async def system_prompt():
         return {"system_prompt": AGENT.memory_manager.prompt_handler.system}
     elif AGENT.GPT_MODEL == "anthropic":
         return {
-            "system_prompt": AGENT.generate_anthropic_prompt(include_messages=False)
+            "system_prompt": AGENT.generate_anthropic_prompt()
         }
 
 

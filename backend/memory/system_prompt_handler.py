@@ -118,8 +118,8 @@ class SystemPromptHandler:
             out.update({os.path.relpath(file_name, self.directory): text})
         return out
 
-    def set_files_in_prompt(self, include_line_numbers: Optional[bool] = None) -> None:
-        """
+    def set_files_in_prompt(self, anth: Optional[bool] = False, include_line_numbers: Optional[bool] = None) -> None:
+        """s
         Sets the files in the prompt.
 
         Args:
@@ -131,11 +131,12 @@ class SystemPromptHandler:
         for k, v in file_contents.items():
             if k in self.files_in_prompt and include_line_numbers:
                 v = self._add_line_numbers_to_content(v)
-                content += f"{k}:\n{v}\n\n"
+                content += f"<{k}>\n{v}\n</{k}>\n\n" if anth else f"{k}:\n{v}\n\n"
             elif k in self.files_in_prompt:
-                content += f"{k}:\n{v}\n\n"
+                content += f"<{k}>\n{v}\n</{k}>\n\n" if anth else f"{k}:\n{v}\n\n"
 
         self.system_file_contents = content
+        print(f"File Contents: {k}" for k, v in file_contents)
         self.set_system()
         return
 
