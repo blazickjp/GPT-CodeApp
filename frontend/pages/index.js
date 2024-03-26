@@ -119,7 +119,6 @@ const Chat = () => {
           <FiMenu className="ml-2" />
         </button>
         <h1 className="text-4xl text-center text-dark-secondary px-5 ">CodeKnot</h1>
-        {/* <img src="/codeknot.png" className="bg-transparent" height={100} width={100} /> */}
         <button onClick={() => dispatch(toggleSidebar())} className="float-right">
           <FiMenu className="mr-2" />
         </button>

@@ -28,13 +28,6 @@ export const messageSlice = createSlice({
                 lastMessage.text = lastMessage.text + action.payload.text;
                 state[state.length - 1] = lastMessage;
             }
-            console.log(state);
-            // setMessages(prevMessages => {
-            //   // console.log(prevMessages);
-            //   const lastMessage = { ...prevMessages[prevMessages.length - 1] };
-            //   lastMessage.text = lastMessage.text + content;
-            //   return [...prevMessages.slice(0, prevMessages.length - 1), lastMessage];
-            // })
         },
     },
     extraReducers: (builder) => {
