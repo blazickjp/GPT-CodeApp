@@ -50,8 +50,13 @@ async def message_streaming(
             if content is not None:
                 accumulated_messages[id] += content
                 yield json.dumps({"id": id, "content": content}) + "@@"
-        AGENT.memory_manager.add_message("assistant", accumulated_messages[id])
-        background_tasks.add_task(AGENT.memory_manager.update_context)
+        AGENT.memory_manager.add_message(
+            "assistant",
+            accumulated_messages[id],
+            system_prompt=AGENT.memory_manager.prompt_handler.system,
+        )
+        # Experimental feature to update the context after each message
+        # background_tasks.add_task(AGENT.memory_manager.update_context)
 
     return StreamingResponse(stream(), media_type="text/event-stream")
 
@@ -61,9 +66,7 @@ async def system_prompt():
     if AGENT.GPT_MODEL.startswith("gpt"):
         return {"system_prompt": AGENT.memory_manager.prompt_handler.system}
     elif AGENT.GPT_MODEL == "anthropic":
-        return {
-            "system_prompt": AGENT.generate_anthropic_prompt()
-        }
+        return {"system_prompt": AGENT.generate_anthropic_prompt()}
 
 
 @app.post("/update_system")
