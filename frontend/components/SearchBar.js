@@ -94,7 +94,6 @@ const SearchBar = ({ addFileToContext }) => {
                         file_token_count: file.file_token_count,
                         summary_token_count: file.summary_token_count
                     }]);
-                    sendFiles();
                     setRefreshStatus('success');
                     setTimeout(() => setRefreshStatus(null), timetout);  // Reset status after 2 seconds
 
@@ -109,8 +108,8 @@ const SearchBar = ({ addFileToContext }) => {
 
     // This was taking too long everytime you make a change and need to refresh to UI
     useEffect(() => {
-        fetchSearchData();
         fetchFilesInContext();
+        sendFiles();
     }, []);
 
 

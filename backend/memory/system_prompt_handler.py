@@ -1,113 +1,88 @@
-"""
-This module contains classes and methods for handling system prompts and logging relevant information within the backend memory system. It includes a `RelevantLogHandler` class for managing logs relevant to the system's operation, focusing on error logs, and a `SystemPromptHandler` class for managing system prompts, including CRUD operations on system prompts stored in a database. These components are essential for maintaining a responsive and informed system environment, aiding in debugging and user interaction management.
-"""
-
-from typing import Optional, Dict
+from typing import Optional, Dict, List, Any, Tuple
 import os
 import logging
-import datetime
+import subprocess
+import sqlite3
 
-
-class RelevantLogHandler:
-    def __init__(self, capacity=50):
-        self.capacity = capacity
-        self.relevant_logs = []
-        self.log_file = os.path.join(os.getcwd(), "logs", "backend.log")
-
-    def read(self):
-        print(self.log_file)
-        with open(self.log_file) as f:
-            # Seek to end of file
-            f.seek(0, os.SEEK_END - self.capacity)
-
-            # Read last capacity lines
-            for line in f.readlines():
-                if self.is_relevant(line):
-                    self.relevant_logs.append(line)
-
-    def is_relevant(self, log_line):
-        # Filter logic to check if log line is relevant
-        if "ERROR" in log_line:
-            return True
-        else:
-            return False
-
-    def get_relevant_logs(self):
-        # self.read()
-        print(self.relevant_logs)
-        return self.relevant_logs
-
-
-relevant_logger = RelevantLogHandler()
+logger = logging.getLogger(__name__)
 
 
 class SystemPromptHandler:
-    def __init__(self, db_connection, identity=None, tree=None, working_context=None):
+    def __init__(
+        self,
+        db_connection: sqlite3.Connection,
+        identity: Optional[str] = None,
+        tree: Optional[str] = None,
+        working_context: Optional[str] = None,
+    ):
+        """
+        Initialize the SystemPromptHandler with a database connection and optional identity, tree, and working context.
+
+        Args:
+            db_connection (sqlite3.Connection): The database connection.
+            identity (Optional[str], optional): The identity of the system. Defaults to None.
+            tree (Optional[str], optional): The directory tree. Defaults to None.
+            working_context (Optional[str], optional): The working context. Defaults to None.
+        """
         self.conn = db_connection
         self.cur = self.conn.cursor()
         self.system_file_summaries = None
         self.system_file_contents = None
-        # self.identity = "You are an AI Pair Programmer and a world class python developer helping the Human work on a project."
         self.identity = identity
-        self.system_table_name = "default_system_prompt"
-        self.files_in_prompt = None
+        self.files_in_prompt = []
         self.system = self.identity
         self.tree = tree
-        self.working_context = working_context
         self.create_tables()
         self.directory = self.get_directory()
-        self.relevant_log_handler = relevant_logger
 
     def get_directory(self) -> str:
-        self.cur.execute(
-            """
-            SELECT value FROM config WHERE field = 'directory';
-            """
-        )
+        """Retrieve the project directory from the configuration.
+
+        Returns:
+            str: The project directory.
+        """
+        self.cur.execute("SELECT value FROM config WHERE field = 'directory';")
         result = self.cur.fetchone()
         return result[0] if result else None
 
-    def set_system(self, input: dict = {}) -> None:
-        """Set the system message."""
+    def set_system(self, input: Dict[str, Any] = {}) -> bool:
+        """
+        Set the system message and optionally attach a diff from the main branch.
+
+        Args:
+            input (Dict[str, Any], optional): A dictionary containing the 'system_prompt' key with a new system message. Defaults to {}.
+
+        Returns:
+            bool: True if the operation was successful, False otherwise.
+        """
         self.directory = self.get_directory()
-        # print(input)
-        if input.get("system_prompt") is not None:
-            self.system = input.get("system_prompt")
+        if "system_prompt" in input:
+            self.system = input["system_prompt"]
         else:
             self.system = (
                 self.identity
-                + "\n\n"  # noqa 503
-                + "The following information is intended to aid in your responses to the User\n\n"  # noqa 503
-                + "The project directory is setup as follows:\n"  # noqa 503
+                + "\n\n"
+                + "The following information is intended to aid in your responses to the User\n\n"
+                + "The project directory is setup as follows:\n"
             )
-            self.system = self.system + self.tree + "\n\n" if self.tree else ""
-
+            self.system += self.tree + "\n\n" if self.tree else ""
             if self.system_file_contents:
                 self.system += (
                     "Related File Contents:\n" + self.system_file_contents + "\n\n"
                 )
-            if self.working_context.get_context():
-                self.system += (
-                    "Short-Term Memory:\n" + self.working_context.get_context() + "\n\n"
-                )
-            else:
-                print("No working context")
 
-            if self.relevant_log_handler:
-                relevant_logs = self.relevant_log_handler.get_relevant_logs()
-                if len(relevant_logs) > 0:
-                    self.system += (
-                        "Relevant Logs:\n" + "\n".join(relevant_logs) + "\n\n"
-                    )  # noqa 503
-                    print(relevant_logs)
-            else:
-                logging.warning("No relevant logs")
+        # Attach a diff from the main branch to the system prompt if applicable.
+        diff = self.generate_diff_from_main()
+        # logging.warning("****\n\nDiff from main branch:\n\n", diff)
+        if diff.stdout:
+            self.system += "\n\nDiff from main branch:\n" + str(diff.stdout) + "\n\n"
 
-        self.cur.execute(f"DELETE FROM {self.system_table_name}")
+        self.cur.execute("DELETE FROM system_prompt")
         self.cur.execute(
-            f"INSERT INTO {self.system_table_name} (role, content) VALUES (?, ?)",
+            "INSERT INTO system_prompt (role, content) VALUES (?, ?)",
             ("system", self.system),
         )
+        self.conn.commit()
         return True
 
     def get_file_contents(self) -> Dict[str, str]:
@@ -118,7 +93,9 @@ class SystemPromptHandler:
             out.update({os.path.relpath(file_name, self.directory): text})
         return out
 
-    def set_files_in_prompt(self, anth: Optional[bool] = False, include_line_numbers: Optional[bool] = None) -> None:
+    def set_files_in_prompt(
+        self, anth: Optional[bool] = False, include_line_numbers: Optional[bool] = None
+    ) -> None:
         """s
         Sets the files in the prompt.
 
@@ -142,21 +119,20 @@ class SystemPromptHandler:
 
     def _add_line_numbers_to_content(self, content: str) -> str:
         """
-        Adds line numbers to the given content.
+        Add line numbers to the content of a file.
 
         Args:
-            content (str): The content to add line numbers to.
+            content (str): The content of the file.
 
         Returns:
-            str: The content with line numbers added.
+            str: The content of the file with line numbers added.
         """
-        lines = content.split("\n")
-        for i in range(len(lines)):
-            lines[i] = f"{i + 1} {lines[i]}"
-        return "\n".join(lines)
+        return "\n".join(
+            f"{i + 1} {line}" for i, line in enumerate(content.split("\n"))
+        )
 
-    def create_tables(self):
-        """Create a table for system prompts if it doesn't exist."""
+    def create_tables(self) -> None:
+        """Create tables for system prompts if they don't exist."""
         try:
             self.cur.execute(
                 """
@@ -171,86 +147,136 @@ class SystemPromptHandler:
             self.conn.commit()
 
             self.cur.execute(
-                f"""
-                    CREATE TABLE IF NOT EXISTS {self.system_table_name}
-                    (
-                        role VARCHAR(100),
-                        content TEXT
-                    );
-                    """
+                """
+                CREATE TABLE IF NOT EXISTS system_prompt (
+                    role TEXT PRIMARY KEY,
+                    content TEXT NOT NULL
+                );
+            """
             )
             self.conn.commit()
         except Exception as e:
-            print(e)
-            print("Failed to create table.")
-            raise e
+            logger.error(f"Failed to create table: {e}")
+            logger.error(f"{e.traceback}")
+            raise
 
-    def create_prompt(self, prompt_id, prompt):
-        """Create a new system prompt."""
+    def generate_diff_from_main(self) -> subprocess.CompletedProcess:
+        """
+        Generate a diff from the main branch.
+
+        Returns:
+            subprocess.CompletedProcess: The result of the git diff command.
+        """
+        repo_path = self.directory  # Assuming the directory is the repo path
+        command = ["git", "-C", repo_path, "diff", "release..main"]
+        return subprocess.run(
+            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        )
+
+    def list_prompts(self) -> List[Dict[str, Any]]:
+        """
+        List all system prompts.
+
+        Returns:
+            List[Dict[str, Any]]: A list of dictionaries, each containing the details of a system prompt.
+        """
+        self.cur.execute("SELECT * FROM system_prompts")
+        return [
+            {
+                "id": prompt[0],
+                "name": prompt[0],
+                "prompt": prompt[1],
+                "created_at": prompt[2],
+                "updated_at": prompt[3],
+            }
+            for prompt in self.cur.fetchall()
+        ]
+
+    def update_prompt(self, prompt_id: str, new_prompt: str) -> bool:
+        """
+        Update a system prompt by its ID.
+
+        Args:
+            prompt_id (str): The ID of the prompt to update.
+            new_prompt (str): The new prompt text.
+
+        Returns:
+            bool: True if the update was successful, False otherwise.
+        """
         try:
             self.cur.execute(
-                """
-            INSERT INTO system_prompts (id, prompt) VALUES (?, ?)
-            """,
-                (prompt_id, prompt),
+                "UPDATE system_prompts SET prompt = ? WHERE id = ?",
+                (new_prompt, prompt_id),
             )
             self.conn.commit()
+            return True
         except Exception as e:
-            print(e)
-            print(f"Prompt '{prompt}' with ID '{prompt_id}' already exists.")
-        return
+            logger.error(f"Failed to update prompt: {e}")
+            return False
 
-    def read_prompt(self, prompt_id):
-        """Read a system prompt by ID."""
-        self.cur.execute(
-            """
-            SELECT * FROM system_prompts WHERE id = ?
-            """,
-            (prompt_id,),
-        )
-        return self.cur.fetchone()
+    def delete_prompt(self, prompt_id: str) -> bool:
+        """
+        Delete a system prompt by its ID.
 
-    def update_prompt(self, prompt_id, new_prompt):
-        """Update a system prompt by ID."""
-        self.cur.execute(
-            """
-            UPDATE system_prompts
-            SET prompt = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-            """,
-            (new_prompt, prompt_id),
-        )
-        self.conn.commit()
-        return
+        Args:
+            prompt_id (str): The ID of the prompt to delete.
 
-    def delete_prompt(self, prompt_id):
-        """Delete a system prompt by ID."""
-        if not prompt_id:
+        Returns:
+            bool: True if the deletion was successful, False otherwise.
+        """
+        try:
             self.cur.execute(
-                """
-                DELETE FROM system_prompts
-                WHERE id is null;
-                """
-            )
-        else:
-            self.cur.execute(
-                """
-                DELETE FROM system_prompts WHERE id = ?
-                """,
+                "DELETE FROM system_prompts WHERE id = ?",
                 (prompt_id,),
             )
+            self.conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete prompt: {e}")
+            return False
 
-        self.conn.commit()
+    def read_prompt(self, prompt_id: str) -> bool:
+        """
+        Read a system prompt by its ID.
 
-    def list_prompts(self):
-        """List all system prompts."""
-        self.cur.execute(
-            """
-            SELECT * FROM system_prompts
-            """
-        )
-        output = []
-        for prompt in self.cur.fetchall():
-            output.append({"name": prompt[0], "prompt": prompt[1]})
+        Args:
+            prompt_id (str): The ID of the prompt to read.
 
-        return output
+        Returns:
+            Optional[str]: The prompt text if it exists, None otherwise.
+        """
+        try:
+            self.cur.execute(
+                "SELECT prompt FROM system_prompts WHERE id = ?", (prompt_id,)
+            )
+            result = self.cur.fetchone()
+            return result[0] if result else None
+        except Exception as e:
+            logger.error(f"Failed to read prompt: {e}")
+            return None
+
+    def create_prompt(self, prompt: str) -> bool:
+        """
+        Create a new system prompt.
+
+        Args:
+            prompt (str): The prompt text.
+
+        Returns:
+            bool: True if the creation was successful, False otherwise.
+        """
+        try:
+            self.cur.execute(
+                "INSERT INTO system_prompts (prompt) VALUES (?)",
+                (prompt,),
+            )
+            self.conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to create prompt: {e}")
+            return False
+
+
+# Example usage:
+# handler = SystemPromptHandler(db_connection)
+# handler.set_system()

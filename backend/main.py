@@ -7,9 +7,12 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from app_setup import setup_app, app
 from agent.agent_functions.file_ops import _OP_LIST
 import traceback
+import logging
 
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 AGENT, CODEBASE = setup_app()
+
+logger = logging.getLogger("logger")
 
 
 @app.on_event("startup")
@@ -50,8 +53,13 @@ async def message_streaming(
             if content is not None:
                 accumulated_messages[id] += content
                 yield json.dumps({"id": id, "content": content}) + "@@"
-        AGENT.memory_manager.add_message("assistant", accumulated_messages[id])
-        background_tasks.add_task(AGENT.memory_manager.update_context)
+        AGENT.memory_manager.add_message(
+            "assistant",
+            accumulated_messages[id],
+            system_prompt=AGENT.memory_manager.prompt_handler.system,
+        )
+        # Experimental feature to update the context after each message
+        # background_tasks.add_task(AGENT.memory_manager.update_context)
 
     return StreamingResponse(stream(), media_type="text/event-stream")
 
@@ -61,9 +69,7 @@ async def system_prompt():
     if AGENT.GPT_MODEL.startswith("gpt"):
         return {"system_prompt": AGENT.memory_manager.prompt_handler.system}
     elif AGENT.GPT_MODEL == "anthropic":
-        return {
-            "system_prompt": AGENT.generate_anthropic_prompt()
-        }
+        return {"system_prompt": AGENT.generate_anthropic_prompt()}
 
 
 @app.post("/update_system")
@@ -157,7 +163,6 @@ async def set_files_in_prompt(input: dict):
     )
     AGENT.memory_manager.prompt_handler.files_in_prompt = files
     AGENT.memory_manager.prompt_handler.set_files_in_prompt()
-    AGENT.memory_manager.prompt_handler.set_system()
     return JSONResponse(status_code=200, content={})
 
 
@@ -266,7 +271,7 @@ async def get_directory():
 @app.get("/get_home")
 async def get_home():
     home_directory = os.path.expanduser("~")
-    print("home_directory", home_directory)
+    logging.info("home_directory", home_directory)
     return {"home_directory": home_directory}
 
 
@@ -338,3 +343,31 @@ def get_error_logs():
         error_logs = [line for line in log_lines if "INFO" in line]
 
     return JSONResponse(status_code=200, content={"error_logs": error_logs})
+
+
+@app.post("/set_temperature")
+async def set_temperature(input: dict):
+    """Sets the temperature value for the system.
+
+    This endpoint accepts a JSON input with a key "temperature", which should contain the temperature value.
+    The temperature value is then stored and used by the system as needed.
+
+    Args:
+        input (dict): A dictionary containing the "temperature" key with a temperature value as its value.
+
+    Returns:
+        JSONResponse: A response with a 200 status code on success, or an error message on failure.
+    """
+    temperature = input.get("temperature")
+    if temperature is not None:
+        # Here you would implement the logic to store and use the temperature value as needed.
+        # For demonstration, let's just print it.
+        AGENT.temperature = temperature
+        print(f"Setting system temperature to: {temperature}")
+        return JSONResponse(
+            status_code=200, content={"message": "Temperature set successfully"}
+        )
+    else:
+        return JSONResponse(
+            status_code=400, content={"error": "No temperature was provided"}
+        )

@@ -137,6 +137,26 @@ const DirectorySelectOption = () => {
 
     }
 
+    // Function to update temperature setting via API
+    const updateTemperatureSetting = async (newTemperature) => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/set_temperature`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ temperature: newTemperature }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update temperature setting');
+            }
+
+            console.log('Temperature setting updated successfully');
+        } catch (error) {
+            console.error('Error updating temperature setting:', error);
+        }
+    };
 
     return (
         <div className='overflow-x-scroll relative'>
@@ -181,7 +201,11 @@ const DirectorySelectOption = () => {
                         max={2}
                         step={0.1}
                         value={temperature}
-                        onChange={(e) => setTemperature(e.target.value)}
+                        onChange={(e) => {
+                            const newTemp = parseFloat(e.target.value);
+                            setTemperature(newTemp);
+                            updateTemperatureSetting(newTemp);
+                        }}
                     />
                     {showTooltip && (
                         <div

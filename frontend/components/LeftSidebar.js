@@ -22,6 +22,7 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
             }
             const data = await response.json();
             setPrompts(data.prompts);
+            console.log(data.prompts);
         } catch (error) {
             console.error('Error fetching prompts', error);
         }
@@ -118,7 +119,7 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
                                                 saving[prompt.id] === 'error' ? 'text-red-500' :
                                                     'text-green-400'}`} />
                                 </button>
-                                <button onClick={() => handleDeletePrompt(prompt.name)}>
+                                <button onClick={() => handleDeletePrompt(prompt.id)}>
                                     <FaTrash className=' text-red-400' />
                                 </button>
                             </div>

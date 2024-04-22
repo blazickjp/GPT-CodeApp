@@ -10,7 +10,6 @@ import { FaClipboardCheck } from 'react-icons/fa';
 const CodeBlock = React.memo(({ node, inline, className, children }) => {
     const match = /language-(\w+)/.exec(className || '');
     const lang = match && match[1] ? match[1] : '';
-
     return !inline && match ? (
         <div className='relative bg-zinc-800 my-4 rounded overflow-x-scroll'>
             <p className='text-sm flex pt-2 pl-2'>{lang}</p>
@@ -30,6 +29,7 @@ const CodeBlock = React.memo(({ node, inline, className, children }) => {
         <code className=" text-amber-500 ">{children}</code>
     );
 });
+CodeBlock.displayName = 'CodeBlock';
 
 // const renderers = {
 //     listItem: (props) => {
