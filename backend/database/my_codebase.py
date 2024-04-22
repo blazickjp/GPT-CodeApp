@@ -148,7 +148,6 @@ class MyCodebase:
         """
         tree = {}
         start_from = os.path.basename(self.directory)
-        print("Start from: ", start_from)
 
         # Fetch file paths from the database
         self.cur.execute("SELECT file_path, summary FROM files")

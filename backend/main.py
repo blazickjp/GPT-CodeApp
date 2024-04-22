@@ -7,9 +7,12 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from app_setup import setup_app, app
 from agent.agent_functions.file_ops import _OP_LIST
 import traceback
+import logging
 
 ENCODER = tiktoken.encoding_for_model("gpt-3.5-turbo")
 AGENT, CODEBASE = setup_app()
+
+logger = logging.getLogger("logger")
 
 
 @app.on_event("startup")
@@ -160,7 +163,6 @@ async def set_files_in_prompt(input: dict):
     )
     AGENT.memory_manager.prompt_handler.files_in_prompt = files
     AGENT.memory_manager.prompt_handler.set_files_in_prompt()
-    AGENT.memory_manager.prompt_handler.set_system()
     return JSONResponse(status_code=200, content={})
 
 
@@ -269,7 +271,7 @@ async def get_directory():
 @app.get("/get_home")
 async def get_home():
     home_directory = os.path.expanduser("~")
-    print("home_directory", home_directory)
+    logging.info("home_directory", home_directory)
     return {"home_directory": home_directory}
 
 

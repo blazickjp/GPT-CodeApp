@@ -1,4 +1,4 @@
-from typing import Optional, Dict, List, Any
+from typing import Optional, Dict, List, Any, Tuple
 import os
 import logging
 import subprocess
@@ -88,50 +88,36 @@ class SystemPromptHandler:
         return True
 
     def get_file_contents(self) -> Dict[str, str]:
-        """Fetch file contents from the database and return a dictionary.
-
-        Returns:
-            Dict[str, str]: A dictionary mapping file paths to their contents.
-        """
         self.cur.execute("SELECT file_path, text FROM files")
         results = self.cur.fetchall()
-        # Filter results before dictionary comprehension
-        filtered_results = [
-            (file_name, text)
-            for file_name, text in results
-            if file_name in self.files_in_prompt
-        ]
-        return {
-            os.path.relpath(file_name, self.directory): text
-            for file_name, text in filtered_results
-        }
+        out = {}
+        for file_name, text in results:
+            out.update({os.path.relpath(file_name, self.directory): text})
+        return out
 
     def set_files_in_prompt(
         self, anth: Optional[bool] = False, include_line_numbers: Optional[bool] = None
     ) -> None:
-        """
-        Set which files should be included in the system prompt, with options to annotate and include line numbers.
+        """s
+        Sets the files in the prompt.
 
         Args:
-            anth (Optional[bool]): Whether to annotate the files with tags. Defaults to False.
-            include_line_numbers (Optional[bool]): Whether to include line numbers in the file contents. Defaults to None.
+            files (List[File]): A list of files to be set in the prompt.
+            include_line_numbers (Optional[bool]): Whether to include line numbers in the prompt.
         """
         file_contents = self.get_file_contents()
         content = ""
         for k, v in file_contents.items():
-            sanitized_k = k.replace("<", "&lt;").replace(
-                ">", "&gt;"
-            )  # Sanitize k to be a valid tag
             if k in self.files_in_prompt and include_line_numbers:
                 v = self._add_line_numbers_to_content(v)
-            content += (
-                f"<{sanitized_k}>\n{v}\n</{sanitized_k}>\n\n"
-                if anth
-                else f"{sanitized_k}:\n{v}\n\n"
-            )
+                content += f"<{k}>\n{v}\n</{k}>\n\n" if anth else f"{k}:\n{v}\n\n"
+            elif k in self.files_in_prompt:
+                content += f"<{k}>\n{v}\n</{k}>\n\n" if anth else f"{k}:\n{v}\n\n"
 
         self.system_file_contents = content
+        print(f"File Contents: {k}" for k, v in file_contents)
         self.set_system()
+        return
 
     def _add_line_numbers_to_content(self, content: str) -> str:
         """
@@ -160,17 +146,20 @@ class SystemPromptHandler:
                 )
             """
             )
+            self.conn.commit()
+
             self.cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS system_prompt (
-                    role VARCHAR(100),
-                    content TEXT
+                    role TEXT PRIMARY KEY,
+                    content TEXT NOT NULL
                 );
             """
             )
             self.conn.commit()
         except Exception as e:
             logger.error(f"Failed to create table: {e}")
+            logger.error(f"{e.traceback}")
             raise
 
     def generate_diff_from_main(self) -> subprocess.CompletedProcess:
@@ -258,9 +247,15 @@ class SystemPromptHandler:
         Returns:
             Optional[str]: The prompt text if it exists, None otherwise.
         """
-        self.cur.execute("SELECT prompt FROM system_prompts WHERE id = ?", (prompt_id,))
-        result = self.cur.fetchone()
-        return True if result else False
+        try:
+            self.cur.execute(
+                "SELECT prompt FROM system_prompts WHERE id = ?", (prompt_id,)
+            )
+            result = self.cur.fetchone()
+            return result[0] if result else None
+        except Exception as e:
+            logger.error(f"Failed to read prompt: {e}")
+            return None
 
     def create_prompt(self, prompt: str) -> bool:
         """

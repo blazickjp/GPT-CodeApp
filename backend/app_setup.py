@@ -19,7 +19,7 @@ from pydantic import BaseModel
 import logging
 
 logger = logging.getLogger("logger")
-logger.setLevel(logging.WARNING)  # Adjust to the appropriate log level
+logger.setLevel(logging.INFO)  # Adjust to the appropriate log level
 
 # Create a file handler which logs even debug messages
 if not os.path.exists("logs"):
@@ -60,14 +60,16 @@ class StreamToLogger(object):
     Fake file-like stream object that redirects writes to a logger instance.
     """
 
-    def __init__(self, logger, log_level=logging.INFO):
+    def __init__(self, logger, log_level):
         self.logger = logger
         self.log_level = log_level
-        self.linebuf = ""
+        self._is_logging = False
 
-    def write(self, buf):
-        for line in buf.rstrip().splitlines():
-            self.logger.log(self.log_level, line.rstrip())
+    def write(self, message):
+        if not self._is_logging:
+            self._is_logging = True
+            self.logger.log(self.log_level, message.rstrip())
+            self._is_logging = False
 
     def flush(self):
         pass

@@ -71,14 +71,7 @@ class MemoryManager:
         Returns:
             List[dict]: A list of dictionaries, each containing the role and content of a message.
         """
-        self.cur.execute(
-            f"""
-            SELECT role, content
-            FROM {self.system_table_name};
-            """
-        )
-        results = self.cur.fetchall()
-        messages = [{"role": result[0], "content": result[1]} for result in results]
+        messages = [{"role": "system", "content": self.prompt_handler.system}]
 
         max_tokens = 30000 if chat_box else self.max_tokens
         if chat_box:
@@ -215,11 +208,12 @@ class MemoryManager:
                     summarized_message_tokens INT,
                     project_directory TEXT,
                     is_function_call BOOLEAN DEFAULT FALSE,
-                    function_response BOOLEAN DEFAULT FALSE
+                    function_response BOOLEAN DEFAULT FALSE,
                     system_prompt TEXT DEFAULT NULL
                 );
                 """
             )
+            self.conn.commit()
         except Exception as e:
             print("Failed to create tables: ", str(e))
         return
