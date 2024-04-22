@@ -12,114 +12,9 @@ import instructor
 from instructor import OpenAISchema
 from openai import OpenAI, AsyncOpenAI
 import logging
+from memory.working_context import WorkingContext
 
 CLIENT = instructor.patch(AsyncOpenAI())
-
-
-class WorkingContext:
-    def __init__(self, db_connection, project_directory) -> None:
-        """Initializes the WorkingContext class.
-
-        Args:
-          db_connection: The database connection object.
-          project_directory: The path to the project directory.
-
-        Attributes:
-          context: The working context string.
-          conn: The database connection.
-          cur: The database cursor.
-          client: The OpenAI API client.
-          project_directory: The project directory path.
-
-        """
-        self.context = "The user is named Joe"
-        self.conn = db_connection
-        self.cur = self.conn.cursor()
-        self.client = CLIENT
-        self.project_directory = project_directory
-        self.create_tables()
-
-    def create_tables(self) -> None:
-        try:
-            self.cur.execute(
-                """
-                CREATE TABLE IF NOT EXISTS working_context
-                (
-                    context TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    project_directory TEXT
-                );
-                """
-            )
-        except Exception as e:
-            print("Failed to create tables: ", str(e))
-        return
-
-    def add_context(self, context: str) -> None:
-        self.context += "\n" + context
-
-        self.cur.execute(
-            """
-            INSERT INTO working_context
-            (context, created_at, project_directory)
-            VALUES (?, ?, ?);
-            """,
-            (context, datetime.now().isoformat(), self.project_directory),
-        )
-        self.conn.commit()
-
-    def get_context(self) -> str:
-        self.cur.execute(
-            """
-            SELECT context, created_at
-            FROM working_context
-            where project_directory = ?
-            """,
-            (self.project_directory,),
-        )
-        results = self.cur.fetchall()
-        self.context = ""
-        for result in results:
-            self.context += "\n" + result[0]
-
-        return ""
-
-    def remove_context(self, context: str) -> None:
-        self.context = self.context.replace(context, "")
-        self.cur.execute(
-            """
-            DELETE FROM working_context
-            WHERE context = ?
-            and project_directory = ?
-            """,
-            (context, self.project_directory),
-        )
-        self.conn.commit()
-
-    def __str__(self) -> str:
-        return self.context
-
-
-class ContextUpdate(BaseModel):
-    """
-    API to add information from the working context.
-    """
-
-    thought: str = Field(
-        default=...,
-        description="Always think first and document your thought process here.",
-    )
-    new_context: List[str] | None = Field(
-        default=None,
-        description="Valuable information from the conversation you want to keep in working context. ",
-    )
-
-    def execute(self, working_context: WorkingContext) -> None:
-        if self.new_context:
-            for context in self.new_context:
-                working_context.add_context(context)
-
-        return working_context
 
 
 class MemoryManager:
@@ -144,11 +39,13 @@ class MemoryManager:
         )
         self.system_file_summaries = None
         self.system_file_contents = None
-        self.conn = db_connection
+        if db_connection is not None:
+            self.conn = db_connection
+        else:
+            raise ValueError("db_connection cannot be None")
         self.cur = self.conn.cursor()
-        self.working_context = WorkingContext(
-            db_connection=db_connection, project_directory=self.project_directory
-        )
+        self.cur = self.conn.cursor()
+        self.working_context = WorkingContext()
         self.prompt_handler = SystemPromptHandler(
             db_connection=db_connection,
             tree=tree,
@@ -245,6 +142,7 @@ class MemoryManager:
         content: str,
         command: Optional[str] = None,
         function_response: Optional[str] = None,
+        system_prompt: Optional[str] = None,
     ) -> None:
         """
         Adds a message to the memory database.
@@ -262,17 +160,15 @@ class MemoryManager:
         """
         timestamp = datetime.now().isoformat()
         message_tokens = self.get_total_tokens_in_message(content)
-        summary, summary_tokens = (
-            self.summarize(content) if message_tokens > float("inf") else (None, None)
-        )
+        summary, summary_tokens = (None, None)
         is_function_call = command is not None
 
         try:
             self.cur.execute(
                 f"""
                 INSERT INTO {self.memory_table_name}
-                (interaction_index, role, content, content_tokens, summarized_message, summarized_message_tokens, project_directory, is_function_call)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+                (interaction_index, role, content, content_tokens, summarized_message, summarized_message_tokens, project_directory, is_function_call, system_prompt)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """,
                 (
                     timestamp,
@@ -283,6 +179,7 @@ class MemoryManager:
                     summary_tokens,
                     self.project_directory,
                     is_function_call,
+                    system_prompt,
                 ),
             )
             self.conn.commit()
@@ -319,59 +216,12 @@ class MemoryManager:
                     project_directory TEXT,
                     is_function_call BOOLEAN DEFAULT FALSE,
                     function_response BOOLEAN DEFAULT FALSE
+                    system_prompt TEXT DEFAULT NULL
                 );
                 """
             )
         except Exception as e:
             print("Failed to create tables: ", str(e))
-        return
-
-    async def update_context(self):
-        ctx = self.working_context.get_context()
-        print("Working Context: ", ctx)
-        prompt = f"""
-You are monitoring a conversation between an engineer and their AI Assistant.
-Your mission is to manage the working memory for the AI Assistant. 
-You do this by adding information to the working context (short-term memory) based on the conversation history.
-
-
-## Guidelines
-- Your insertions should be short, concise, and relevant to the future of the conversation.
-- Keep track of facts, ideas, and concepts that are important to the conversation.
-- Monitor the personality of the person you're speaking with and adjust your responses accordingly.
-- Keep track of things that the user appeared to like or dislike.
-- In your thoughts, justify why you are adding or removing information from the working context.
-
-You can see the current working context below.
-
-Working Context:
-{ctx}
-
-Please make any updates accordingly. Be sure the think step by step as you work.
-"""
-        messages = [
-            {"role": item["role"], "content": item["content"]}
-            for item in self.get_messages()
-        ]
-
-        for message in messages:
-            if message["role"] == "system":
-                message["content"] = prompt
-
-        print(messages)
-
-        update = await self.working_context.client.chat.completions.create(
-            model="gpt-4-1106-preview",
-            response_model=ContextUpdate,
-            messages=messages,
-        )
-
-        print(update)
-
-        self.working_context = update.execute(self.working_context)
-
-        self.prompt_handler.set_system()
-
         return
 
     def set_directory(self, directory: str) -> None:

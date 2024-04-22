@@ -341,3 +341,31 @@ def get_error_logs():
         error_logs = [line for line in log_lines if "INFO" in line]
 
     return JSONResponse(status_code=200, content={"error_logs": error_logs})
+
+
+@app.post("/set_temperature")
+async def set_temperature(input: dict):
+    """Sets the temperature value for the system.
+
+    This endpoint accepts a JSON input with a key "temperature", which should contain the temperature value.
+    The temperature value is then stored and used by the system as needed.
+
+    Args:
+        input (dict): A dictionary containing the "temperature" key with a temperature value as its value.
+
+    Returns:
+        JSONResponse: A response with a 200 status code on success, or an error message on failure.
+    """
+    temperature = input.get("temperature")
+    if temperature is not None:
+        # Here you would implement the logic to store and use the temperature value as needed.
+        # For demonstration, let's just print it.
+        AGENT.temperature = temperature
+        print(f"Setting system temperature to: {temperature}")
+        return JSONResponse(
+            status_code=200, content={"message": "Temperature set successfully"}
+        )
+    else:
+        return JSONResponse(
+            status_code=400, content={"error": "No temperature was provided"}
+        )

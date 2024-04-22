@@ -3,7 +3,12 @@ import os
 import sqlite3
 import sys
 from agent.coding_agent import CodingAgent
-from agent.agent_prompts import PROFESSOR_SYNAPSE, DEFAULT_SYSTEM_PROMPT, LSA
+from agent.agent_prompts import (
+    PROFESSOR_SYNAPSE,
+    DEFAULT_SYSTEM_PROMPT,
+    LSA,
+    DEFAULT_SYSTEM_PROMPT_V2,
+)
 from agent.agent_functions.file_ops import _OP_LIST
 from memory.memory_manager import MemoryManager
 from database.my_codebase import MyCodebase
@@ -14,7 +19,7 @@ from pydantic import BaseModel
 import logging
 
 logger = logging.getLogger("logger")
-logger.setLevel(logging.INFO)  # Adjust to the appropriate log level
+logger.setLevel(logging.WARNING)  # Adjust to the appropriate log level
 
 # Create a file handler which logs even debug messages
 if not os.path.exists("logs"):
@@ -75,7 +80,8 @@ sys.stderr = StreamToLogger(logger, logging.ERROR)
 # from agent.agent_functions.changes import Changes
 
 IGNORE_DIRS = ["node_modules", ".next", ".venv", "__pycache__", ".git"]
-FILE_EXTENSIONS = [".js", ".py", ".md", "Dockerfile", '.txt', '.ts', '.yaml']
+FILE_EXTENSIONS = [".js", ".py", ".md", "Dockerfile", ".txt", ".ts", ".yaml"]
+
 
 def create_database_connection() -> sqlite3.Connection:
     try:
@@ -129,7 +135,9 @@ def setup_codebase() -> MyCodebase:
 def setup_app() -> CodingAgent:
     print("Setting up app")
     codebase = setup_codebase()
-    memory = setup_memory_manager(tree=codebase.tree(), identity=DEFAULT_SYSTEM_PROMPT)
+    memory = setup_memory_manager(
+        tree=codebase.tree(), identity=DEFAULT_SYSTEM_PROMPT_V2
+    )
     agent = CodingAgent(
         memory_manager=memory, function_map=[_OP_LIST], codebase=codebase
     )

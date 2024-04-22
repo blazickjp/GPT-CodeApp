@@ -90,10 +90,10 @@ class CodingAgent:
 
         self.memory_manager = memory_manager
         self.function_map = function_map
-        self.GPT_MODEL = "gpt-4-0125-preview"
+        self.GPT_MODEL = "gpt-4-turbo"
         self.codebase = codebase
         self.max_tokens = 4000
-        self.temperature = 0.75
+        self.temperature = 0.2
         self.tool_choice = "auto"
         self.function_to_call = None
         self.ops_to_execute = []
@@ -300,8 +300,6 @@ class CodingAgent:
     def call_model_streaming(self, command: Optional[str] | None = None, **kwargs):
         if command:
             kwargs["prompt"] = command
-        else:
-            kwargs["prompt"] = "Please generate code based on the provided context."
 
         kwargs["stream"] = True
         kwargs["max_tokens"] = kwargs.get("max_tokens", 256)
@@ -311,7 +309,7 @@ class CodingAgent:
             raise ValueError("Model not specified in kwargs")
         print("Calling model streaming")
         print(kwargs["model"])
-        if self.GPT_MODEL.startswith("gpt"):
+        if self.GPT_MODEL.startswith("gpt") or self.GPT_MODEL is None:
             print("Calling OpenAI")
             for chunk in self.client.chat.completions.create(**kwargs):
                 yield chunk
@@ -374,6 +372,12 @@ class CodingAgent:
                     print("UnboundLocalError")
                     break
 
+        else:
+            # Default to OpenAI
+            print("Calling OpenAI")
+            for chunk in self.client.chat.completions.create(**kwargs):
+                yield chunk
+
     def generate_anthropic_prompt(self) -> str:
         """
         Generates a prompt for the Gaive model.
@@ -384,9 +388,8 @@ class CodingAgent:
         Returns:
             str: The generated prompt.
         """
-        
-        self.memory_manager.prompt_handler.set_files_in_prompt(anth=True)
 
+        self.memory_manager.prompt_handler.set_files_in_prompt(anth=True)
 
         if self.memory_manager.prompt_handler.system_file_contents:
             file_context = (
@@ -405,10 +408,8 @@ class CodingAgent:
         else:
             tree = ""
 
-
         sys_prompt = tree + file_context + self.memory_manager.identity
 
-        
         return sys_prompt
         # return sys_prompt + "\n\n" + last_user_message + "\n\nAssistant: "
 
