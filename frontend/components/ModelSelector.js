@@ -83,7 +83,7 @@ const ModelSelector = () => {
     return (
         <div className='inline-flex justify-center bg-gray-700 p-2 rounded-lg'> {/* You can adjust the color (bg-gray-800), padding (p-2), and roundness (rounded-lg) as needed */}
             <Button id="gpt-3.5-turbo-1106" icon={<GiLightningBranches className=' text-green-500 mx-2' />} text="GPT-3.5" />
-            < Button id="gpt-4-0125-preview" icon={< GiStarsStack className='text-purple-500 mx-2' />} text="GPT-4" />
+            < Button id="gpt-4-turbo" icon={< GiStarsStack className='text-purple-500 mx-2' />} text="GPT-4" />
             < Button id="anthropic" icon={< FaAmazon className='text-yellow-500 mx-2' />} text="Anth" />
         </div >
     );
