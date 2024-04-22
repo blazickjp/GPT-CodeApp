@@ -307,14 +307,13 @@ class CodingAgent:
 
         if "model" not in kwargs:
             raise ValueError("Model not specified in kwargs")
-        print("Calling model streaming")
-        print(kwargs["model"])
+
         if self.GPT_MODEL.startswith("gpt") or self.GPT_MODEL is None:
             print("Calling OpenAI")
             for chunk in self.client.chat.completions.create(**kwargs):
                 yield chunk
 
-        if self.GPT_MODEL == "anthropic":
+        elif self.GPT_MODEL == "anthropic":
             print("Calling anthropic")
             try:
                 print(self.generate_anthropic_prompt())
@@ -373,10 +372,7 @@ class CodingAgent:
                     break
 
         else:
-            # Default to OpenAI
-            print("Calling OpenAI")
-            for chunk in self.client.chat.completions.create(**kwargs):
-                yield chunk
+            print("Invalid model specified")
 
     def generate_anthropic_prompt(self) -> str:
         """

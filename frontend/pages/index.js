@@ -60,7 +60,7 @@ const Chat = () => {
       body = JSON.stringify({ input: input, command: command });
     } else {
       body = JSON.stringify({ input: input })
-    };
+    }
 
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/message_streaming`, {
       method: 'POST',
@@ -122,7 +122,7 @@ const Chat = () => {
     };
     // Call the function to fetch historical messages
     fetchHistoricalMessages();
-    fetchLogMessages();
+    // fetchLogMessages();
 
   }, []);
 

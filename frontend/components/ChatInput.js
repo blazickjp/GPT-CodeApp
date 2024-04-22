@@ -7,7 +7,7 @@ import { useSelector } from 'react-redux';
 const ChatInput = ({ onSubmit }) => {
     const [input, setInput] = useState('');
     const commands = ['/CommandPlan', '/Changes'];
-    const logMessages = useSelector(state => state.logMessages.logMessages);
+    // const logMessages = useSelector(state => state.logMessages.logMessages);
 
     const handleSubmit = (e) => {
         e.preventDefault();

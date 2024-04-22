@@ -19,7 +19,7 @@ from pydantic import BaseModel
 import logging
 
 logger = logging.getLogger("logger")
-logger.setLevel(logging.INFO)  # Adjust to the appropriate log level
+logger.setLevel(logging.WARNING)  # Adjust to the appropriate log level
 
 # Create a file handler which logs even debug messages
 if not os.path.exists("logs"):
