@@ -7,11 +7,8 @@ from typing import Optional, List
 from datetime import datetime
 from dotenv import load_dotenv
 from memory.system_prompt_handler import SystemPromptHandler
-from pydantic import BaseModel, Field
 import instructor
-from instructor import OpenAISchema
-from openai import OpenAI, AsyncOpenAI
-import logging
+from openai import AsyncOpenAI
 from memory.working_context import WorkingContext
 
 CLIENT = instructor.patch(AsyncOpenAI())

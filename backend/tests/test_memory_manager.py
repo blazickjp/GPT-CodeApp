@@ -1,8 +1,5 @@
-from typing import Iterable
 import unittest
 from unittest.mock import Mock
-from unittest.mock import MagicMock, mock_open, patch, call
-import asyncio
 from memory.memory_manager import MemoryManager
 
 
