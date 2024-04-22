@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from memory.system_prompt_handler import SystemPromptHandler
 import instructor
 from openai import AsyncOpenAI
+
 from memory.working_context import WorkingContext
 
 CLIENT = instructor.patch(AsyncOpenAI())
