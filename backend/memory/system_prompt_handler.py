@@ -4,8 +4,6 @@ import logging
 import subprocess
 import sqlite3
 
-from traitlets import Bool
-
 logger = logging.getLogger(__name__)
 
 
@@ -237,7 +235,7 @@ class SystemPromptHandler:
             logger.error(f"Failed to delete prompt: {e}")
             return False
 
-    def read_prompt(self, prompt_id: str) -> Bool():
+    def read_prompt(self, prompt_id: str) -> bool:
         """
         Read a system prompt by its ID.
 
