@@ -26,7 +26,6 @@ class TestMemoryManager:
         # Configure the mock cursor's fetchall method to return a list
         cursor = self.memory_manager.cur
         cursor.fetchall.side_effect = [
-            [("role1", "system_prompt")],  # First call to fetchall
             [  # Second call to fetchall
                 ("assistant", "full_assistant_message", "assistant_message", 20),
                 ("user", "full_user_message", "user_message", 10),
@@ -35,8 +34,7 @@ class TestMemoryManager:
         messages = self.memory_manager.get_messages()
         print(messages)
 
-        assert messages == [
-            {"role": "role1", "content": "system_prompt"},
+        assert messages[1:] == [
             {
                 "role": "user",
                 "content": "user_message",

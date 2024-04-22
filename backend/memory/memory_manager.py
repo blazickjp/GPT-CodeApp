@@ -121,7 +121,7 @@ class MemoryManager:
         results = self.cur.fetchall()
         prev_role = "assistant"
         for result in results[::-1]:
-            if prev_role == result[0] or result[2] is None or result[2] == "":
+            if prev_role == result[0] or result[2] == "":
                 continue
             messages.append(
                 {"role": result[0], "content": result[2], "full_content": result[1]}
