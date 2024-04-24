@@ -29,7 +29,6 @@ const Chat = () => {
   // Add a function to toggle the left sidebar
   const toggleLeftSidebar = () => {
     setIsLeftSidebarOpen(!isLeftSidebarOpen);
-    console.log(isLeftSidebarOpen);
   };
 
   const fetchLogMessages = async () => {
@@ -37,8 +36,6 @@ const Chat = () => {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs/errors`); // Adjust the endpoint as necessary
       if (response.ok) {
         const logs = await response.json();
-        console.log("Logs:")
-        console.log(logs);
         dispatch(setLogMessages(logs.error_logs)); // Update the state with the fetched log messages
       } else {
         console.error('Failed to fetch log messages:', response.status);
@@ -50,17 +47,12 @@ const Chat = () => {
 
 
 
-  const submitMessage = async (input, command = null) => {
-    console.log(input);
+  const submitMessage = async (input, command = null, file = null) => {
     let currentId = null;
     let body = null;
 
     dispatch(addMessage({ text: input, user: 'human' }));
-    if (command) {
-      body = JSON.stringify({ input: input, command: command });
-    } else {
-      body = JSON.stringify({ input: input })
-    }
+    body = JSON.stringify({ input: input, command: command, file: file });
 
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/message_streaming`, {
       method: 'POST',
@@ -106,7 +98,6 @@ const Chat = () => {
 
   useEffect(() => {
     const fetchHistoricalMessages = async () => {
-      console.log(`${process.env.NEXT_PUBLIC_API_URL}`)
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_messages?chatbox=true`);
         const historicalMessages = await response.json();

@@ -15,7 +15,6 @@ const SearchBar = ({ addFileToContext }) => {
 
     const timetout = 1000;
     const fileIcon = (fileType) => {
-        console.log(fileType);
         switch (fileType) {
             case 'py':
                 return <span className='text-python-blue'><FaPython /></span>
@@ -51,7 +50,6 @@ const SearchBar = ({ addFileToContext }) => {
 
 
     const sendFiles = () => {
-        console.log(options);
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/set_files_in_prompt`, {
             method: 'POST',
             headers: {
@@ -66,7 +64,6 @@ const SearchBar = ({ addFileToContext }) => {
                 setTimeout(() => setFileStatus(null), timetout);
             } else {
                 // handle non-200 responses here
-                console.log(response.status)
                 setFileStatus('warning');
                 setTimeout(() => setFileStatus(null), timetout);
             }

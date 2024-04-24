@@ -45,6 +45,7 @@ async def message_streaming(
     request: Request, background_tasks: BackgroundTasks
 ) -> StreamingResponse:
     data = await request.json()
+    logger.warning(data.keys())
 
     def stream():
         id = str(uuid4())

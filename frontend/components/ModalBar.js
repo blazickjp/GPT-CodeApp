@@ -48,7 +48,6 @@ const ModalBar = () => {
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_functions`)
             .then(response => response.json())
             .then(data => {
-                console.log(data)
                 dispatch(setAgentFunctions(data.agent_functions));
                 dispatch(setOnDemandFunctions(data.on_demand_functions));
                 if (modal) {
@@ -83,7 +82,6 @@ const ModalBar = () => {
                 for (const message of data.messages) {
                     m_tokens += encoding.encode(message.content).length;
                 }
-                console.log(m_tokens);
                 dispatch(setMessageTokens(m_tokens));
             })
             .catch(console.error);

@@ -16,6 +16,7 @@ Embark on a coding adventure with GPT-CodeApp, your new AI-powered coding compan
 - [Tests](#tests)
 - [License](#license)
 - [Questions](#questions)
+- [Features](#features)
 
 ## 🛠️ Installation and Setup
 
@@ -100,7 +101,7 @@ Dive into the GPT-CodeApp experience with these simple steps:
 - **Step 4:** Now, it's time to ask away! Load *focus* files into the search bar at the top. Make sure to send them to the backend with the send button. Type your coding queries or dilemmas into the text box and hit submit. GPT-CodeApp will churn through its AI brain to bring you crisp, accurate coding advice or solutions.
 - **Step 5:** Explore the responses, refine your questions for deeper insights, or kick off a new query. The AI is here to assist you through thick and thin code.
 - **Step 6:** Base prompts can be found in the backend/agent/agent_prompts.py file and set to load in the app_setup.py. You can also add your own prompts to the file anytime. 
-
+- **Notes:** The input text box accepts images and text. To add an image to the prompt simply copy the image and paste it into the text box.
 
 ## 🤝 Contributing
 
@@ -109,17 +110,4 @@ Contributions are what make the open-source community such an amazing place to l
 See [Contributing Guide](CONTRIBUTING.md)
 
 ## 🧪 Tests
-
-```bash
-cd backend
-python3 -m pytest 
-```
-
-❓ Questions
-
-Got questions? We've got answers! If you have any questions about the project, please open an issue or contact the project team. We're here to help!
-
-📜 License
-
-GPT-CodeApp is licensed under the MIT License.
 
