@@ -78,6 +78,40 @@ class TestCodingAgent1(unittest.TestCase):
             function_map=[_OP_LIST],
         )
 
+    def test_query_text_only(self):
+        input_text = "Test input without file"
+        
+        with patch.object(self.agent, 'call_model_streaming', return_value=iter(["Test", "output"])):
+            output = list(self.agent.query(input_text))
+
+        self.assertEqual(output, ["Test", "output"])
+        self.memory_manager.add_message.assert_called_once_with("user", input_text)
+
+    def test_query_with_file(self):
+        input_text = "Test input with file"
+        file_data = b"Test file data"
+        
+        with patch.object(self.agent, 'call_model_streaming', return_value=iter(["Test", "output"])):
+            output = list(self.agent.query(input_text, file=file_data))
+
+        self.assertEqual(output, ["Test", "output"])
+        self.memory_manager.add_message.assert_called_once()
+        
+        user_message = self.memory_manager.add_message.call_args[0][1]
+        self.assertIsInstance(user_message, list)
+        self.assertEqual(len(user_message), 2)
+        self.assertEqual(user_message[0]['type'], "text") 
+        self.assertEqual(user_message[0]['text'], input_text)
+        self.assertEqual(user_message[1]['type'], "image_url")
+        self.assertTrue(user_message[1]['image_url']['url'].startswith("data:image/jpeg;base64,"))
+
+    def test_query_error_handling(self):
+        input_text = "Test input for error"
+        
+        with patch.object(self.agent, 'call_model_streaming', side_effect=ValueError("Test error")):
+            with self.assertRaises(ValueError):
+                list(self.agent.query(input_text))
+
     def test_process_json(self):
         result = self.agent.process_json('{"key": "value"}')
         self.assertEqual(result, {"key": "value"})
