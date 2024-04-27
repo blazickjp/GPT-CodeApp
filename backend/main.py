@@ -68,15 +68,15 @@ async def message_streaming(
 @app.get("/system_prompt")
 async def system_prompt():
     if AGENT.GPT_MODEL.startswith("gpt"):
-        return {"system_prompt": AGENT.memory_manager.prompt_handler.system}
+        return {
+            "system_prompt": AGENT.memory_manager.prompt_handler.system,
+            "name": AGENT.memory_manager.prompt_handler.name,
+        }
     elif AGENT.GPT_MODEL == "anthropic":
-        return {"system_prompt": AGENT.generate_anthropic_prompt()}
-
-
-@app.post("/update_system")
-async def update_system_prompt(input: dict):
-    AGENT.memory_manager.prompt_handler.set_system(input)
-    return JSONResponse(status_code=200, content={})
+        return {
+            "system_prompt": AGENT.generate_anthropic_prompt(),
+            "name": AGENT.memory_manager.prompt_handler.name,
+        }
 
 
 @app.get("/get_functions")
@@ -214,13 +214,15 @@ async def get_max_message_tokens():
 
 @app.post("/save_prompt")
 async def save_prompt(input: dict):
+    logger.warn(input)
     prompt = input.get("prompt")
     prompt_name = input.get("prompt_name")
-    if AGENT.memory_manager.prompt_handler.read_prompt(prompt_name):
+    if AGENT.memory_manager.prompt_handler.get_prompt(prompt_name):
         AGENT.memory_manager.prompt_handler.update_prompt(prompt_name, prompt)
     else:
         AGENT.memory_manager.prompt_handler.create_prompt(prompt_name, prompt)
     AGENT.memory_manager.prompt_handler.set_system({"system_prompt": prompt})
+    AGENT.memory_manager.prompt_handler.name = prompt_name
     return JSONResponse(status_code=200, content={})
 
 
@@ -232,20 +234,13 @@ async def list_prompts():
 
 @app.post("/delete_prompt")
 async def delete_prompt(input: dict):
+    logger.warn(input)
     prompt_id = input.get("prompt_id", None)
+    prompt_name = input.get("prompt_name", None)
     try:
         AGENT.memory_manager.prompt_handler.delete_prompt(prompt_id)
     except Exception as e:
         return JSONResponse(status_code=400, content={"error": str(e)})
-    return JSONResponse(status_code=200, content={})
-
-
-@app.post("/set_prompt")
-async def set_prompt(input: dict):
-    prompt_id = input.get("prompt_id")
-    prompt = input.get("prompt")
-    AGENT.memory_manager.prompt_handler.update_prompt(prompt_id, prompt)
-    AGENT.memory_manager.prompt_handler.set_system({"system_prompt": prompt})
     return JSONResponse(status_code=200, content={})
 
 

@@ -139,7 +139,7 @@ def setup_app() -> CodingAgent:
     codebase = setup_codebase()
     memory = setup_memory_manager(
         tree=codebase.tree(),
-        identity=PROFESSOR_SYNAPSE,
+        identity=DEFAULT_SYSTEM_PROMPT_V2,
     )
     agent = CodingAgent(
         memory_manager=memory, function_map=[_OP_LIST], codebase=codebase

@@ -34,6 +34,7 @@ class SystemPromptHandler:
         self.tree = tree
         self.create_tables()
         self.directory = self.get_directory()
+        self.name = "Default"
 
     def get_directory(self) -> str:
         """Retrieve the project directory from the configuration.
@@ -192,12 +193,12 @@ class SystemPromptHandler:
             for prompt in self.cur.fetchall()
         ]
 
-    def update_prompt(self, prompt_id: str, new_prompt: str) -> bool:
+    def update_prompt(self, prompt_name: str, new_prompt: str) -> bool:
         """
         Update a system prompt by its ID.
 
         Args:
-            prompt_id (str): The ID of the prompt to update.
+            prompt_name (str): The name of the prompt to update.
             new_prompt (str): The new prompt text.
 
         Returns:
@@ -206,7 +207,7 @@ class SystemPromptHandler:
         try:
             self.cur.execute(
                 "UPDATE system_prompts SET prompt = ? WHERE id = ?",
-                (new_prompt, prompt_id),
+                (new_prompt, prompt_name),
             )
             self.conn.commit()
             return True
@@ -235,7 +236,7 @@ class SystemPromptHandler:
             logger.error(f"Failed to delete prompt: {e}")
             return False
 
-    def read_prompt(self, prompt_id: str) -> bool:
+    def get_prompt(self, name: str) -> Optional[str]:
         """
         Read a system prompt by its ID.
 
@@ -246,16 +247,14 @@ class SystemPromptHandler:
             Optional[str]: The prompt text if it exists, None otherwise.
         """
         try:
-            self.cur.execute(
-                "SELECT prompt FROM system_prompts WHERE id = ?", (prompt_id,)
-            )
+            self.cur.execute("SELECT prompt FROM system_prompts WHERE id = ?", (name,))
             result = self.cur.fetchone()
             return result[0] if result else None
         except Exception as e:
             logger.error(f"Failed to read prompt: {e}")
             return None
 
-    def create_prompt(self, prompt: str) -> bool:
+    def create_prompt(self, name: str, prompt: str) -> bool:
         """
         Create a new system prompt.
 
@@ -265,10 +264,12 @@ class SystemPromptHandler:
         Returns:
             bool: True if the creation was successful, False otherwise.
         """
+        if not name or not prompt:
+            raise ValueError("Prompt name and prompt text are required.")
         try:
             self.cur.execute(
-                "INSERT INTO system_prompts (prompt) VALUES (?)",
-                (prompt,),
+                "INSERT INTO system_prompts (id, prompt) VALUES (?, ?)",
+                (name, prompt),
             )
             self.conn.commit()
             return True

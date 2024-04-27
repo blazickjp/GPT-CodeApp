@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useDispatch } from 'react-redux';
-import { setEditablePrompt, setIsModalOpen } from '../store/modal_bar_modals/systemPromptSlice';
 import { FaTrash } from 'react-icons/fa';
 import { HiOutlineCheckCircle } from 'react-icons/hi';
 import DirectorySelectOption from './DirectorySelectOption';
@@ -28,8 +27,6 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
         }
     };
 
-
-
     const handleDeletePrompt = async (id) => {
         console.log(prompts);
         console.log("Deleting prompt: ", id);
@@ -56,7 +53,7 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
         console.log("Setting prompt: ", id);
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/set_prompt`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/save_prompt`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -66,9 +63,7 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
             if (!response.ok) {
                 throw new Error('Error setting prompt');
             }
-            dispatch(setEditablePrompt(prompt));
 
-            console.log("Setting prompt: ", prompt);
 
             // After success, update only the status of the specific prompt ID
             setTimeout(() => {
