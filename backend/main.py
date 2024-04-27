@@ -65,20 +65,6 @@ async def message_streaming(
     return StreamingResponse(stream(), media_type="text/event-stream")
 
 
-@app.get("/system_prompt")
-async def system_prompt():
-    if AGENT.GPT_MODEL.startswith("gpt"):
-        return {
-            "system_prompt": AGENT.memory_manager.prompt_handler.system,
-            "name": AGENT.memory_manager.prompt_handler.name,
-        }
-    elif AGENT.GPT_MODEL == "anthropic":
-        return {
-            "system_prompt": AGENT.generate_anthropic_prompt(),
-            "name": AGENT.memory_manager.prompt_handler.name,
-        }
-
-
 @app.get("/get_functions")
 async def get_functions():
     if AGENT.tools is None:
@@ -132,11 +118,6 @@ async def get_summaries(reset: bool | None = None):
     return result
 
 
-@app.get("/generate_readme")
-async def generate_readme():
-    return {"readme": "Deprecated"}
-
-
 @app.post("/set_files_in_prompt")
 async def set_files_in_prompt(input: dict):
     """Sets the files to be included in the prompt.
@@ -172,16 +153,6 @@ async def get_files_in_prompt():
     return {"files": AGENT.memory_manager.prompt_handler.files_in_prompt}
 
 
-async def get_user_directory_tree():
-    """Returns the directory tree of the user's codebase.
-
-    Returns:
-        dict: A dictionary containing the directory tree of the user's codebase.
-
-    """
-    return {"directory_tree": CODEBASE.tree()}
-
-
 @app.post("/set_model")
 async def set_model(input: dict):
     model = input.get("model")
@@ -209,39 +180,13 @@ async def get_model():
 
 @app.get("/get_max_message_tokens")
 async def get_max_message_tokens():
-    return {"max_message_tokens": AGENT.memory_manager.max_tokens}
-
-
-@app.post("/save_prompt")
-async def save_prompt(input: dict):
-    logger.warn(input)
-    prompt = input.get("prompt")
-    prompt_name = input.get("prompt_name")
-    if AGENT.memory_manager.prompt_handler.get_prompt(prompt_name):
-        AGENT.memory_manager.prompt_handler.update_prompt(prompt_name, prompt)
-    else:
-        AGENT.memory_manager.prompt_handler.create_prompt(prompt_name, prompt)
-    AGENT.memory_manager.prompt_handler.set_system({"system_prompt": prompt})
-    AGENT.memory_manager.prompt_handler.name = prompt_name
-    return JSONResponse(status_code=200, content={})
-
-
-@app.get("/list_prompts")
-async def list_prompts():
-    prompts = AGENT.memory_manager.prompt_handler.list_prompts()
-    return {"prompts": prompts}
-
-
-@app.post("/delete_prompt")
-async def delete_prompt(input: dict):
-    logger.warn(input)
-    prompt_id = input.get("prompt_id", None)
-    prompt_name = input.get("prompt_name", None)
-    try:
-        AGENT.memory_manager.prompt_handler.delete_prompt(prompt_id)
-    except Exception as e:
-        return JSONResponse(status_code=400, content={"error": str(e)})
-    return JSONResponse(status_code=200, content={})
+    max_message_tokens = AGENT.memory_manager.cur.execute(
+        """
+        SELECT value FROM config
+        WHERE field = 'max_message_tokens';
+        """
+    ).fetchone()
+    return {"max_message_tokens": max_message_tokens}
 
 
 @app.post("/set_directory")
@@ -367,3 +312,49 @@ async def set_temperature(input: dict):
         return JSONResponse(
             status_code=400, content={"error": "No temperature was provided"}
         )
+
+
+@app.post("/save_prompt")
+async def save_prompt(input: dict):
+    logger.warn(input)
+    prompt = input.get("prompt")
+    prompt_name = input.get("prompt_name")
+    if AGENT.memory_manager.prompt_handler.get_prompt(prompt_name):
+        AGENT.memory_manager.prompt_handler.update_prompt(prompt_name, prompt)
+    else:
+        AGENT.memory_manager.prompt_handler.create_prompt(prompt_name, prompt)
+    AGENT.memory_manager.prompt_handler.set_system({"system_prompt": prompt})
+    AGENT.memory_manager.prompt_handler.name = prompt_name
+    return JSONResponse(status_code=200, content={})
+
+
+@app.get("/system_prompt")
+async def system_prompt():
+    if AGENT.GPT_MODEL.startswith("gpt"):
+        return {
+            "system_prompt": AGENT.memory_manager.prompt_handler.system,
+            "name": AGENT.memory_manager.prompt_handler.name,
+        }
+    elif AGENT.GPT_MODEL == "anthropic":
+        return {
+            "system_prompt": AGENT.generate_anthropic_prompt(),
+            "name": AGENT.memory_manager.prompt_handler.name,
+        }
+
+
+@app.get("/list_prompts")
+async def list_prompts():
+    prompts = AGENT.memory_manager.prompt_handler.list_prompts()
+    return {"prompts": prompts}
+
+
+@app.post("/delete_prompt")
+async def delete_prompt(input: dict):
+    logger.warn(input)
+    prompt_id = input.get("prompt_id", None)
+    prompt_name = input.get("prompt_name", None)
+    try:
+        AGENT.memory_manager.prompt_handler.delete_prompt(prompt_id)
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
+    return JSONResponse(status_code=200, content={})

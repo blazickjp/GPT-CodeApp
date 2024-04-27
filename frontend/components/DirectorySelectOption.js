@@ -9,8 +9,8 @@ import { setDirectory, } from '@/store/sidebar/sidebarSlice';
 const DirectorySelectOption = () => {
     const [placeholder, setPlaceholder] = useState('Loading...');
     const [tempDirectory, setTempDirectory] = useState('');
-    const [actualTokens, setActualTokens] = useState(1000);
-    const [displayTokens, setDisplayTokens] = useState('1000');
+    const [actualTokens, setActualTokens] = useState(null);
+    const [displayTokens, setDisplayTokens] = useState(null);
     const [temperature, setTemperature] = useState(0.5);
     const [showTooltip, setShowTooltip] = useState(false);
 
@@ -59,8 +59,24 @@ const DirectorySelectOption = () => {
                 console.error('Error fetching home directory: ', error);
             }
         };
+
+        const fetchMaxTokens = async () => {
+            try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/get_max_message_tokens`)
+                if (response.ok) {
+                    const data = await response.json();
+                    setActualTokens(data.max_message_tokens);
+                    setDisplayTokens(data.max_message_tokens.toLocaleString());
+                } else {
+                    console.error('Error fetching max message tokens: ', response.statusText);
+                }
+            } catch (error) {
+                console.error('Error fetching max message tokens: ', error);
+            }
+        };
         fetchHomeDirectory();
         fetchSavedDirectory();
+        fetchMaxTokens();
     }, [placeholder]);
 
 
