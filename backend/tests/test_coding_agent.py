@@ -3,7 +3,7 @@ import instructor
 import difflib
 from openai import OpenAI
 from unittest.mock import MagicMock, mock_open, patch, call
-from agent.coding_agent import CodingAgent
+from agent.coding_agent import CodingAgent, QueryRewrite
 from memory.memory_manager import MemoryManager
 from database.my_codebase import MyCodebase
 from agent.agent_functions.file_ops import _OP_LIST, AddFunction, DeleteFunction
@@ -34,16 +34,37 @@ delete_function_op = DeleteFunction(file_name="example.py", function_name="examp
 
 class TestCodingAgent(unittest.TestCase):
     def setUp(self):
-        # Mock the CodingAgent and its dependencies
-        self.agent = CodingAgent(memory_manager=None, function_map=None, codebase=None)
-        self.agent.ops_to_execute = [add_function_op, delete_function_op]
-        # Patch the open function in the coding_agent module
-        self.mock_open = mock_open(read_data=ORIGINAL_CODE)
-        self.open_patch = patch("agent.coding_agent.open", self.mock_open)
-        self.open_patch.start()
+        self.agent = CodingAgent(memory_manager=None)
 
-    def tearDown(self):
-        self.open_patch.stop()
+    def test_query_rewrite(self):
+        # Test basic rewrite
+        rewrite = QueryRewrite(rewritten_query="test query")
+        self.assertEqual(rewrite.rewritten_query, "test query")
+        self.assertEqual(rewrite.to_dict(), {"rewritten_query": "test query"})
+        
+        # Test empty query
+        empty_rewrite = QueryRewrite(rewritten_query="")
+        self.assertEqual(empty_rewrite.rewritten_query, "")
+        
+    def test_rewrite_input(self):
+        """Test the rewrite_input method of the CodingAgent."""
+        # Test basic rewrite
+        original_query = "original query"
+        rewritten_query = self.agent.rewrite_input(original_query)
+        self.assertIsInstance(rewritten_query, str)
+        self.assertNotEqual(rewritten_query, original_query)
+        self.assertIn("rewritten", rewritten_query)
+
+        # Test empty query
+        empty_query = ""
+        rewritten_empty = self.agent.rewrite_input(empty_query)
+        self.assertEqual(rewritten_empty, "")
+
+        # Test long query
+        long_query = "a" * 1000
+        rewritten_long = self.agent.rewrite_input(long_query)
+        self.assertIsInstance(rewritten_long, str)
+        self.assertNotEqual(rewritten_long, long_query)
 
     def test_execute_ops(self):
         # Call the method to test
