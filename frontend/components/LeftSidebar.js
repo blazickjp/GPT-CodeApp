@@ -1,17 +1,13 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useDispatch } from 'react-redux';
+import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types'; // Import PropTypes
 import { FaTrash } from 'react-icons/fa';
 import { HiOutlineCheckCircle } from 'react-icons/hi';
 import DirectorySelectOption from './DirectorySelectOption';
 
-
-
 const LeftSidebar = ({ isLeftSidebarOpen }) => {
     const [prompts, setPrompts] = useState([]);
-    const [sidebarKey, setSidebarKey] = useState(0);
+    const [sidebarKey] = useState(0);
     const [saving, setSaving] = useState({}); // Track saving status by prompt ID
-    const dispatch = useDispatch();
-
 
     const fetchPrompts = async () => {
         try {
@@ -64,7 +60,6 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
                 throw new Error('Error setting prompt');
             }
 
-
             // After success, update only the status of the specific prompt ID
             setTimeout(() => {
                 setSaving(prev => ({ ...prev, [id]: 'success' }));
@@ -83,12 +78,9 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
         }
     };
 
-
     useEffect(() => {
         fetchPrompts();
     }, [sidebarKey, isLeftSidebarOpen]);
-
-
 
     return (
         <div className={`fixed h-full bg-neutral-800 transition-all duration-500 overflow-y-scroll p-6 text-gray-200 transform ${isLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full'
@@ -124,6 +116,11 @@ const LeftSidebar = ({ isLeftSidebarOpen }) => {
                 ))}
         </div >
     );
+};
+
+// Define prop types for LeftSidebar
+LeftSidebar.propTypes = {
+    isLeftSidebarOpen: PropTypes.bool.isRequired // Define the prop type and mark it as required
 };
 
 export default LeftSidebar;

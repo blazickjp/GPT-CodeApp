@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaArrowRight, FaCog } from 'react-icons/fa';  // Importing an icon from react-icons
+import { FaCog } from 'react-icons/fa';  // Importing an icon from react-icons
 import { useDispatch } from 'react-redux';
 import { setMessageTokens, } from '../store/modal_bar_modals/messageHistorySlice';
 import { setDirectory, } from '@/store/sidebar/sidebarSlice';

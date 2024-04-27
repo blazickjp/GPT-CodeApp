@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ChatBox from '../components/ChatBox';
 import Modal from 'react-modal';
-import { get_encoding } from "@dqbd/tiktoken";
 import ModalBar from '../components/ModalBar';
 import RightSidebar from '../components/RightSidebar';
 import LeftSidebar from '../components/LeftSidebar';
@@ -10,19 +9,18 @@ import SearchBar from '../components/SearchBar';
 import ChatInput from '../components/ChatInput';  // adjust this path to point to the ChatInput file
 import ModelSelector from '../components/ModelSelector';
 import { useDispatch, useSelector } from 'react-redux';
-import { addMessage, addAIPartResponse, fetchMessages } from '../store/messages/messagesSlice';
-import { setLogMessages } from '../store/messages/logMessagesSlice';
+import { addMessage, addAIPartResponse } from '../store/messages/messagesSlice';
+// import { setLogMessages } from '../store/messages/logMessagesSlice';
 import { toggleSidebar } from '../store/sidebar/sidebarSlice';
 
 
-const encoding = get_encoding("cl100k_base");
 Modal.setAppElement('#__next');
 
 const Chat = () => {
   const dispatch = useDispatch();
   const messages = useSelector(state => state.messages);
   const isSidebarOpen = useSelector(state => state.sidebar.isOpen);
-  const [sidebarKey, setSidebarKey] = useState(0);
+  const [sidebarKey] = useState(0);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
 
 
@@ -31,19 +29,19 @@ const Chat = () => {
     setIsLeftSidebarOpen(!isLeftSidebarOpen);
   };
 
-  const fetchLogMessages = async () => {
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs/errors`); // Adjust the endpoint as necessary
-      if (response.ok) {
-        const logs = await response.json();
-        dispatch(setLogMessages(logs.error_logs)); // Update the state with the fetched log messages
-      } else {
-        console.error('Failed to fetch log messages:', response.status);
-      }
-    } catch (error) {
-      console.error('Error fetching log messages:', error);
-    }
-  };
+  // const fetchLogMessages = async () => {
+  //   try {
+  //     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs/errors`); // Adjust the endpoint as necessary
+  //     if (response.ok) {
+  //       const logs = await response.json();
+  //       dispatch(setLogMessages(logs.error_logs)); // Update the state with the fetched log messages
+  //     } else {
+  //       console.error('Failed to fetch log messages:', response.status);
+  //     }
+  //   } catch (error) {
+  //     console.error('Error fetching log messages:', error);
+  //   }
+  // };
 
 
 

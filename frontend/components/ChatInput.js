@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AiOutlineSend, AiOutlineCloseCircle } from 'react-icons/ai';
 import { Hint } from 'react-autocomplete-hint';
+import PropTypes from 'prop-types';
 
 const ChatInput = ({ onSubmit }) => {
     const [input, setInput] = useState('');
@@ -86,6 +87,11 @@ const ChatInput = ({ onSubmit }) => {
             </form>
         </div>
     );
+};
+
+// Define prop types for ChatInput
+ChatInput.propTypes = {
+    onSubmit: PropTypes.func.isRequired // Define the prop type and mark it as required
 };
 
 export default ChatInput;
