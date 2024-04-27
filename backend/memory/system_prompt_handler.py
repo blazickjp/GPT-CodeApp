@@ -86,6 +86,34 @@ class SystemPromptHandler:
         self.conn.commit()
         return True
 
+    def gen_rewrite_prompt(self) -> str:
+        """
+        Set the system message and optionally attach a diff from the main branch.
+
+        Args:
+            input (Dict[str, Any], optional): A dictionary containing the 'system_prompt' key with a new system message. Defaults to {}.
+
+        Returns:
+            bool: True if the operation was successful, False otherwise.
+        """
+        self.directory = self.get_directory()
+        system = (
+            "Rewrite the following prompt to be more concise and clear using the additional information provided below."
+            + "\n\n"
+            + "The project directory is setup as follows:\n"
+        )
+        system += "<tree>" + self.tree + "\n</tree>\n\n" if self.tree else ""
+        if self.system_file_contents:
+            system += "Related File Contents:\n" + self.system_file_contents + "\n\n"
+
+        # Attach a diff from the main branch to the system prompt if applicable.
+        diff = self.generate_diff_from_main()
+        # logging.warning("****\n\nDiff from main branch:\n\n", diff)
+        if diff.stdout:
+            system += "\n\nDiff from main branch:\n" + str(diff.stdout) + "\n\n"
+
+        return system
+
     def get_file_contents(self) -> Dict[str, str]:
         self.cur.execute("SELECT file_path, text FROM files")
         results = self.cur.fetchall()
@@ -163,13 +191,13 @@ class SystemPromptHandler:
 
     def generate_diff_from_main(self) -> subprocess.CompletedProcess:
         """
-        Generate a diff from the main branch.
+        Generate a diff from the current working state against the main branch.
 
         Returns:
-            subprocess.CompletedProcess: The result of the git diff command.
+            subprocess.CompletedProcess: The result of the git diff command comparing the working state with the main branch.
         """
         repo_path = self.directory  # Assuming the directory is the repo path
-        command = ["git", "-C", repo_path, "diff", "release..main"]
+        command = ["git", "-C", repo_path, "diff", "main"]
         return subprocess.run(
             command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
         )

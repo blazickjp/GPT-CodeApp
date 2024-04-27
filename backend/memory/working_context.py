@@ -1,3 +1,7 @@
+"""
+
+"""
+
 from rdflib import Graph, URIRef, Literal, Namespace
 from rdflib.namespace import RDF, FOAF
 from pydantic import BaseModel

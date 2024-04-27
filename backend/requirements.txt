@@ -1,13 +1,13 @@
 fastapi==0.100.0
 numpy==1.23.5
 openai==1.2.2
-pydantic==2.0.3
+pydantic==2.7.0
 python-dotenv==1.0.0
 PyYAML==6.0
 tiktoken==0.4.0
 urllib3==2.0.3
 uvicorn==0.23.0
-instructor==0.4.2
+instructor==1.2.2
 scikit-learn==1.2.2
 pytest==7.4.0
 tenacity==8.2.2

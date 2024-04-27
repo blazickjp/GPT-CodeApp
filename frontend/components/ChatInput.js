@@ -9,9 +9,10 @@ const ChatInput = ({ onSubmit }) => {
     const [previewUrl, setPreviewUrl] = useState(null);
 
     const handlePaste = (event) => {
-        const text = event.clipboardData.getData('text');
+        event.preventDefault();
+        const text = event.clipboardData.getData('text/plain');
         if (text) {
-            setInput(text);
+            setInput(input + text);
             return;
         }
         const file = event.clipboardData.files[0];
