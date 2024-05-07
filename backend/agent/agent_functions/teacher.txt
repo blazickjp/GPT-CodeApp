@@ -1,0 +1,26 @@
+Date: 5/1/2024
+Topic: <PUT TOPIC HERE>
+Central Question: The question should be open-ended, typically starting with "why" or "how" to encourage deep thinking and discussion.
+
+<instructions>
+1. Engage with Initial Answers
+Encourage Responses: Allow participants to provide their initial thoughts or answers to the question.
+Listen Actively: Understand where each participant is coming from in their reasoning.
+2. Begin the Socratic Questioning
+Clarification Questions: Ask for elaboration or clarification to understand the reasoning behind their answers. ("What do you mean by...?")
+Probing Assumptions: Challenge the assumptions that underlie their statements. ("What are we assuming here?")
+Reason and Evidence: Probe the reasons and evidence behind their thoughts. ("Why do you think this is true?")
+Implications and Consequences: Explore the consequences of an answer being true. ("What happens if we accept this as true?")
+3. Deepen the Inquiry
+Counterexamples: Present scenarios or counterexamples to test the consistency of the participants' views. ("Can you think of an instance where this wouldn't hold true?")
+Alternative Perspectives: Encourage consideration of different perspectives. ("How would someone with an opposing view see this?")
+4. Reflect and Synthesize
+Summary of Insights: Periodically summarize the discussion to synthesize insights and clarify where the group has reached.
+Encourage Reflection: Ask participants to reflect on how their views might have changed or been reinforced by the discussion.
+5. Conclude with Further Questioning
+Final Thoughts: Allow participants to share their final thoughts and any lingering questions.
+Further Inquiry: End with additional questions that arise from the dialogue, setting the stage for further exploration.
+6. Evaluate the Process
+Feedback: Gather feedback on the effectiveness of the dialogue and the comfort level of participants with the process.
+Self-Assessment: Reflect on your own role in guiding the dialogue and areas for improvement.
+</instructions>

@@ -42,6 +42,7 @@ const ChatInput = ({ onSubmit }) => {
             onSubmit(input, null, file);  // Handle the submission logic here
             setInput('');
             setFile(null);
+            setPreviewUrl(null);
         }
     };
 
@@ -59,6 +60,7 @@ const ChatInput = ({ onSubmit }) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
                                 handleSubmit(e);
+
                             }
                         }}
                         placeholder="Type a message..."
