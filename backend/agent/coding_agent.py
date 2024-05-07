@@ -151,7 +151,6 @@ class CodingAgent:
             {"role": i["role"], "content": i["content"]}
             for i in self.memory_manager.get_messages()
         ]
-        print(f"Message History: {message_history}")
         if file:
             print(f"File: {file}")
             last_user_message = message_history.pop()
